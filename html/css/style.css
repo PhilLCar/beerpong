@@ -1,0 +1,281 @@
+@import url(https://fonts.googleapis.com/css?family=Oswald&display=swap);
+
+html {
+    height: 100%;
+    font-family: 'Oswald', sans-serif;
+}
+
+body {
+    color: white;
+    background-color: black;
+    height: 100%;
+    width: 100%;
+    margin: 0px;
+    position: absolute;
+}
+
+h1 {
+    font-size: 100px;
+}
+
+input[type="button"], input[type="submit"] {
+    font-family: 'Oswald', sans-serif;
+    font-size: 30px;
+    margin: 30px;
+    border: 3px solid white;
+    border-radius: 5px;
+    color: white;
+    background-color: #222;
+    padding: 5px;
+    width: 150px;
+}
+
+input[type="button"]:hover, input[type="submit"]:hover {
+    color: #222;
+    background-color: white;
+    cursor: pointer;
+}
+
+select {
+    -moz-appearance:none; /* Firefox */
+    -webkit-appearance:none; /* Safari and Chrome */
+    appearance:none;
+    font-size: 30px;
+    font-family: 'Oswald', sans-serif;
+    border: 3px solid #777;
+    border-radius: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    cursor: pointer;
+}
+
+input[type="text"] {
+    font-size: 30px;
+    font-family: 'Oswald', sans-serif;
+    border: 3px solid #777;
+    border-radius: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+p {
+    font-size: 30px;
+}
+
+form {
+    margin: auto;
+    text-align: center;
+}
+
+#MainButtons {
+    display: inline-block;
+    text-align: center;
+    width: 100%;
+}
+
+#CreateButton {
+    background-color: red;
+}
+
+#CreateButton:hover {
+    background-color: white;
+    color: red;
+}
+
+#JoinButton {
+    background-color: blue;
+}
+
+#JoinButton:hover {
+    background-color: white;
+    color: blue;
+}
+
+#Title {
+    position: absolute;
+    top: -15px;
+    width: 100%;
+    font-size: 50px;
+    display: inline-block;
+    text-align: center;
+    z-index: 10;
+}
+
+#Home {
+    font-size: 75px;
+    display: inline-block;
+    color: white;
+}
+
+#Away {
+    font-size: 75px;
+    display: inline-block;
+    color: white;
+}
+
+#Redemption {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    z-index: 100;
+    color: rgb(255, 0, 149);
+}
+
+#RedYes:hover {
+    color: green;
+}
+
+#RedNo:hover {
+    color: red;
+}
+
+#RerackMenu {
+    position: absolute;
+    bottom: 0px;
+    left: 30px;
+    width: 300px;
+    z-index: 10;
+    background-color: black;
+}
+
+#Rerack {
+    display: flex;
+    background-color: black;
+    color: white;
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    width: 30px;
+    word-wrap: break-word;
+    align-items: center;
+    text-align: center;
+    font-size: 50px;
+}
+
+#Rerack:hover {
+    background-color: white;
+    color: black;
+    cursor: pointer;
+}
+
+#Quit {
+    display: flex;
+    background-color: black;
+    color: white;
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    right: 0px;
+    width: 30px;
+    word-wrap: break-word;
+    align-items: center;
+    text-align: center;
+    font-size: 50px;
+}
+
+#Quit:hover {
+    background-color: white;
+    color: black;
+    cursor: pointer;
+}
+
+#Table {
+    background-color: #FA0;
+    background-image: url(https://laminatecountertops.com/wp-content/uploads/2017/08/975-Amber-Bamboo.jpg);
+    background-size: 100% 100%;
+    margin: auto;
+    margin-top: 10%;
+    width: 400px;
+    height: 80%;
+    border: 4px solid #520;
+    border-radius: 30px;
+    text-align: center;
+    position: relative;
+}
+
+#Opponent {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    right: 0;
+}
+
+#Contestant {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+}
+
+.RerackMenuItem {
+    padding-left: 20px;
+}
+
+.RerackMenuItem:hover {
+    color: black;
+    background-color: white;
+    cursor: pointer;
+}
+
+.JoinItem {
+    border: 3px solid white;
+    border-radius: 20px;
+    margin: 30px;
+    text-align: left;
+    padding: 30px;
+    background-color: #222;
+}
+
+.JoinItem input[type="button"] {
+    float: right;
+    margin-top: -120px;
+    background-color: green;
+}
+
+.JoinItem input[type="button"]:hover {
+    float: right;
+    color: green;
+    background-color: white;
+}
+
+.JoinItem input[type="button"]:disabled {
+    color: white;
+    background-color: black;
+    cursor: not-allowed;
+}
+
+.G {
+    display: inline-block;
+    vertical-align: middle;
+    height: 100px;
+    width: 100px;
+    border: 4px solid white;
+    border-radius: 71px;
+    cursor: pointer;
+}
+
+.O {
+    background-color: white;
+}
+
+.O:hover {
+    background-color: #777;
+}
+
+.C {
+    background-color: white;
+}
+
+.C:hover {
+    background-color: #777;
+}
+
+.E {
+    background-color: rgba(0,0,0,0);
+}
+
+.E:hover {
+    background-color: rgba(0,0,0,0.5);
+}

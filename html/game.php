@@ -1,0 +1,205 @@
+<?php
+  // DATABASE CONNECTION
+  $servername = "localhost";
+  $username   = "webserver";
+  $password   = "BP4Life";
+  $database   = "beerpong";
+
+  $conn = mysqli_connect($servername, $username, $password, $database);
+  $update = array();
+  $error = 0;
+  
+	if (empty($_COOKIE["GameID"]) || empty($_COOKIE["TeamName"]) || empty($_COOKIE["UserName"])) {
+	  if (empty($_POST["GameID"])) {
+      header("Location: join.php?error=1");
+      $conn->close();
+      exit();
+	  }
+	  if (empty($_POST["TeamName"])) {
+	    $error |= 2;
+	  }
+	  if (empty($_POST["MemberA"])) {
+		  $error |= 4;
+	  }
+	  if ($_POST["MemberA"] == $_POST["MemberB"]) {
+		  $error |= 64;
+	  }
+
+    if (empty($_COOKIE["GameID"])) {
+      setcookie("GameID", $_POST["GameID"], time() + 86400, "/");
+      $_COOKIE["GameID"] = $_POST["GameID"];
+    }
+
+    if ($conn && !$error) {
+      $conn->query("LOCK TABLES users WRITE, teams WRITE, games WRITE");
+
+      // User 1
+      $sql = "SELECT * FROM users WHERE UserName='" . $_POST["MemberA"] . "'";
+      if (!$conn->query($sql)->num_rows) {
+        $update[] = "INSERT INTO users(UserName, LastUpdate, Wins, Loses) VALUES ('" . $_POST["MemberA"] . "', NOW(), 0, 0)";
+      } else {
+        $sql = "SELECT user_active('" . $_POST["MemberA"] . "') AS active";
+        $result = $conn->query($sql)->fetch_assoc();
+        if ($result["active"]) {
+          header("Location: team.php?error=32");
+				  $conn->query("UNLOCK TABLES");
+          $conn->close();
+          exit();
+        } else {
+          $update[] = "UPDATE users SET LastUpdate=NOW() WHERE UserName='" . $_POST["MemberA"] . "'";
+        }
+      }
+
+      // User 2
+      if (!empty($_POST["MemberB"])) {
+        $sql = "SELECT * FROM users WHERE UserName='" . $_POST["MemberB"] . "'";
+        if (!$conn->query($sql)->num_rows) {
+          $update[] = "INSERT INTO users(UserName, LastUpdate, Wins, Loses) VALUES ('" . $_POST["MemberB"] . "', NOW(), 0, 0)";
+        } else {
+          $sql = "SELECT user_active('" . $_POST["MemberA"] . "') AS active";
+          $result = $conn->query($sql)->fetch_assoc();
+          if ($result["active"]) {
+            header("Location: team.php?error=64");
+            $conn->query("UNLOCK TABLES");
+            $conn->close();
+            exit();
+          } else {
+            $update[] = "UPDATE users SET LastUpdate=NOW() WHERE UserName='" . $_POST["MemberB"] . "'";
+          }
+        }
+      }
+
+      // Team
+      $sql = "SELECT * FROM teams WHERE TeamName='" . $_POST["TeamName"] . "'";
+      $result = $conn->query($sql);
+      if (!$conn->query($sql)->num_rows) {
+        $update[] = "INSERT INTO teams(TeamName, Color, MemberA, MemberB, Wins, Loses) VALUES ('" . 
+                    $_POST["TeamName"] . "', 'white', '" .
+                    $_POST["MemberA"]  . "', " .
+                    (empty($_POST["MemberB"]) ? "NULL" : "'" . $_POST["MemberB"] . "'") .
+                    ", 0, 0)";
+      } else {
+        $sql = "SELECT * FROM games WHERE Active=TRUE AND (" .
+          "TeamA='" . $_POST["TeamName"] . "' OR " .
+          "TeamB='" . $_POST["TeamName"] . "') AND NOT MemberB=NULL";
+        if ($conn->query($sql)->num_rows) {
+          header("Location: join.php?error=32");
+          $conn->query("UNLOCK TABLES");
+          $conn->close();
+          exit();
+        }
+        $update[] = "UPDATE teams SET MemberB='" . $_POST["MemberA"] . "' WHERE TeamName='" . $_POST["TeamName"] . "'";
+      }
+
+      $update[] = "UPDATE games SET TeamB='" . $_POST["TeamName"] . "' WHERE GameID=" . $_POST["GameID"];
+      
+      foreach ($update as $sql) $conn->query($sql);
+
+      setcookie("UserName", $_POST["MemberA"], time() + 86400, "/");
+      $_COOKIE["UserName"] = $_POST["MemberA"];
+      setcookie("TeamName", $_POST["TeamName"], time() + 86400, "/");
+      $_COOKIE["TeamName"] = $_POST["TeamName"];
+      if (!empty($_POST["MemberB"])) {
+        setcookie("PartnerName", $_POST["MemberB"], time() + 86400, "/");
+        $_COOKIE["PartnerName"] = $_POST["MemberB"];
+      }
+
+    } else {
+      if (!$conn) $error |= 8;
+    }
+  }
+
+  if ($conn) {
+    $sql = "SELECT * FROM games WHERE GameID=" . $_COOKIE["GameID"];
+    $result = $conn->query($sql);
+    $game = $result->fetch_assoc();
+
+    $conn->query("UNLOCK TABLES");
+    $conn->close();
+
+    if (!$game["Active"]) {
+      header("Location: index.php");
+      exit();
+    }
+  }
+
+  if ($error) {
+    header("Location: team.php?error=" . $error);
+  }
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <title>BEERPONG</title>
+    <script type="text/javascript" src="js/scripts.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/style.css"/>
+    <script>
+      window.setInterval(refresh, 1000);
+    </script>
+  </head>
+  <body onload="resizetable()">
+    <div id="Title">
+      <div id="Home">
+        <?php
+          echo($_COOKIE["TeamName"]);
+        ?>
+      </div>
+      VS
+      <div id="Away">
+        <?php
+          if ($_COOKIE["TeamName"] == $game["TeamA"]) 
+            if (empty($game["TeamB"])) echo("...");
+            else echo($game["TeamB"]);
+          else   echo($game["TeamA"]);
+        ?>
+      </div>
+    </div>
+    <div id="Redemption" hidden="true">REDEMPTION<br>
+      <input id="RedYes" type="button" hidden="true" value="I GOT IT!" onclick="update('Redemption')"/>
+      <input id="RedNo" type="button" hidden="true" value="I MISSED :(" onclick="update('End')"/>
+    </div>
+    <div id="Rerack" onclick="openreracks()">
+      R E R A C K
+    </div>
+    <div id="RerackMenu" hidden="true" onclick="openreracks()">
+      <div class="RerackMenuItem" onclick="rerack(1)">TRIANGLE</div>
+      <div class="RerackMenuItem" onclick="rerack(2)">REVERSE TRIANGLE</div>
+      <div class="RerackMenuItem" onclick="rerack(3)">FLAG</div>
+      <div class="RerackMenuItem" onclick="rerack(4)">REVERSE FLAG</div>
+      <div class="RerackMenuItem" onclick="rerack(5)">INLINE</div>
+      <div class="RerackMenuItem" onclick="rerack(6)">INLINE 4</div>
+      <div class="RerackMenuItem" onclick="rerack(7)">HORIZONTAL LINE</div>
+      <div class="RerackMenuItem" onclick="rerack(8)">HORIZONTAL LINE 4</div>
+      <div class="RerackMenuItem" onclick="rerack(9)">DIAMOND</div>
+      <div class="RerackMenuItem" onclick="rerack(10)">HORIZONTAL DIAMOND</div>
+      <div class="RerackMenuItem" onclick="rerack(11)">PENIS</div>
+      <div class="RerackMenuItem" onclick="rerack(12)">REVERSE PENIS</div>
+    </div>
+    <div id="Quit" onclick="window.location='index.php'">
+      Q U I T
+    </div>
+    <div id="Table">
+      <style id="TableStyle" type="text/css">
+      </style>
+      <style id="GlassesStyle" type="text/css">
+      </style>
+      <div id="Opponent" rack="0">
+        <div class="G O" id="O5" onclick="enter(true, 5)"></div>
+        <div class="G O" id="O4" onclick="enter(true, 4)"></div>
+        <div class="G O" id="O3" onclick="enter(true, 3)"></div>
+        <div class="G O" id="O2" onclick="enter(true, 2)"></div>
+        <div class="G O" id="O1" onclick="enter(true, 1)"></div>
+        <div class="G O" id="O0" onclick="enter(true, 6)"></div>
+      </div>
+      <div id="Contestant" rack="0">
+        <div class="G C" id="C0" onclick="enter(false, 6)"></div>
+        <div class="G C" id="C1" onclick="enter(false, 1)"></div>
+        <div class="G C" id="C2" onclick="enter(false, 2)"></div>
+        <div class="G C" id="C3" onclick="enter(false, 3)"></div>
+        <div class="G C" id="C4" onclick="enter(false, 4)"></div>
+        <div class="G C" id="C5" onclick="enter(false, 5)"></div>
+      </div>
+    </div>
+  </body>
+</html>
