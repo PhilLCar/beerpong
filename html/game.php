@@ -79,16 +79,24 @@
                     (empty($_POST["MemberB"]) ? "NULL" : "'" . $_POST["MemberB"] . "'") .
                     ", 0, 0)";
       } else {
-        $sql = "SELECT * FROM games WHERE Active=TRUE AND (" .
+        $sql = "SELECT * FROM games WHERE Active=TRUE AND " .
           "TeamA='" . $_POST["TeamName"] . "' OR " .
-          "TeamB='" . $_POST["TeamName"] . "') AND NOT MemberB=NULL";
+          "TeamB='" . $_POST["TeamName"] . "'";
         if ($conn->query($sql)->num_rows) {
-          header("Location: join.php?error=32");
-          $conn->query("UNLOCK TABLES");
-          $conn->close();
-          exit();
+          $sql = "SELECT * FROM teams WHERE TeamName='" . $_POST["TeamName"] . "' AND NOT MemberB=NULL";
+          if ($conn->query($sql)->num_rows || !empty($_POST["MemberB"])) {
+            header("Location: join.php?error=32");
+            $conn->query("UNLOCK TABLES");
+            $conn->close();
+            exit();
+          } else {
+            $update[] = "UPDATE teams SET MemberB='" . $_POST["MemberA"] . "' WHERE TeamName='" . $_POST["TeamName"] . "'";
+          }
+        } else {
+          // team exists but not active
+          $update[] = "UPDATE teams SET MemberA='" . $_POST["MemberA"] . "', " . (empty($_POST["MemberB"]) ? "" : "MemberB='" . $_POST["MemberB"] . "', ") .
+                        "Color='white' WHERE TeamName='" . $_POST["TeamName"] . "'";
         }
-        $update[] = "UPDATE teams SET MemberB='" . $_POST["MemberA"] . "' WHERE TeamName='" . $_POST["TeamName"] . "'";
       }
 
       $update[] = "UPDATE games SET TeamB='" . $_POST["TeamName"] . "' WHERE GameID=" . $_POST["GameID"];
@@ -163,18 +171,18 @@
       R E R A C K
     </div>
     <div id="RerackMenu" hidden="true" onclick="openreracks()">
-      <div class="RerackMenuItem" onclick="rerack(1)">TRIANGLE</div>
-      <div class="RerackMenuItem" onclick="rerack(2)">REVERSE TRIANGLE</div>
-      <div class="RerackMenuItem" onclick="rerack(3)">FLAG</div>
-      <div class="RerackMenuItem" onclick="rerack(4)">REVERSE FLAG</div>
-      <div class="RerackMenuItem" onclick="rerack(5)">INLINE</div>
-      <div class="RerackMenuItem" onclick="rerack(6)">INLINE 4</div>
-      <div class="RerackMenuItem" onclick="rerack(7)">HORIZONTAL LINE</div>
-      <div class="RerackMenuItem" onclick="rerack(8)">HORIZONTAL LINE 4</div>
-      <div class="RerackMenuItem" onclick="rerack(9)">DIAMOND</div>
-      <div class="RerackMenuItem" onclick="rerack(10)">HORIZONTAL DIAMOND</div>
-      <div class="RerackMenuItem" onclick="rerack(11)">PENIS</div>
-      <div class="RerackMenuItem" onclick="rerack(12)">REVERSE PENIS</div>
+      <div class="RerackMenuItem" onclick="rerack(1)" onmouseover="triangleP()" onmouseleave="document.getElementById('Preview').innerHTML=''">TRIANGLE</div>
+      <div class="RerackMenuItem" onclick="rerack(2)" onmouseover="rtriangleP()" onmouseleave="document.getElementById('Preview').innerHTML=''">REVERSE TRIANGLE</div>
+      <div class="RerackMenuItem" onclick="rerack(3)" onmouseover="flagP()" onmouseleave="document.getElementById('Preview').innerHTML=''">FLAG</div>
+      <div class="RerackMenuItem" onclick="rerack(4)" onmouseover="rflagP()" onmouseleave="document.getElementById('Preview').innerHTML=''">REVERSE FLAG</div>
+      <div class="RerackMenuItem" onclick="rerack(5)" onmouseover="lineP()" onmouseleave="document.getElementById('Preview').innerHTML=''">INLINE</div>
+      <div class="RerackMenuItem" onclick="rerack(6)" onmouseover="line4P()" onmouseleave="document.getElementById('Preview').innerHTML=''">INLINE 4</div>
+      <div class="RerackMenuItem" onclick="rerack(7)" onmouseover="hlineP()" onmouseleave="document.getElementById('Preview').innerHTML=''">HORIZONTAL LINE</div>
+      <div class="RerackMenuItem" onclick="rerack(8)" onmouseover="hline4P()" onmouseleave="document.getElementById('Preview').innerHTML=''">HORIZONTAL LINE 4</div>
+      <div class="RerackMenuItem" onclick="rerack(9)" onmouseover="diamondP()" onmouseleave="document.getElementById('Preview').innerHTML=''">DIAMOND</div>
+      <div class="RerackMenuItem" onclick="rerack(10)" onmouseover="hdiamondP()" onmouseleave="document.getElementById('Preview').innerHTML=''">HORIZONTAL DIAMOND</div>
+      <div class="RerackMenuItem" onclick="rerack(11)" onmouseover="penisP()" onmouseleave="document.getElementById('Preview').innerHTML=''">PENIS</div>
+      <div class="RerackMenuItem" onclick="rerack(12)" onmouseover="rpenisP()" onmouseleave="document.getElementById('Preview').innerHTML=''">REVERSE PENIS</div>
     </div>
     <div id="Quit" onclick="window.location='index.php'">
       Q U I T
@@ -184,6 +192,7 @@
       </style>
       <style id="GlassesStyle" type="text/css">
       </style>
+      <div id="Preview" rack="0"></div>
       <div id="Opponent" rack="0">
         <div class="G O" id="O5" onclick="enter(true, 5)"></div>
         <div class="G O" id="O4" onclick="enter(true, 4)"></div>

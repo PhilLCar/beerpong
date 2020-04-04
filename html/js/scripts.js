@@ -119,6 +119,9 @@ function refresh() {
                 document.getElementById("RedYes").hidden = true;
                 document.getElementById("RedNo").hidden = true;
             }
+        } else {
+            alert("Game terminated");
+            window.location = "index.php";
         }
       }
     };
@@ -265,6 +268,14 @@ function genOG(n) {
     var html = "";
     for (var i = 0; i < n; i++) {
         html += "<div class=\"G O\" id=\"O" + i + "\" onclick=\"enter(true, " + i + ")\"></div>\n";
+    }
+    return html;
+}
+
+function genPG(n) {
+    var html = "";
+    for (var i = 0; i < n; i++) {
+        html += "<div class=\"G P\" id=\"P" + i + "\"></div>\n";
     }
     return html;
 }
@@ -417,6 +428,33 @@ function standardO() {
     g.style.left = s3 + "px";
 }
 
+
+function standardP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "0");
+    c.innerHTML = genPG(6);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    var s1 = (twidth - 3*gwidth) / 2;
+    for (var i = 3; i < 6; i++) {
+        var g = getG("P", i);
+        g.style.top = 0 + "px";
+        g.style.left = s1 + (5 - i) * gwidth + "px";
+    }
+    var s2 = (twidth - 2*gwidth) / 2;
+    for (var i = 1; i < 3; i++) {
+        var g = getG("P", i);
+        g.style.top = gwidth * 0.86 + "px";
+        g.style.left = s2 + (2 - i) * gwidth + "px";
+    }
+    var s3 = (twidth - gwidth) / 2;
+    var g = getG("P", 0);
+    g.style.top = gwidth * 1.72 + "px";
+    g.style.left = s3 + "px";
+}
+
 function triangleC() {
     var c = document.getElementById("Contestant");
     c.setAttribute("rack", "1");
@@ -457,6 +495,26 @@ function triangleO() {
     g.style.left = s2 + "px";
 }
 
+function triangleP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "1");
+    c.innerHTML = genPG(3);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    var s1 = (twidth - 2*gwidth) / 2;
+    for (var i = 1; i < 3; i++) {
+        var g = getG("P", i);
+        g.style.top = 0 + "px";
+        g.style.left = s1 + (2 - i) * gwidth + "px";
+    }
+    var s2 = (twidth - gwidth) / 2;
+    var g = getG("P", 0);
+    g.style.top = gwidth * 0.86 + "px";
+    g.style.left = s2 + "px";
+}
+
 function rtriangleC() {
     var c = document.getElementById("Contestant");
     c.setAttribute("rack", "2");
@@ -493,6 +551,26 @@ function rtriangleO() {
     }
     var s2 = (twidth - gwidth) / 2;
     var g = getG("O", 0);
+    g.style.top = 0 + "px";
+    g.style.left = s2 + "px";
+}
+
+function rtriangleP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "2");
+    c.innerHTML = genPG(3);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    var s1 = (twidth - 2*gwidth) / 2;
+    for (var i = 1; i < 3; i++) {
+        var g = getG("P", i);
+        g.style.top = gwidth * 0.86 + "px";
+        g.style.left = s1 + (2 - i) * gwidth + "px";
+    }
+    var s2 = (twidth - gwidth) / 2;
+    var g = getG("P", 0);
     g.style.top = 0 + "px";
     g.style.left = s2 + "px";
 }
@@ -541,6 +619,28 @@ function flagO() {
     g.style.left   = twidth / 2 - 0.86 * gwidth + "px";
 }
 
+function flagP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "3");
+    c.innerHTML = genPG(3);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    // 1
+    var g = getG("P", 0);
+    g.style.top = gwidth + "px";
+    g.style.left   = twidth / 2 - 0.86 * gwidth + "px";
+    // 2
+    g = getG("P", 1);
+    g.style.top = 0.49 * gwidth + "px";
+    g.style.left   = twidth / 2 + "px";
+    // 3
+    g = getG("P", 2);
+    g.style.top = 0 + "px";
+    g.style.left   = twidth / 2 - 0.86 * gwidth + "px";
+}
+
 function rflagC() {
     var c = document.getElementById("Contestant");
     c.setAttribute("rack", "4");
@@ -585,6 +685,28 @@ function rflagO() {
     g.style.right   = twidth / 2 - 0.86 * gwidth + "px";
 }
 
+function rflagP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "4");
+    c.innerHTML = genPG(3);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    // 1
+    var g = getG("P", 0);
+    g.style.top = gwidth + "px";
+    g.style.right   = twidth / 2 - 0.86 * gwidth + "px";
+    // 2
+    g = getG("P", 1);
+    g.style.top = 0.49 * gwidth + "px";
+    g.style.right   = twidth / 2 + "px";
+    // 3
+    g = getG("P", 2);
+    g.style.top = 0 + "px";
+    g.style.right   = twidth / 2 - 0.86 * gwidth + "px";
+}
+
 function lineC() {
     var c = document.getElementById("Contestant");
     c.setAttribute("rack", "5");
@@ -625,6 +747,28 @@ function lineO() {
     g.style.left = twidth / 2 - 0.5 * gwidth + "px";
     // 3
     g = getG("O", 2);
+    g.style.top  = 0 + "px";
+    g.style.left = twidth / 2 - 0.5 * gwidth + "px";
+}
+
+function lineP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "5");
+    c.innerHTML = genPG(3);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    // 1
+    var g = getG("P", 0);
+    g.style.top  = 2 * gwidth + "px";
+    g.style.left = twidth / 2 - 0.5 * gwidth + "px";
+    // 2
+    g = getG("P", 1);
+    g.style.top  = gwidth + "px";
+    g.style.left = twidth / 2 - 0.5 * gwidth + "px";
+    // 3
+    g = getG("P", 2);
     g.style.top  = 0 + "px";
     g.style.left = twidth / 2 - 0.5 * gwidth + "px";
 }
@@ -681,6 +825,32 @@ function line4O() {
     g.style.left = twidth / 2 - 0.5 * gwidth + "px";
 }
 
+function line4P() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "6");
+    c.innerHTML = genPG(4);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    // 1
+    var g = getG("P", 0);
+    g.style.top  = 3 * gwidth + "px";
+    g.style.left = twidth / 2 - 0.5 * gwidth + "px";
+    // 2
+    g = getG("P", 1);
+    g.style.top  = 2 * gwidth + "px";
+    g.style.left = twidth / 2 - 0.5 * gwidth + "px";
+    // 3
+    g = getG("P", 2);
+    g.style.top  = gwidth + "px";
+    g.style.left = twidth / 2 - 0.5 * gwidth + "px";
+    // 4
+    g = getG("P", 3);
+    g.style.top  = 0 + "px";
+    g.style.left = twidth / 2 - 0.5 * gwidth + "px";
+}
+
 function hlineC() {
     var c = document.getElementById("Contestant");
     c.setAttribute("rack", "7");
@@ -721,6 +891,28 @@ function hlineO() {
     g.style.left = twidth / 2 - 0.5 * gwidth + "px";
     // 3
     g = getG("O", 2);
+    g.style.top  = 0 + "px";
+    g.style.left = twidth / 2 - 1.5 * gwidth + "px";
+}
+
+function hlineP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "7");
+    c.innerHTML = genPG(3);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    // 1
+    var g = getG("P", 0);
+    g.style.top  = 0 + "px";
+    g.style.left = twidth / 2 + 0.5 * gwidth + "px";
+    // 2
+    g = getG("P", 1);
+    g.style.top  = 0 + "px";
+    g.style.left = twidth / 2 - 0.5 * gwidth + "px";
+    // 3
+    g = getG("P", 2);
     g.style.top  = 0 + "px";
     g.style.left = twidth / 2 - 1.5 * gwidth + "px";
 }
@@ -773,6 +965,32 @@ function hline4O() {
     g.style.left = twidth / 2 - 1 * gwidth + "px";
     // 4
     g = getG("O", 3);
+    g.style.top  = 0 + "px";
+    g.style.left = twidth / 2 - 2 * gwidth + "px";
+}
+
+function hline4P() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "8");
+    c.innerHTML = genPG(4);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    // 1
+    var g = getG("P", 0);
+    g.style.top  = 0 + "px";
+    g.style.left = twidth / 2 + 1 * gwidth + "px";
+    // 2
+    var g = getG("P", 1);
+    g.style.top  = 0 + "px";
+    g.style.left = twidth / 2 + 0 * gwidth + "px";
+    // 3
+    g = getG("P", 2);
+    g.style.top  = 0 + "px";
+    g.style.left = twidth / 2 - 1 * gwidth + "px";
+    // 4
+    g = getG("P", 3);
     g.style.top  = 0 + "px";
     g.style.left = twidth / 2 - 2 * gwidth + "px";
 }
@@ -833,6 +1051,34 @@ function diamondO() {
     g.style.left = s3 + "px";
 }
 
+function diamondP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "9");
+    c.innerHTML = genPG(4);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    // 4
+    var g = getG("P", 3);
+    g.style.top = 0 + "px";
+    g.style.left = twidth / 2 - 0.5 * gwidth + "px";
+
+    // 2 3
+    var s2 = (twidth - 2*gwidth) / 2;
+    for (var i = 1; i < 3; i++) {
+        var g = getG("P", i);
+        g.style.top = gwidth * 0.86 + "px";
+        g.style.left = s2 + (2 - i) * gwidth + "px";
+    }
+
+    // 1
+    var s3 = (twidth - gwidth) / 2;
+    var g = getG("P", 0);
+    g.style.top = gwidth * 1.72 + "px";
+    g.style.left = s3 + "px";
+}
+
 function hdiamondC() {
     var c = document.getElementById("Contestant");
     c.setAttribute("rack", "10");
@@ -889,6 +1135,34 @@ function hdiamondO() {
     g.style.left = s3 + "px";
 }
 
+function hdiamondP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "10");
+    c.innerHTML = genPG(4);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    // 4
+    var g = getG("P", 3);
+    g.style.top = 0 + "px";
+    g.style.left = twidth / 2 - 0.5 * gwidth + "px";
+
+    // 2 3
+    var s2 = (twidth - 2*1.37*gwidth) / 2;
+    for (var i = 1; i < 3; i++) {
+        var g = getG("P", i);
+        g.style.top = gwidth * 0.5 + "px";
+        g.style.left = s2 + (2 - i) * 1.75 * gwidth + "px";
+    }
+
+    // 1
+    var s3 = (twidth - gwidth) / 2;
+    var g = getG("P", 0);
+    g.style.top = gwidth + "px";
+    g.style.left = s3 + "px";
+}
+
 function penisC() {
     var c = document.getElementById("Contestant");
     c.setAttribute("rack", "11");
@@ -931,6 +1205,29 @@ function penisO() {
     g.style.top = gwidth * 0.86 + "px";
     g.style.left = s2 + "px";
     var g = getG("O", 0);
+    g.style.top = gwidth * 1.86 + "px";
+    g.style.left = s2 + "px";
+}
+
+function penisP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "11");
+    c.innerHTML = genPG(4);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    var s1 = (twidth - 2*gwidth) / 2;
+    for (var i = 1; i < 3; i++) {
+        var g = getG("P", i+1);
+        g.style.top = 0 + "px";
+        g.style.left = s1 + (2 - i) * gwidth + "px";
+    }
+    var s2 = (twidth - gwidth) / 2;
+    var g = getG("P", 1);
+    g.style.top = gwidth * 0.86 + "px";
+    g.style.left = s2 + "px";
+    var g = getG("P", 0);
     g.style.top = gwidth * 1.86 + "px";
     g.style.left = s2 + "px";
 }
@@ -984,6 +1281,33 @@ function rpenisO() {
     g.style.left   = twidth / 2 - 0.5 * gwidth + "px";
     // 4
     g = getG("O", 3);
+    g.style.top = 0 + "px";
+    g.style.left   = twidth / 2 - 0.5 * gwidth + "px";
+}
+
+function rpenisP() {
+    var c = document.getElementById("Preview");
+    c.setAttribute("rack", "12");
+    c.innerHTML = genPG(4);
+
+    var twidth = document.getElementById("Table").offsetWidth;
+    var gwidth = document.getElementById("O0").offsetWidth;
+
+    
+    // 1
+    var g = getG("P", 0);
+    g.style.top = 1.86 * gwidth + "px";
+    g.style.left   = twidth / 2 + 0 * gwidth + "px";
+    // 2
+    g = getG("P", 1);
+    g.style.top = 1.86 * gwidth + "px";
+    g.style.left   = twidth / 2 - 1 * gwidth + "px";
+    // 3
+    g = getG("P", 2);
+    g.style.top = gwidth + "px";
+    g.style.left   = twidth / 2 - 0.5 * gwidth + "px";
+    // 4
+    g = getG("P", 3);
     g.style.top = 0 + "px";
     g.style.left   = twidth / 2 - 0.5 * gwidth + "px";
 }

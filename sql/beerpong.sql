@@ -79,15 +79,17 @@ BEGIN
     DECLARE PActiveB BOOLEAN;
     SET PActiveA = EXISTS(SELECT * FROM games
         WHERE GameID = PGameID
-        AND   team_active(TeamA));
+        AND   team_active(TeamA)
+        AND   Active = TRUE);
     SET PActiveB = EXISTS(SELECT * FROM games
         WHERE GameID = PGameID
-        AND   team_active(TeamB));
+        AND   team_active(TeamB)
+        AND   Active = TRUE);
     UPDATE games SET TeamA = TeamB, TeamB = NULL,
                      GlassesA = (@Glasses := GlassesA), GlassesA = GlassesB, GlassesB = @Glasses,
                      RackA = (@Rack := RackA), RackA = RackB, RackB = @Rack
                  WHERE NOT PActiveA AND PActiveB AND GameID = PGameID;
-    UPDATE games SET Active = PActiveA OR PActiveB WHERE GameID = PGameID;
+    UPDATE games SET Active = PActiveA OR PActiveB WHERE Active = TRUE AND GameID = PGameID;
     RETURN PActiveA OR PActiveB;
 END.
 DELIMITER ;
