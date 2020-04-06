@@ -1,0 +1,119 @@
+@import url(https://fonts.googleapis.com/css?family=Nunito&display=swap);
+
+html {
+    font-family: 'Nunito', sans-serif;
+    background-color: brown;
+    color: white;
+    height: 100%;
+}
+
+body {
+    margin: 0px;
+    height: 100%;
+}
+
+#LobbyTitle {
+    position: relative;
+    font-size: 100px;
+    box-shadow: 0px 3px 3px black;
+}
+
+#LobbyID {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    font-size: 20px;
+}
+
+#SideBar {
+    position: absolute;
+    width: 300px;
+    top: 140px;
+    bottom: 0px;
+    word-wrap: break-word;
+    margin: 5px;
+    border: 3px solid #333;
+    border-radius: 10px;
+    color: black;
+    background-color: #CCC;
+    font-weight: bolder;
+}
+
+#PairedTitle {
+    background-color: #333;
+    color: #CCC;
+    padding-left: 20px;
+    margin-bottom: 10px;
+}
+
+#UnpairedTitle {
+    background-color: #333;
+    color: #CCC;
+    padding-left: 20px;
+    margin-bottom: 10px;
+    margin-top: 20px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+#ChatWindow {
+    position: absolute;
+    top: 140px;
+    left: 310px;
+    right: 0px;
+    bottom: 0px
+}
+
+.PairTitle {
+    padding-left: 20px;
+}
+
+.PairTitle:hover {
+    color: #CCC;
+    background-color: #333;
+}
+
+.PairItem {
+    padding-left: 40px;
+}
+
+.User {
+    padding-left: 20px;
+}
+
+.User:hover {
+    color: #CCC;
+}
+
+.Status {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 20px;
+    text-align: center;
+    color: white;
+}
+
+.StatusPlaying {
+    background-color: green;
+}
+
+.StatusAsking {
+    background-color: green;
+}
+
+.StatusGuessing {
+    background-color: green;
+}
+
+.StatusWaiting {
+    background-color: orange;
+}
+
+.StatusWriting {
+    background-color: #07F;
+}
+
+.StatusUnpaired {
+    background-color: red;
+}

@@ -138,10 +138,19 @@ form {
     text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
     z-index: 7;
     color: red;
+    pointer-events: none;
+}
+
+#RedYes {
+    pointer-events: all;
 }
 
 #RedYes:hover {
     color: green;
+}
+
+#RedNo {
+    pointer-events: all;
 }
 
 #RedNo:hover {
@@ -155,6 +164,11 @@ form {
     text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
     z-index: 7;
     color: green;
+    pointer-events: none;
+}
+
+#Done {
+    pointer-events: all;
 }
 
 #Done:hover {

@@ -34,6 +34,7 @@ CREATE TABLE games (
     RackA       INT             NOT NULL    DEFAULT     0,
     RackB       INT             NOT NULL    DEFAULT     0,
     Redemption  BOOLEAN         NOT NULL    DEFAULT     FALSE,
+    Turn        BOOLEAN         NOT NULL    DEFAULT     FALSE,
     FOREIGN KEY (TeamA)         REFERENCES teams(TeamName),
     FOREIGN KEY (TeamB)         REFERENCES teams(TeamName)
 );
@@ -48,7 +49,7 @@ CREATE FUNCTION user_active (
 RETURN EXISTS (
     SELECT * FROM users 
         WHERE UserName = PUserName
-        AND   NOW() - LastUpdate < 300
+        AND   TIMESTAMPDIFF(SECOND, LastUpdate, NOW()) < 300
 );
 
 DELIMITER .
@@ -87,9 +88,33 @@ BEGIN
         AND   Active = TRUE);
     UPDATE games SET TeamA = TeamB, TeamB = NULL,
                      GlassesA = (@Glasses := GlassesA), GlassesA = GlassesB, GlassesB = @Glasses,
-                     RackA = (@Rack := RackA), RackA = RackB, RackB = @Rack
+                     RackA = (@Rack := RackA), RackA = RackB, RackB = @Rack,
+                     Turn = NOT Turn
                  WHERE NOT PActiveA AND PActiveB AND GameID = PGameID;
     UPDATE games SET Active = PActiveA OR PActiveB WHERE Active = TRUE AND GameID = PGameID;
     RETURN PActiveA OR PActiveB;
+END.
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS end_game;
+
+DELIMITER .
+CREATE PROCEDURE end_game (
+    PGameID    INT,
+    PTeamLose  VARCHAR(127)
+)
+BEGIN
+    IF EXISTS(SELECT TeamA FROM games WHERE GameID = PGameID AND NOT TeamA = PTeamLose) THEN
+        SELECT TeamA FROM games WHERE GameID = PGameID INTO @PTeamWin;
+    ELSE
+        SELECT TeamB FROM games WHERE GameID = PGameID INTO @PTeamWin;
+    END IF;
+    UPDATE teams SET Wins = Wins + 1, MemberA = (@PMemberAWin := MemberA), MemberB = (@PMemberBWin := MemberB)
+                 WHERE TeamName = @PTeamWin;
+    UPDATE teams SET Loses = Loses + 1, MemberA = (@PMemberALose := MemberA), MemberB = (@PMemberBLose := MemberB)
+                 WHERE TeamName = PTeamLose;
+    UPDATE users SET Wins = Wins + 1 WHERE UserName = @PMemberAWin OR UserName = @PMemberBWin;
+    UPDATE users SET Loses = Loses + 1 WHERE UserName = @PMemberALose OR UserName = @PMemberBLose;
+    UPDATE games SET Active = FALSE WHERE GameID = PGameID;
 END.
 DELIMITER ;
