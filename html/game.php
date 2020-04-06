@@ -167,6 +167,9 @@
       <input id="RedYes" type="button" hidden="true" value="I GOT IT!" onclick="update('Redemption')"/>
       <input id="RedNo" type="button" hidden="true" value="I MISSED :(" onclick="update('End')"/>
     </div>
+    <div id="Turn" hidden="true">YOUR TURN!<br>
+      <input id="Done" type="button" value="DONE" onclick="update('Turn')"/>
+    </div>
     <div id="Rerack" onclick="openreracks()">
       R E R A C K
     </div>

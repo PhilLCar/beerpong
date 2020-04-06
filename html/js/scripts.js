@@ -114,13 +114,20 @@ function refresh() {
                     document.getElementById("RedYes").hidden = false;
                     document.getElementById("RedNo").hidden  = false;
                 }
+                document.getElementById("Turn").hidden = true;
             } else {
                 document.getElementById("Redemption").hidden = true;
                 document.getElementById("RedYes").hidden = true;
                 document.getElementById("RedNo").hidden = true;
+
+                document.getElementById("Turn").hidden = nums[9] == 0;
             }
         } else {
-            alert("Game terminated");
+            if (check("C") == 0) {
+                alert("You lost! :(");
+            } else {
+                alert("YOU WON!!!");
+            }
             window.location = "index.php";
         }
       }
@@ -132,7 +139,11 @@ function refresh() {
 function rerack(id) {
     if (document.getElementById("Opponent").getAttribute("rack") != "0") {
         alert("You can't rerack twice!");
-        return
+        return;
+    }
+    if (document.getElementById("Turn").hidden) {
+        alert("It's not your turn!");
+        return;
     }
     var ng = check("O");
     var dg = 0;
@@ -164,6 +175,13 @@ function rerack(id) {
 function enter(opponent, id) {
     if (!opponent) {
         alert("Don't remove your own glasses!");
+        return;
+    }
+    if (document.getElementById("Turn").hidden) {
+        alert("It's not your turn!");
+        return;
+    }
+    if (!document.getElementById("Redemption").hidden) {
         return;
     }
     if (document.getElementById("O" + id).getAttribute("class") == "G O")
@@ -205,9 +223,12 @@ function resizetable() {
     var quit   = document.getElementById("Quit");
     var menu   = document.getElementById("RerackMenu");
     var red    = document.getElementById("Redemption");
+    var turn   = document.getElementById("Turn");
 
     red.style.top = 0.4 * height + "px";
     red.style.fontSize  = 0.08 * height + "px";
+    turn.style.top = 0.4 * height + "px";
+    turn.style.fontSize  = 0.08 * height + "px";
 
     table.style.height = 0.8 * height + "px";
     table.style.width  = 0.5 * 0.8 * height + "px";

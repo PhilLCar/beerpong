@@ -11,7 +11,7 @@
 	<?php
 		$error = $_GET["error"];
 		if ($error & 1) echo('<p class="error">No game found</p>');
-		if ($error & 32) echo('<p class="error">Game is full</p>');
+		if ($error & 32) echo('<p class="error">Team is already playing!</p>');
 	?>
     <form id="GameList" method="POST" action="team.php">
       <?php

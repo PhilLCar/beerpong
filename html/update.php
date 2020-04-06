@@ -61,30 +61,34 @@
                 }
 
                 if ($_COOKIE["TeamName"] == $row["TeamA"]) echo($row["GlassesA"] . ";" . $row["GlassesB"] . ";" . $row["TeamA"] . ";" . $row["TeamB"] .
-                                                                ";" . $ColorA . ";" . $ColorB) . ";" . $row["RackA"] . ";" . $row["RackB"] . ";" . $row["Redemption"];
+                                                                ";" . $ColorA . ";" . $ColorB) . ";" . $row["RackA"] . ";" . $row["RackB"] . ";" . 
+                                                                $row["Redemption"] . ";" . !$row["Turn"];
                 else                                       echo($row["GlassesB"] . ";" . $row["GlassesA"] . ";" . $row["TeamB"] . ";" . $row["TeamA"] .
-                                                                ";" . $ColorB . ";" . $ColorA) . ";" . $row["RackB"] . ";" . $row["RackA"] . ";" . $row["Redemption"];
+                                                                ";" . $ColorB . ";" . $ColorA) . ";" . $row["RackB"] . ";" . $row["RackA"] . ";" . 
+                                                                $row["Redemption"] . ";" . $row["Turn"];
             } else {
                 // write
                 if ($_COOKIE["TeamName"] == $row["TeamA"]) {
-                    $sql = "UPDATE games SET GlassesB=" . $_POST["Glasses"] . ($_POST["Glasses"] != 0 ? "" : ", Redemption=1") . 
-                            " WHERE GameID=" . $_COOKIE["GameID"];
+                    if (!$row["Turn"]) $sql = "UPDATE games SET GlassesB=" . $_POST["Glasses"] . ($_POST["Glasses"] != 0 ? "" : ", Redemption=1") . 
+                                                " WHERE GameID=" . $_COOKIE["GameID"];
                 } else {
-                    $sql = "UPDATE games SET GlassesA=" . $_POST["Glasses"] . ($_POST["Glasses"] != 0 ? "" : ", Redemption=1") . 
-                            " WHERE GameID=" . $_COOKIE["GameID"];
+                    if ($row["Turn"]) $sql = "UPDATE games SET GlassesA=" . $_POST["Glasses"] . ($_POST["Glasses"] != 0 ? "" : ", Redemption=1") . 
+                                                " WHERE GameID=" . $_COOKIE["GameID"];
                 }
                 $conn->query($sql);
                 
                 if (!empty($_POST["Rack"])) {
                     if ($_POST["Rack"] == "Redemption") {
                         $sql = "UPDATE games SET GlassesA=63, GlassesB=63, RackA=1, RackB=1, Redemption=0 WHERE GameID=" . $_COOKIE["GameID"];
+                    } else if ($_POST["Rack"] == "Turn") {
+                        $sql = "UPDATE games SET Turn=NOT Turn WHERE GameID=" . $_COOKIE["GameID"];
                     } else if ($_POST["Rack"] == "End") {
-                        $sql = "UPDATE games SET Active=FALSE WHERE GameID=" . $_COOKIE["GameID"];                
+                        $sql = "CALL end_game(" . $_COOKIE["GameID"] . ", '" . $_COOKIE["TeamName"] . "')";          
                     } else {
                         if ($_COOKIE["TeamName"] == $row["TeamA"] && !$row["RackB"]) {
-                            $sql = "UPDATE games SET GlassesB=63, RackB=" . $_POST["Rack"] . " WHERE GameID=" . $_COOKIE["GameID"];
+                            if (!$row["Turn"]) $sql = "UPDATE games SET GlassesB=63, RackB=" . $_POST["Rack"] . " WHERE GameID=" . $_COOKIE["GameID"];
                         } else if ($_COOKIE["TeamName"] == $row["TeamB"] && !$row["RackA"]) {
-                            $sql = "UPDATE games SET GlassesA=63, RackA=" . $_POST["Rack"] . " WHERE GameID=" . $_COOKIE["GameID"];
+                            if ($row["Turn"]) $sql = "UPDATE games SET GlassesA=63, RackA=" . $_POST["Rack"] . " WHERE GameID=" . $_COOKIE["GameID"];
                         }
                     }
                 }
