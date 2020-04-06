@@ -25,7 +25,8 @@
             header("Location: join.php?error=1");
         }
         // try insert user
-        $sql = "INSERT INTO users(LobbyID, UserName) VALUES ('" . $id . "', '" . $_POST["UserName"] . "')";
+        $sql = "INSERT INTO users(LobbyID, UserName, HOST) VALUES ('" . $id . "', '" . $_POST["UserName"] . "', " . 
+                    empty($_POST["LobbyID"]) . ")";
         if (!$conn->query($sql)) {
             if (empty($_POST["LobbyID"])) header("Location: create.php?error=2");
             else                          header("Location: join.php?error=2");
@@ -37,6 +38,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
   <link rel="stylesheet" type="text/css" href="/css/boulette.css"/> 
+  <script type="text/javascript" src="/js/boulette.js"></script>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>Salon de discussion</title>
@@ -44,15 +46,17 @@
   <body>
     <div id="LobbyTitle">
         LA BOULETTE
-        <div id="LobbyID">#SALON: <b class="LobbyID">FKGG</b></div>
+        <div id="GlobalTime">13:23</div>
+        <div id="LobbyID">#SALON: <b class="LobbyID"><?php echo($id); ?></b></div>
     </div>
     <div id="SideBar">
         <div id="Paired">
-            <div id="PairedTitle">PAIRED</div>
+            <div id="PairedTitle">PAIRÉ.E.S</div>
             <div id="Pair1" class="Pair">
                 <div class="PairTitle" onclick="hidePair(1)">
                     <div class="Status StatusPlaying">J</div>
                     DemoPair1
+                    <div class="PairTime">00:23</div>
                 </div>
                 <div class="PairItem">
                     <div class="Status StatusAsking">P</div>
@@ -79,18 +83,19 @@
             </div>
         </div>
         <div id="Unpaired">
-            <div id="UnpairedTitle">UNPAIRED</div>
+            <div id="UnpairedTitle">NON-PAIRÉ.E.S</div>
             <div class="User">
                 <div class="Status StatusWriting">...</div>
                 User 5
             </div>
-            <div class="User">
+            <div class="User Me">
                 <div class="Status StatusUnpaired">N</div>
-                User 5
+                User 6
             </div>
         </div>
     </div>
     <div id="ChatWindow">
+        <div id="MessageBoxTitle">MESSAGES</div>
         <div id="MessageBox">
             <div class="Message">
                 <div class="MessageTitle">User X</div>
@@ -102,7 +107,7 @@
                 <div class="MessageTime">19:41</div>
                 Bla bla bla bla bla bla bla bla bla bla bla bla
             </div>
-            <div class="Message">
+            <div class="Message Mine">
                 <div class="MessageTitle">User X</div>
                 <div class="MessageTime">19:41</div>
                 Bla bla bla bla bla bla bla bla bla bla bla bla
@@ -112,7 +117,7 @@
                 <div class="MessageTime">19:41</div>
                 Bla bla bla bla bla bla bla bla bla bla bla bla
             </div>
-            <div class="Message">
+            <div class="Message Mine">
                 <div class="MessageTitle">User X</div>
                 <div class="MessageTime">19:41</div>
                 Bla bla bla bla bla bla bla bla bla bla bla bla
@@ -122,7 +127,7 @@
                 <div class="MessageTime">19:41</div>
                 Bla bla bla bla bla bla bla bla bla bla bla bla
             </div>
-            <div class="Message">
+            <div class="Message Mine">
                 <div class="MessageTitle">User X</div>
                 <div class="MessageTime">19:41</div>
                 Bla bla bla bla bla bla bla bla bla bla bla bla
@@ -165,7 +170,7 @@
         </div>
         <div id="Write">
             <input id="WriteBox" type="text"/>
-            <input id="WriteSend" type="button"/>
+            <input id="WriteSend" type="button" value="Envoyer"/>
         </div>
     </div>
   </body>

@@ -18,6 +18,7 @@ CREATE TABLE lobbies (
 CREATE TABLE users (
     LobbyID         VARCHAR(4)          NOT NULL,
     UserName        VARCHAR(128)        NOT NULL,
+    Host            BOOLEAN             NOT NULL    DEFAULT     FALSE,
     UserOrder       INT                             DEFAULT     NULL,
     UserStatus      INT                 NOT NULL    DEFAULT     0,
     PRIMARY KEY     (LobbyID, UserName),
@@ -60,6 +61,7 @@ CREATE TABLE messages (
     LobbyID         VARCHAR(4)          NOT NULL,
     UserName        VARCHAR(128)        NOT NULL,
     Content         VARCHAR(1024)       NOT NULL,
+    TimeSent        TIMESTAMP           NOT NULL    DEFAULT     NOW(),
     FOREIGN KEY     (LobbyID)           REFERENCES  lobbies(LobbyID),
     FOREIGN KEY     (LobbyID,UserName)  REFERENCES  users(LobbyID, UserName)
 );
