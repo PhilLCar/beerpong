@@ -3,8 +3,8 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>JOIN TEAM</title>
-    <link rel="stylesheet" type="text/css" href="css/style.css"/> 
-  	<script type="text/javascript" src="js/scripts.js"></script>
+    <link rel="stylesheet" type="text/css" href="/css/beerpong.css"/> 
+  	<script type="text/javascript" src="/js/beerpong.js"></script>
 	<script type="text/javascript">
 		document.addEventListener('DOMContentLoaded', function() {
 			select();

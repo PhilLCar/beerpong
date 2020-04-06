@@ -26,7 +26,7 @@
 	  }
 
     if (empty($_COOKIE["GameID"])) {
-      setcookie("GameID", $_POST["GameID"], time() + 86400, "/");
+      setcookie("GameID", $_POST["GameID"], time() + 86400, "/beerpong");
       $_COOKIE["GameID"] = $_POST["GameID"];
     }
 
@@ -103,12 +103,12 @@
       
       foreach ($update as $sql) $conn->query($sql);
 
-      setcookie("UserName", $_POST["MemberA"], time() + 86400, "/");
+      setcookie("UserName", $_POST["MemberA"], time() + 86400, "/beerpong");
       $_COOKIE["UserName"] = $_POST["MemberA"];
-      setcookie("TeamName", $_POST["TeamName"], time() + 86400, "/");
+      setcookie("TeamName", $_POST["TeamName"], time() + 86400, "/beerpong");
       $_COOKIE["TeamName"] = $_POST["TeamName"];
       if (!empty($_POST["MemberB"])) {
-        setcookie("PartnerName", $_POST["MemberB"], time() + 86400, "/");
+        setcookie("PartnerName", $_POST["MemberB"], time() + 86400, "/beerpong");
         $_COOKIE["PartnerName"] = $_POST["MemberB"];
       }
 
@@ -140,8 +140,8 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <title>BEERPONG</title>
-    <script type="text/javascript" src="js/scripts.js"></script>
-    <link rel="stylesheet" type="text/css" href="css/style.css"/>
+    <script type="text/javascript" src="/js/beerpong.js"></script>
+    <link rel="stylesheet" type="text/css" href="/css/beerpong.css"/>
     <script>
       window.setInterval(refresh, 1000);
     </script>

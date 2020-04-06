@@ -91,6 +91,7 @@ function refresh() {
             setcss("O", nums[5], true);
             document.getElementById("Home").innerHTML = nums[2];
             document.getElementById("Away").innerHTML = nums[3] == "" ? "..." : nums[3];
+            resizetitle(document.getElementById("Title"), document.getElementById("Home"), document.getElementById("Away"));
             for (var i = 0; i < nglasses("C"); i++) {
                 if (nums[0] & (1 << i)) {
                     document.getElementById("C" + i).setAttribute("class", "G C");
@@ -213,6 +214,14 @@ function check(name) {
     return document.getElementsByClassName(name).length;
 }
 
+function resizetitle(title, home, away) {
+    while (parseFloat(title.offsetHeight) != parseFloat(home.offsetHeight)) {
+        title.style.fontSize = 0.9 * parseFloat(title.style.fontSize) + "px";
+        home.style.fontSize = 0.9 * parseFloat(home.style.fontSize) + "px";
+        away.style.fontSize = 0.9 * parseFloat(away.style.fontSize) + "px";
+    }
+}
+
 function resizetable() {
     var height = window.innerHeight;
     var table  = document.getElementById("Table");
@@ -240,11 +249,7 @@ function resizetable() {
     home.style.fontSize = 0.1 * height + "px";
     away.style.fontSize = 0.1 * height + "px";
 
-    while (parseFloat(title.offsetHeight) != parseFloat(home.offsetHeight)) {
-        title.style.fontSize = 0.9 * parseFloat(title.style.fontSize) + "px";
-        home.style.fontSize = 0.9 * parseFloat(home.style.fontSize) + "px";
-        away.style.fontSize = 0.9 * parseFloat(away.style.fontSize) + "px";
-    }
+    resizetitle(title, home, away);
 
     menu.style.top = title.offsetHeight + "px";
     menu.style.left = 0.06 * height + "px";

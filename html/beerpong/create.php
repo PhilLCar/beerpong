@@ -4,8 +4,8 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>CREATE GAME</title>
-    <link rel="stylesheet" type="text/css" href="css/style.css"/> 
-  	<script type="text/javascript" src="js/scripts.js"></script>
+    <link rel="stylesheet" type="text/css" href="/css/beerpong.css"/> 
+  	<script type="text/javascript" src="js/beerpong.js"></script>
   </head>
   <body>
       <h1>CREATE GAME</h1>

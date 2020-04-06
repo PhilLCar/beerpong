@@ -95,10 +95,10 @@
 			"'" . $_POST["TeamName"] . "', " .
 			"NULL, 63, 63)";
 		if ($conn->query($sql)) {
-			setcookie("GameID", $conn->insert_id, time() + 86400, "/");
-			setcookie("UserName", $_POST["MemberA"], time() + 86400, "/");
-			setcookie("TeamName", $_POST["TeamName"], time() + 86400, "/");
-			if (!empty($_POST["MemberB"])) setcookie("PartnerName", $_POST["MemberB"], time() + 86400, "/");
+			setcookie("GameID", $conn->insert_id, time() + 86400, "/beerpong");
+			setcookie("UserName", $_POST["MemberA"], time() + 86400, "/beerpong");
+			setcookie("TeamName", $_POST["TeamName"], time() + 86400, "/beerpong");
+			if (!empty($_POST["MemberB"])) setcookie("PartnerName", $_POST["MemberB"], time() + 86400, "/beerpong");
 			header("Location: game.php");
 		}
 		else {
