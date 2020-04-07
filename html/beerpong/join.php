@@ -12,6 +12,7 @@
 		$error = $_GET["error"];
 		if ($error & 1) echo('<p class="error">No game found</p>');
 		if ($error & 32) echo('<p class="error">Team is already playing!</p>');
+		if ($error & 128) echo('<p class="error">Unknown error joining game</p>');
 	?>
     <form id="GameList" method="POST" action="team.php">
       <?php
@@ -32,6 +33,8 @@
 		}
 
 		while ($row = $result->fetch_assoc()) {
+			$sql = "SELECT game_active(" . $row["GameID"] . ") AS active";
+			if (!$conn->query($sql)->fetch_assoc()["active"]) continue;
 			$numplayers = 1;
 			$sql = "SELECT * FROM teams WHERE TeamName='" . $row["TeamA"] . "'";
 			$subres = $conn->query($sql);

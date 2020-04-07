@@ -1,4 +1,15 @@
 <?php
+	function rmchars($string, $chars) {
+		$final = "";
+		foreach (str_split($string) as $charA) {
+			foreach (str_split($chars) as $charB) {
+				if ($charA == $charB) continue 2;
+			}
+			$final .= $charA;
+		}
+		return $final;
+	}
+
 	$error = 0;
 	
 	if ($_POST["MemberA"] == "") {
@@ -10,6 +21,10 @@
 	if ($_POST["TeamName"] == "") {
 	   	$error |= 2;
 	}
+
+	$_POST["MemberA"] = rmchars($_POST["MemberA"], ";");
+	$_POST["MemberB"] = rmchars($_POST["MemberB"], ";");
+	$_POST["TeamName"] = rmchars($_POST["TeamName"], ";");
 
 	if ($error > 0) {
 		header("Location: create.php?error=" .  $error);
@@ -87,7 +102,14 @@
 						"MemberB=" . ($_POST["MemberB"] == "" ? "NULL" : "'" . $_POST["MemberB"] . "'") .
 						"WHERE TeamName='" . $_POST["TeamName"] . "'";
 	   	}
-		foreach ($update as $sql) $conn->query($sql);
+		foreach ($update as $sql) {
+			if (!$conn->query($sql)) {
+				header("Location: create.php?error=128");
+				$conn->query("UNLOCK TABLES");
+				$conn->close();
+				exit();
+			}
+		}
 
 		// game
 		$sql = "INSERT INTO games (Active, TeamA, TeamB, GlassesA, GlassesB) VALUES (" .

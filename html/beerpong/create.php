@@ -18,6 +18,7 @@
 		if ($error & 16) echo('<p class="error">This team is already playing</p>');
 		if ($error & 32) echo('<p class="error">The contestant is already in use at the moment</p>');
 		if ($error & 64) echo('<p class="error">The partner name is already in use at the moment</p>');
+		if ($error & 128) echo('<p class="error">Unknown error creating game</p>');
       ?>
       <form method="POST" action="newgame.php">
       	<p>Contestant:<br>

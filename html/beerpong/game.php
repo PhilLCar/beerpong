@@ -1,4 +1,15 @@
 <?php
+  function rmchars($string, $chars) {
+    $final = "";
+    foreach (str_split($string) as $charA) {
+      foreach (str_split($chars) as $charB) {
+        if ($charA == $charB) continue 2;
+      }
+      $final .= $charA;
+    }
+    return $final;
+  }
+
   // DATABASE CONNECTION
   $servername = "localhost";
   $username   = "webserver";
@@ -24,6 +35,10 @@
 	  if ($_POST["MemberA"] == $_POST["MemberB"]) {
 		  $error |= 64;
 	  }
+
+    $_POST["MemberA"] = rmchars($_POST["MemberA"], ";");
+    $_POST["MemberB"] = rmchars($_POST["MemberB"], ";");
+    $_POST["TeamName"] = rmchars($_POST["TeamName"], ";");
 
     if (empty($_COOKIE["GameID"])) {
       setcookie("GameID", $_POST["GameID"], time() + 86400, "/beerpong");
@@ -100,8 +115,15 @@
       }
 
       $update[] = "UPDATE games SET TeamB='" . $_POST["TeamName"] . "' WHERE GameID=" . $_POST["GameID"];
-      
-      foreach ($update as $sql) $conn->query($sql);
+ 
+      foreach ($update as $sql) {
+        if (!$conn->query($sql)) {
+          header("Location: join.php?error=128");
+          $conn->query("UNLOCK TABLES");
+          $conn->close();
+          exit();
+        }
+      }
 
       setcookie("UserName", $_POST["MemberA"], time() + 86400, "/beerpong");
       $_COOKIE["UserName"] = $_POST["MemberA"];
