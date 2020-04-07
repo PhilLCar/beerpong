@@ -8,7 +8,16 @@
             $final .= $charA;
         }
         return $final;
-}
+    }
+
+    function escape($string) {
+        $final = "";
+        foreach (str_split($string) as $charA) {
+            if ($charA == "'") $final .= "\\";
+            $final .= $charA;
+        }
+        return $final;
+    }
 
     // DATABASE CONNECTION
     $servername = "localhost";
@@ -28,28 +37,45 @@
         }
         if (!empty($_POST["UserStatus"])) {
             // toggle UserStatus
-            $sql = "UPDATE users SET UserStatus=UserStatus^" . $_POST["UserStatus"] . " WHERE UserName='" . $_POST["UserName"] . "' AND LobbyID='" . 
+            $sql = "UPDATE users SET UserStatus=UserStatus^" . $_POST["UserStatus"] . " WHERE UserName='" . escape($_POST["UserName"]) . "' AND LobbyID='" . 
                             $_POST["LobbyID"] . "'";
             $conn->query($sql);
         }
         if (!empty($_POST["Score"])) {
-            $sql = "UPDATE users SET Score=" . $_POST["Score"] . " WHERE UserName='" . $_POST["UserName"] . "' AND LobbyID='" . $_POST["LobbyID"] . "'";
+            $sql = "UPDATE users SET Score=" . $_POST["Score"] . " WHERE UserName='" . escape($_POST["UserName"]) . "' AND LobbyID='" . $_POST["LobbyID"] . "'";
             $conn->query($sql);
         }
         if (!empty($_POST["PairName"])) {
             if(!empty($_POST["UserB"]) && $_POST["PairStatus"] == "New") {
-                $sql = "SELECT create_pair('" . $_POST["LobbyID"] . "', '" . $_POST["PairName"] . "', '" . $_POST["UserName"] . "', '" . $_POST["UserB"] . "')";
+                $sql = "SELECT create_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "', '" . escape($_POST["UserName"]) . 
+                        "', '" . escape($_POST["UserB"]) . "')";
                 $conn->query($sql);
             } else if(!empty($_POST["UserB"]) && $_POST["PairStatus"] == "Append") {
-                $sql = "SELECT append_pair('" . $_POST["LobbyID"] . "', '" . $_POST["PairName"] . "', '" . $_POST["UserB"] . "')";
+                $sql = "SELECT append_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "', '" . escape($_POST["UserB"]) . "')";
                 $conn->query($sql);
             } else if($_POST["PairStatus"] == "Confirm") {
-                $sql = "SELECT set_pair('" . $_POST["LobbyID"] . "', '" . $_POST["PairName"] . "')";
+                $sql = "SELECT set_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "')";
                 $conn->query($sql);
             } else if(!empty($_POST["UserB"]) && $_POST["PairStatus"] == "Delete") {
-                $sql = "SELECT delete_pair('" . $_POST["LobbyID"] . "', '" . $_POST["PairName"] . "')";
+                $sql = "SELECT delete_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "')";
                 $conn->query($sql);
             } 
+        }
+        if (!empty($_POST["CatName"]) && $_POST["CatStatus"] == "New") {
+            $sql = "INSERT INTO categories(LobbyID, CatName, UserName) VALUES ('" . $_POST["LobbyID"] . "', '" . 
+                        $_POST["CatName"] . "', '" . $_POST["UserName"] . "')";
+            $conn->query($sql);
+        }
+        if (!empty($_POST["Item"])) {
+            $sql = "INSERT INTO names(LobbyID, UserName, Item, CatName) VALUES ('" . $_POST["LobbyID"] . "', '" . $_POST["UserName"] . "', '" .
+                    $_POST["Item"] . "', '" . $_POST["CatName"] . "')";
+            $conn->query($sql);
+        }
+        if (!empty($_POST["Messages"])) {
+            $messages = split("`", $_POST["Messages"]);
+            foreach ($messages as $message) {
+                $sql = "INSERT INTO messages(LobbyID, UserName, Content) VALUES ('"
+            }
         }
 
         // RECEIVE
@@ -70,10 +96,10 @@
         }
 
         if ($_POST["RequestCat"]) {
-            $sql = "SELECT CatName FROM categories WHERE LobbyID='" . $_POST["LobbyID"] . "'";
+            $sql = "SELECT CatName, UserName FROM categories WHERE LobbyID='" . $_POST["LobbyID"] . "'";
             $query = $conn->query($sql);
             while ($result = $query->fetch_assoc()) {
-                echo("C;" . $result["CatName"] . "`");
+                echo("C;" . $result["CatName"] . ";" . $result["UserName"] . "`");
             }
         }
 

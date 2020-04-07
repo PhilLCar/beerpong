@@ -1,4 +1,13 @@
 <?php
+  function escape($string) {
+    $final = "";
+    foreach (str_split($string) as $charA) {
+        if ($charA == "'") $final .= "\\";
+        $final .= $charA;
+    }
+    return $final;
+  }
+
   if (!empty($_COOKIE["UserName"]) || !empty($_COOKIE["PartnerName"])) {
     // DATABASE CONNECTION
     $servername = "localhost";
@@ -9,8 +18,8 @@
     $conn = mysqli_connect($servername, $username, $password, $database);
 
     if ($conn) {
-      $sql = "UPDATE users SET LastUpdate=DATE_SUB(NOW(), INTERVAL 300 SECOND) WHERE UserName='" . $_COOKIE["UserName"] . "'" .
-              (empty($_COOKIE["PartnerName"]) ? "" : " OR UserName='" . $_COOKIE["PartnerName"] . "'");
+      $sql = "UPDATE users SET LastUpdate=DATE_SUB(NOW(), INTERVAL 300 SECOND) WHERE UserName='" . escape($_COOKIE["UserName"]) . "'" .
+              (empty($_COOKIE["PartnerName"]) ? "" : " OR UserName='" . escape($_COOKIE["PartnerName"]) . "'");
       $conn->query($sql);
 
       $sql = "SELECT game_active(" . $_COOKIE["GameID"] . ")";

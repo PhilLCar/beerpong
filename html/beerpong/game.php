@@ -10,6 +10,15 @@
     return $final;
   }
 
+  function escape($string) {
+      $final = "";
+      foreach (str_split($string) as $charA) {
+          if ($charA == "'") $final .= "\\";
+          $final .= $charA;
+      }
+      return $final;
+  }
+
   // DATABASE CONNECTION
   $servername = "localhost";
   $username   = "webserver";
@@ -34,11 +43,15 @@
 	  }
 	  if ($_POST["MemberA"] == $_POST["MemberB"]) {
 		  $error |= 64;
-	  }
+    }
+    
+    $memberA = rmchars($_POST["MemberA"], ";");
+    $memberB = rmchars($_POST["MemberB"], ";");
+    $teamName = rmchars($_POST["TeamName"], ";");
 
-    $_POST["MemberA"] = rmchars($_POST["MemberA"], ";");
-    $_POST["MemberB"] = rmchars($_POST["MemberB"], ";");
-    $_POST["TeamName"] = rmchars($_POST["TeamName"], ";");
+    $_POST["MemberA"] = escape(rmchars($_POST["MemberA"], ";"));
+    $_POST["MemberB"] = escape(rmchars($_POST["MemberB"], ";"));
+    $_POST["TeamName"] = escape(rmchars($_POST["TeamName"], ";"));
 
     if (empty($_COOKIE["GameID"])) {
       setcookie("GameID", $_POST["GameID"], time() + 86400, "/beerpong");
@@ -125,13 +138,13 @@
         }
       }
 
-      setcookie("UserName", $_POST["MemberA"], time() + 86400, "/beerpong");
-      $_COOKIE["UserName"] = $_POST["MemberA"];
-      setcookie("TeamName", $_POST["TeamName"], time() + 86400, "/beerpong");
-      $_COOKIE["TeamName"] = $_POST["TeamName"];
+      setcookie("UserName", $memberA, time() + 86400, "/beerpong");
+      $_COOKIE["UserName"] = $memberA;
+      setcookie("TeamName", $teamName, time() + 86400, "/beerpong");
+      $_COOKIE["TeamName"] = $teamName;
       if (!empty($_POST["MemberB"])) {
-        setcookie("PartnerName", $_POST["MemberB"], time() + 86400, "/beerpong");
-        $_COOKIE["PartnerName"] = $_POST["MemberB"];
+        setcookie("PartnerName", $memberB, time() + 86400, "/beerpong");
+        $_COOKIE["PartnerName"] = $memberB;
       }
 
     } else {

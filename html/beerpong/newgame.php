@@ -10,6 +10,15 @@
 		return $final;
 	}
 
+    function escape($string) {
+        $final = "";
+        foreach (str_split($string) as $charA) {
+            if ($charA == "'") $final .= "\\";
+            $final .= $charA;
+        }
+        return $final;
+    }
+
 	$error = 0;
 	
 	if ($_POST["MemberA"] == "") {
@@ -21,10 +30,14 @@
 	if ($_POST["TeamName"] == "") {
 	   	$error |= 2;
 	}
+    
+    $memberA = rmchars($_POST["MemberA"], ";");
+    $memberB = rmchars($_POST["MemberB"], ";");
+    $teamName = rmchars($_POST["TeamName"], ";");
 
-	$_POST["MemberA"] = rmchars($_POST["MemberA"], ";");
-	$_POST["MemberB"] = rmchars($_POST["MemberB"], ";");
-	$_POST["TeamName"] = rmchars($_POST["TeamName"], ";");
+	$_POST["MemberA"] = escape(rmchars($_POST["MemberA"], ";"));
+	$_POST["MemberB"] = escape(rmchars($_POST["MemberB"], ";"));
+	$_POST["TeamName"] = escape(rmchars($_POST["TeamName"], ";"));
 
 	if ($error > 0) {
 		header("Location: create.php?error=" .  $error);
@@ -118,9 +131,9 @@
 			"NULL, 63, 63)";
 		if ($conn->query($sql)) {
 			setcookie("GameID", $conn->insert_id, time() + 86400, "/beerpong");
-			setcookie("UserName", $_POST["MemberA"], time() + 86400, "/beerpong");
-			setcookie("TeamName", $_POST["TeamName"], time() + 86400, "/beerpong");
-			if (!empty($_POST["MemberB"])) setcookie("PartnerName", $_POST["MemberB"], time() + 86400, "/beerpong");
+			setcookie("UserName", $memberA, time() + 86400, "/beerpong");
+			setcookie("TeamName", $teamName, time() + 86400, "/beerpong");
+			if (!empty($memberB)) setcookie("PartnerName", $memberB, time() + 86400, "/beerpong");
 			header("Location: game.php");
 		}
 		else {

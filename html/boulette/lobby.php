@@ -1,4 +1,26 @@
 <?php
+    function rmchars($string, $chars) {
+        $final = "";
+        foreach (str_split($string) as $charA) {
+            foreach (str_split($chars) as $charB) {
+                if ($charA == $charB) continue 2;
+            }
+            $final .= $charA;
+        }
+        return $final;
+    }
+
+    function escape($string) {
+        $final = "";
+        foreach (str_split($string) as $charA) {
+            if ($charA == "'") $final .= "\\";
+            $final .= $charA;
+        }
+        return $final;
+    }
+
+    $_POST["UserName"] = rmchars($_POST["UserName"], ";");
+    
     // DATABASE CONNECTION
     $servername = "localhost";
     $username   = "webserver";
@@ -25,7 +47,7 @@
             header("Location: join.php?error=1");
         }
         // try insert user
-        $sql = "INSERT INTO users(LobbyID, UserName, HOST) VALUES ('" . $id . "', '" . $_POST["UserName"] . "', " . 
+        $sql = "INSERT INTO users(LobbyID, UserName, HOST) VALUES ('" . $id . "', '" . escape($_POST["UserName"]) . "', " . 
                     empty($_POST["LobbyID"]) . ")";
         if (!$conn->query($sql)) {
             if (empty($_POST["LobbyID"])) header("Location: create.php?error=2");

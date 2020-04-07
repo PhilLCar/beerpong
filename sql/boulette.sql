@@ -43,8 +43,10 @@ CREATE TABLE pairs (
 CREATE TABLE categories (
     LobbyID         VARCHAR(4)          NOT NULL,
     CatName         VARCHAR(128)        NOT NULL,
+    UserName        VARCHAR(128)        NOT NULL,
     PRIMARY KEY     (LobbyID, CatName),
-    FOREIGN KEY     (LobbyID)           REFERENCES  lobbies(LobbyID)
+    FOREIGN KEY     (LobbyID)           REFERENCES  lobbies(LobbyID),
+    FOREIGN KEY     (LobbyID, UserName) REFERENCES  users(LobbyID, UserName)
 );
 
 CREATE TABLE names (

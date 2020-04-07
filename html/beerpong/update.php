@@ -1,4 +1,13 @@
 <?php
+    function escape($string) {
+        $final = "";
+        foreach (str_split($string) as $charA) {
+            if ($charA == "'") $final .= "\\";
+            $final .= $charA;
+        }
+        return $final;
+    }
+
     function random_color() {
         $color = rand(0, 5);
         switch ($color) {
@@ -38,25 +47,25 @@
 
             if (empty($_POST["Push"])) {
                 // read
-                $sql = "UPDATE users SET LastUpdate=NOW() WHERE UserName='" . $_COOKIE["UserName"] . "'" .
-                        (empty($_COOKIE["PartnerName"]) ? "" : " OR UserName='" . $_COOKIE["PartnerName"] . "'");
+                $sql = "UPDATE users SET LastUpdate=NOW() WHERE UserName='" . escape($_COOKIE["UserName"]) . "'" .
+                        (empty($_COOKIE["PartnerName"]) ? "" : " OR UserName='" . escape($_COOKIE["PartnerName"]) . "'");
                 $conn->query($sql);
 
-                $sql = "SELECT * FROM teams WHERE TeamName='" . $row["TeamA"] . "'";
+                $sql = "SELECT * FROM teams WHERE TeamName='" . escape($row["TeamA"]) . "'";
                 $ColorA = $conn->query($sql)->fetch_assoc()["Color"];
                 $ColorB = NULL;
                 if ($row["TeamB"] !== NULL) {
-                    $sql = "SELECT * FROM teams WHERE TeamName='" . $row["TeamB"] . "'";
+                    $sql = "SELECT * FROM teams WHERE TeamName='" . escape($row["TeamB"]) . "'";
                     $ColorB = $conn->query($sql)->fetch_assoc()["Color"];
                 }
                 if ($ColorA == 'white') {
                     while ($ColorA == $ColorB || $ColorA == 'white') $ColorA = random_color();
-                    $sql = "UPDATE teams SET Color='" . $ColorA . "' WHERE TeamName='" . $row["TeamA"] . "'";
+                    $sql = "UPDATE teams SET Color='" . $ColorA . "' WHERE TeamName='" . escape($row["TeamA"]) . "'";
                     $conn->query($sql);
                 }
                 if ($ColorB == 'white') {
                     while ($ColorA == $ColorB || $ColorB == 'white') $ColorB = random_color();
-                    $sql = "UPDATE teams SET Color='" . $ColorB . "' WHERE TeamName='" . $row["TeamB"] . "'";
+                    $sql = "UPDATE teams SET Color='" . $ColorB . "' WHERE TeamName='" . escape($row["TeamB"]) . "'";
                     $conn->query($sql);
                 }
 
