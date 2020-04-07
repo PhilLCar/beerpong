@@ -1,19 +1,9 @@
 <?php
-    function rmchars($string, $chars) {
-        $final = "";
-        foreach (str_split($string) as $charA) {
-            foreach (str_split($chars) as $charB) {
-                if ($charA == $charB) continue 2;
-            }
-            $final .= $charA;
-        }
-        return $final;
-    }
-
     function escape($string) {
         $final = "";
         foreach (str_split($string) as $charA) {
             if ($charA == "'") $final .= "\\";
+            if ($charA == "\\") $final .= "\\";
             $final .= $charA;
         }
         return $final;
@@ -36,8 +26,7 @@
             $conn->query($sql);
         }
         if (!empty($_POST["UserStatus"])) {
-            // toggle UserStatus
-            $sql = "UPDATE users SET UserStatus=UserStatus^" . $_POST["UserStatus"] . " WHERE UserName='" . escape($_POST["UserName"]) . "' AND LobbyID='" . 
+            $sql = "UPDATE users SET UserStatus=" . $_POST["UserStatus"] . " WHERE UserName='" . escape($_POST["UserName"]) . "' AND LobbyID='" . 
                             $_POST["LobbyID"] . "'";
             $conn->query($sql);
         }
@@ -63,18 +52,20 @@
         }
         if (!empty($_POST["CatName"]) && $_POST["CatStatus"] == "New") {
             $sql = "INSERT INTO categories(LobbyID, CatName, UserName) VALUES ('" . $_POST["LobbyID"] . "', '" . 
-                        $_POST["CatName"] . "', '" . $_POST["UserName"] . "')";
+                        $_POST["CatName"] . "', '" . escape($_POST["UserName"]) . "')";
             $conn->query($sql);
         }
         if (!empty($_POST["Item"])) {
-            $sql = "INSERT INTO names(LobbyID, UserName, Item, CatName) VALUES ('" . $_POST["LobbyID"] . "', '" . $_POST["UserName"] . "', '" .
-                    $_POST["Item"] . "', '" . $_POST["CatName"] . "')";
+            $sql = "INSERT INTO names(LobbyID, UserName, Item, CatName) VALUES ('" . $_POST["LobbyID"] . "', '" . escape($_POST["UserName"]) . "', '" .
+                    escape($_POST["Item"]) . "', '" . escape($_POST["CatName"]) . "')";
             $conn->query($sql);
         }
         if (!empty($_POST["Messages"])) {
             $messages = split("`", $_POST["Messages"]);
             foreach ($messages as $message) {
-                $sql = "INSERT INTO messages(LobbyID, UserName, Content) VALUES ('"
+                $sql = "INSERT INTO messages(LobbyID, UserName, Content) VALUES ('" . $_POST["LobbyID"] . "', '" . escape($_POST["UserName"]) . "', '" .
+                        escape($message) . "')";
+                $conn->query($sql);
             }
         }
 
@@ -86,16 +77,16 @@
         $sql = "SELECT UserName, Host, UserStatus, Score FROM users WHERE LobbyID='" . $_POST["LobbyID"] . "'";
         $query = $conn->query($sql);
         while ($result = $query->fetch_assoc()) {
-            echo("U;" . $result["Username"] . ";" . $result["Host"] . ";" . $result["UserStatus"] . ";" . $result["Score"] . "`");
+            echo("U;" . $result["UserName"] . ";" . $result["Host"] . ";" . $result["UserStatus"] . ";" . $result["Score"] . "`");
         }
 
-        $sql = "SELECT PairName, UserA, UserB, UserC FROM users WHERE LobbyID='" . $_POST["LobbyID"] . "'";
+        $sql = "SELECT PairName, UserA, UserB, UserC FROM pairs WHERE LobbyID='" . $_POST["LobbyID"] . "'";
         $query = $conn->query($sql);
         while ($result = $query->fetch_assoc()) {
             echo("P;" . $result["PairName"] . ";" . $result["UserA"] . ";" . $result["UserB"] . ";" . $result["UserC"] . "`");
         }
 
-        if ($_POST["RequestCat"]) {
+        if (!empty($_POST["RequestCat"])) {
             $sql = "SELECT CatName, UserName FROM categories WHERE LobbyID='" . $_POST["LobbyID"] . "'";
             $query = $conn->query($sql);
             while ($result = $query->fetch_assoc()) {
@@ -103,20 +94,20 @@
             }
         }
 
-        if ($_POST["RequestItem"]) {
+        if (!empty($_POST["RequestItem"])) {
             $sql = "SELECT Item FROM names WHERE LobbyID='" . $_POST["LobbyID"] . "' AND Used=FALSE ORDER BY RAND() LIMIT 1";
             $item = $conn->query($sql)->fetch_assoc()["Item"];
             $sql = "UPDATE names SET Used=TRUE WHERE Item='" . $item . "' AND LobbyID='" . $_POST["LobbyID"] . "'";
             $conn->query($sql);
             echo("I;" . $item . "`");
         }
-
-        $sql = "SELECT UserName, Content, TimeSent FROM messages WHERE MessageID>" . $_POST["LastMID"] . " AND LobbyID='" . $_POST["LobbyID"] . "'";
+        
+        $sql = "SELECT MessageID, UserName, Content, TimeSent FROM messages WHERE MessageID>" . $_POST["LastMID"] . " AND LobbyID='" . $_POST["LobbyID"] . "'";
         $query = $conn->query($sql);
         while ($result = $query->fetch_assoc()) {
-            echo("M;" . $result["UserName"] . ";" . $result["TimeSent"] . ";" . $result["Content"] . "`");
+            echo("M;" . $result["MessageID"] . ";" . $result["UserName"] . ";" . $result["TimeSent"] . ";" . $result["Content"] . "`");
         }
-
         $conn->query("UNLOCK TABLES");
+        $conn->close();
     } 
 ?>

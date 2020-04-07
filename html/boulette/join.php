@@ -8,6 +8,7 @@
   <body>
     <form method="POST" action="lobby.php">
       <input type="text" name="UserName"/>
+      <input type="text" name="LobbyID"/>
       <input type="submit" value="GO!"/>
     </form>
   </body>

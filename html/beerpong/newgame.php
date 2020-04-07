@@ -14,6 +14,7 @@
         $final = "";
         foreach (str_split($string) as $charA) {
             if ($charA == "'") $final .= "\\";
+            if ($charA == "\\") $final .= "\\";
             $final .= $charA;
         }
         return $final;
