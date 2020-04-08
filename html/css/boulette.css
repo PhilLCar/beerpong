@@ -199,14 +199,7 @@ p {
 }
 
 #AllowTrios {
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    text-align: center;
-    color: white;
-    border-radius: 10px;
-    padding: 5px;
+    bottom: 90px;
 }
 
 #AllowTrios:hover {
@@ -214,20 +207,35 @@ p {
 }
 
 #StartGame {
-    position: absolute;
-    left: 10px;
-    right: 10px;
     bottom: 50px;
-    text-align: center;
-    color: white;
-    border-radius: 10px;
-    padding: 5px;
     background-color: blue;
 }
 
 #StartGame:hover {
-    cursor: pointer;
     background-color: #007;
+}
+
+#QuitGame {
+    bottom: 10px;
+    background-color: orange;
+}
+
+#QuitGame:hover {
+    background-color: orangered;
+}
+
+.CButton {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    text-align: center;
+    color: white;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+.CButton:hover {
+    cursor: pointer;
 }
 
 .Allow {
@@ -345,6 +353,7 @@ p {
     padding: 10px;
     background-color: #444;
     color: white;
+    word-wrap: break-word;
 }
 
 .Mine {

@@ -55,7 +55,7 @@
             $sql = "INSERT INTO users(LobbyID, UserName, Host) VALUES ('" . $id . "', '" . escape($usr) . "', " . 
                         (empty($_POST["LobbyID"]) ? "TRUE" : "FALSE") . ")";
             if (!$conn->query($sql)) {
-                $sql = "SELECT user_active('" . escape($usr) . "') AS Active";
+                $sql = "SELECT user_active('" . $id . "', '" . escape($usr) . "') AS Active";
                 if (!$conn->query($sql)->fetch_assoc()["Active"]) {
                     $sql = "UPDATE users SET LastUpdate=NOW(), UserStatus=0 WHERE LobbyID='" . $id . "' AND UserName='" . escape($usr) . "'";
                     $conn->query($sql);
@@ -91,6 +91,9 @@
   </head>
   <body>
     <div id="Mask" hidden="true">
+    </div>
+    <div id="CatChose">
+        
     </div>
     <div id="LobbyTitle">
         LA BOULETTE

@@ -1,5 +1,5 @@
 PARAMETER_GUESSTIME = 45;
-PARAMETER_GAMETIME  = 7 * 60;
+PARAMETER_GAMETIME  = 60 * 60;
 
 STATUS_NOT_PAIRED = 0;
 STATUS_PAIRED     = 1;
@@ -22,7 +22,7 @@ GAME_TIMEOUT  = 64;
 GAME_FINISHED = 128;
 
 STATE_HOST     = false;
-STATE_LOCAL    = 0;
+STATE_LOCAL    = null;
 STATE_SWITCH   = 0;
 STATE_MYUSER   = null;
 STATE_MYPAIR   = null;
@@ -33,16 +33,20 @@ STATE_TIME     = 0;
 STATE_HIDDEN   = [];
 STATE_USERS    = [];
 STATE_PAIRS    = [];
+STATE_MEMPTY   = true;
 STATE_MESSAGES = [];
+STATE_QUIT     = false;
 
 PUSH_PAIR     = null;
 PUSH_MESSAGES = null;
 
-PAIRING  = false;
-CLEARFOR = 0;
+BLOCKERS_PAIRING  = false;
+BLOCKERS_CLEARFOR = 0;
+
+/////////////////////////////////// UPDATE //////////////////////////////////////////////
 
 function uGameTimer() {
-    if (STATE_TIME && (STATE_GAME == (~GAME_TRIOS & GAME_STARTING))) {
+    if (STATE_TIME && ((~GAME_TRIOS & STATE_GAME) == GAME_STARTING)) {
         var time = PARAMETER_GAMETIME - (new Date().getTime() - Date.parse(STATE_TIME)) / 1000;
         var minutes = ((time / 60) | 0);
         var seconds = ((time % 60) | 0);
@@ -105,11 +109,12 @@ function uUsers() {
     }
     var paired = document.getElementById("Paired");
     var unpaired = document.getElementById("Unpaired");
-    if (STATE_HOST) {
-        if (STATE_LOCAL & 1) userHTML += "<div id=\"AllowTrios\" class=\"Block\" onclick=\"allowTrios()\">Restreindre les trios</div>";
-        else userHTML += "<div id=\"AllowTrios\" class=\"Allow\" onclick=\"allowTrios()\">Permettre les trios</div>";
-        userHTML += "<div id=\"StartGame\" onclick=\"startGame()\">Commencer la partie</div>";
+    if (STATE_HOST && ((~GAME_TRIOS & STATE_GAME) == GAME_STARTING)) {
+        if (STATE_GAME & 1) userHTML += "<div id=\"AllowTrios\" class=\"CButton Block\" onclick=\"allowTrios()\">Restreindre les trios</div>";
+        else userHTML += "<div id=\"AllowTrios\" class=\"CButton Allow\" onclick=\"allowTrios()\">Permettre les trios</div>";
+        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"startGame()\">Commencer la partie</div>";
     }
+    userHTML += "<div id=\"QuitGame\" class=\"CButton\" onclick=\"quitGame()\">Quitter la partie</div>";
     if (paired.innerHTML != pairHTML) paired.innerHTML = pairHTML;
     if (unpaired.innerHTML != userHTML) unpaired.innerHTML = userHTML;
 }
@@ -117,7 +122,7 @@ function uUsers() {
 function uPairs() {
     var me = STATE_USERS[STATE_MYUSER];
     var mypair = STATE_PAIRS[STATE_MYPAIR];
-    if (me && mypair && (me.UserStatus & STATUS_TRYING) && (CLEARFOR == 0)) {
+    if (me && mypair && (me.UserStatus & STATUS_TRYING) && (BLOCKERS_CLEARFOR == 0)) {
         if (USERNAME == mypair.UserA) {
             if (mypair.UserC == "") pairWait(mypair.UserB);
             else pairWait(mypair.UserB);
@@ -127,9 +132,9 @@ function uPairs() {
         } else {
             pairAsked(mypair.PairName, mypair.UserA, mypair.userB);
         }
-    } else if (!PAIRING) {
+    } else if (!BLOCKERS_PAIRING) {
         clearDialog();
-        if (CLEARFOR > 0) CLEARFOR--;
+        if (BLOCKERS_CLEARFOR > 0) BLOCKERS_CLEARFOR--;
     }
 }
 
@@ -137,6 +142,10 @@ function uMessages() {
     var messages = document.getElementById("MessageBox");
     var messageHTML = "";
     for (var message of STATE_MESSAGES) {
+        if (STATE_MEMPTY) {
+            messages.innerHTML = "";
+            STATE_MEMPTY = false;
+        }
         messageHTML += "<div class=\"Message" + (message.UserName == USERNAME ? " Mine" : "") + "\">" +
                         "<div class=\"MessageTitle\">" + message.UserName + "</div>" +
                         "<div class=\"MessageTime\">" + getTime(message.TimeSent) + "</div>" +
@@ -148,114 +157,24 @@ function uMessages() {
     STATE_MESSAGES = [];
 }
 
-function uState() {
-    STATE_SWITCH = 0;
-    STATE_SWITCH |= (STATE_STATUS & 127) | (document.getElementById("WriteBox").value != "" ? 1 << 7 : 0);
-    STATE_SWITCH ^= STATE_STATUS;
-}
-
-function pair(n) {
-    if (STATE_MYPAIR != null && !(STATE_GAME & 1)) {
-        alert("Vous faites déjà partie d'une paire!");
-        return;
-    } else if (STATE_USERS[n].UserStatus != 0) {
-        alert("Impossible de former une paire avec cet utilisateur pour l'instant!");
-        return;
-    }
-    var dialogHTML;
-    if (STATE_MYPAIR != null) {
-        dialogHTML = "<div id=\"PairingDialog\">" +
-                        "Voulez-vous former un trio avec avec <b>" + STATE_USERS[n].UserName + "</b>?<br>" +
-                        "<input id=\"PairingDialogOK\" type=\"button\" value=\"OK!\" onclick=\"pairConfirm(" + n + ")\"/>" +
-                        "<input id=\"PairingDialogCancel\" type=\"button\" value=\"Annuler\" onclick=\"clearDialog();PAIRING=false\"/>" +
-                        "</div>";
-    } else {
-        dialogHTML = "<div id=\"PairingDialog\">" +
-                        "Choisissez le nom de la paire que vous allez former avec <b>" + STATE_USERS[n].UserName + "</b>:<br>" +
-                        "<input id=\"PairingDialogInput\" type=\"text\"/><br>" +
-                        "<input id=\"PairingDialogOK\" type=\"button\" value=\"OK!\" onclick=\"pairConfirm(" + n + ")\"/>" +
-                        "<input id=\"PairingDialogCancel\" type=\"button\" value=\"Annuler\" onclick=\"clearDialog();PAIRING=false\"/>" +
-                        "</div>";
-    }
-    var mask = document.getElementById("Mask");
-    mask.innerHTML = dialogHTML;
-    mask.hidden = false;
-    PAIRING = true;
-}
-
-function pairWait(username) {
-    var dialogHTML = "<div id=\"PairingDialog\">" +
-                    "En attente de la réponse de <b>" + username + "</b>..." +
-                    "</div>";
-
-    var mask = document.getElementById("Mask");
-    if (mask.innerHTML != dialogHTML) mask.innerHTML = dialogHTML;
-    mask.hidden = false;
-}
-
-function pairAsked(pairname, username, userb) {
-    var dialogHTML = "<div id=\"PairingDialog\">" +
-                    (userb == null ? "<b>" + username + "</b> veut former la paire '<b>" + pairname + "</b>' avec vous!<br>" :
-                    "<b>" + username + "</b> et <b>" + userb + "</b> veulent former le trio '<b>" + pairname + "</b>' avec vous!<br>") +
-                    "<input id=\"PairingDialogOK\" type=\"button\" value=\"Accepter!\" onclick=\"pairAccept('" + pairname + "')\"/>" +
-                    "<input id=\"PairingDialogCancel\" type=\"button\" value=\"Refuser\" onclick=\"pairDeny('" + pairname + "')\"/>" +
-                    "</div>";
-
-    var mask = document.getElementById("Mask");
-    if (mask.innerHTML != dialogHTML) mask.innerHTML = dialogHTML;
-    mask.hidden = false;
-}
-
-function pairAccept(pairname) {
-    PUSH_PAIR = {
-        "PairName": pairname,
-        "PairStatus": "Confirm"
-    }
-    clearDialog();
-    CLEARFOR = 2;
-}
-
-function pairDeny(pairname) {
-    PUSH_PAIR = {
-        "PairName": pairname,
-        "PairStatus": (STATE_PAIRS[STATE_MYPAIR].UserC == "" ? "NotC" : "Delete")
-    }
-    clearDialog();
-    CLEARFOR = 2;
-}
-
-function pairConfirm(n) {
-    var input;
-    if (STATE_MYPAIR != null) {
-        input = STATE_PAIRS[STATE_MYPAIR].PairName;
-    } else {
-        input = document.getElementById("PairingDialogInput").value;
-    }
-    if (input.value == "") {
-        alert("Le nom de paire ne peut pas être vide!");
-    }
-
-    PUSH_PAIR = {
-        "PairName": input,
-        "UserName" : USERNAME,
-        "UserB" : STATE_USERS[n].UserName,
-        "PairStatus" : (STATE_MYPAIR != null ? "Append" : "New")
-    }
-    PAIRING = false;
-    pairWait(STATE_USERS[n].UserName);
-}
+/////////////////////////////////// STATE //////////////////////////////////////////////
 
 function getState(vars) {
     if (vars[0][0] == 'F') {
         alert("L'hôte a quitté la partie, elle va maintenant se terminer.");
         window.location = "index.php";
         return;
+    } else if (vars[0][0] == 'Q') {
+        window.location = "index.php";
+        return;
     }
     var game = vars[0].split(';');
-    STATE_GAME = game[0];
+    STATE_GAME = game[0] | 0;
     STATE_TIME = game[1];
 
-    switch (STATE_GAME | 0) {
+    if (STATE_LOCAL == null) STATE_LOCAL = STATE_GAME;
+
+    switch (STATE_GAME & ~GAME_TRIOS) {
         case GAME_TIMEOUT:
             alert("La partie n'a pas débutée avant le temps limite.");
             window.location = "index.php";
@@ -280,6 +199,7 @@ function getUsers(vars) {
                 STATE_MYUSER = n - 1;
                 STATE_HOST   = user[2] == "1";
                 STATE_STATUS = user[3];
+                STATE_SWITCH = 0;
             }
         }
     }
@@ -328,15 +248,100 @@ function getMessages(vars) {
     }
 }
 
-function inPairs(user) {
-    for (var pair of STATE_PAIRS) {
-        if (user.UserName == pair.UserA ||
-            user.UserName == pair.UserB ||
-            user.UserName == pair.UserC)
-            return pair;
+/////////////////////////////////// PAIRING //////////////////////////////////////////////
+
+function pair(n) {
+    if (STATE_MYPAIR != null && !(STATE_GAME & 1)) {
+        alert("Vous faites déjà partie d'une paire!");
+        return;
+    } else if (STATE_USERS[n].UserStatus != 0) {
+        alert("Impossible de former une paire avec cet utilisateur pour l'instant!");
+        return;
     }
-    return null;
+    var dialogHTML;
+    if (STATE_MYPAIR != null) {
+        dialogHTML = "<div id=\"PairingDialog\">" +
+                        "Voulez-vous former un trio avec avec <b>" + STATE_USERS[n].UserName + "</b>?<br>" +
+                        "<input id=\"PairingDialogOK\" type=\"button\" value=\"OK!\" onclick=\"pairConfirm(" + n + ")\"/>" +
+                        "<input id=\"PairingDialogCancel\" type=\"button\" value=\"Annuler\" onclick=\"clearDialog();PAIRING=false\"/>" +
+                        "</div>";
+    } else {
+        dialogHTML = "<div id=\"PairingDialog\">" +
+                        "Choisissez le nom de la paire que vous allez former avec <b>" + STATE_USERS[n].UserName + "</b>:<br>" +
+                        "<input id=\"PairingDialogInput\" type=\"text\"/><br>" +
+                        "<input id=\"PairingDialogOK\" type=\"button\" value=\"OK!\" onclick=\"pairConfirm(" + n + ")\"/>" +
+                        "<input id=\"PairingDialogCancel\" type=\"button\" value=\"Annuler\" onclick=\"clearDialog();BLOCKERS_PAIRING=false\"/>" +
+                        "</div>";
+    }
+    var mask = document.getElementById("Mask");
+    mask.innerHTML = dialogHTML;
+    mask.hidden = false;
+    BLOCKERS_PAIRING = true;
 }
+
+function pairWait(username) {
+    var dialogHTML = "<div id=\"PairingDialog\">" +
+                    "En attente de la réponse de <b>" + username + "</b>..." +
+                    "</div>";
+
+    var mask = document.getElementById("Mask");
+    if (mask.innerHTML != dialogHTML) mask.innerHTML = dialogHTML;
+    mask.hidden = false;
+}
+
+function pairAsked(pairname, username, userb) {
+    var dialogHTML = "<div id=\"PairingDialog\">" +
+                    (userb == null ? "<b>" + username + "</b> veut former la paire '<b>" + pairname + "</b>' avec vous!<br>" :
+                    "<b>" + username + "</b> et <b>" + userb + "</b> veulent former le trio '<b>" + pairname + "</b>' avec vous!<br>") +
+                    "<input id=\"PairingDialogOK\" type=\"button\" value=\"Accepter!\" onclick=\"pairAccept('" + pairname + "')\"/>" +
+                    "<input id=\"PairingDialogCancel\" type=\"button\" value=\"Refuser\" onclick=\"pairDeny('" + pairname + "')\"/>" +
+                    "</div>";
+
+    var mask = document.getElementById("Mask");
+    if (mask.innerHTML != dialogHTML) mask.innerHTML = dialogHTML;
+    mask.hidden = false;
+}
+
+function pairAccept(pairname) {
+    PUSH_PAIR = {
+        "PairName": pairname,
+        "PairStatus": "Confirm"
+    }
+    clearDialog();
+    BLOCKERS_CLEARFOR = 2;
+}
+
+function pairDeny(pairname) {
+    PUSH_PAIR = {
+        "PairName": pairname,
+        "PairStatus": (STATE_PAIRS[STATE_MYPAIR].UserC != "" ? "NotC" : "Delete")
+    }
+    clearDialog();
+    BLOCKERS_CLEARFOR = 2;
+}
+
+function pairConfirm(n) {
+    var input;
+    if (STATE_MYPAIR != null) {
+        input = STATE_PAIRS[STATE_MYPAIR].PairName;
+    } else {
+        input = document.getElementById("PairingDialogInput").value;
+    }
+    if (input.value == "") {
+        alert("Le nom de paire ne peut pas être vide!");
+    }
+
+    PUSH_PAIR = {
+        "PairName": input,
+        "UserName" : USERNAME,
+        "UserB" : STATE_USERS[n].UserName,
+        "PairStatus" : (STATE_MYPAIR != null ? "Append" : "New")
+    }
+    BLOCKERS_PAIRING = false;
+    pairWait(STATE_USERS[n].UserName);
+}
+
+/////////////////////////////////// GETTERS //////////////////////////////////////////////
 
 function getUser(username) {
     for (var user of STATE_USERS) {
@@ -363,6 +368,8 @@ function getUserStatusClass(user) {
         return "<div class=\"Status StatusGuessing\">D</div>";
     } else if (user.UserStatus & STATUS_ASKING) {
         return "<div class=\"Status StatusAsking\">P</div>";
+    } else if (user.UserStatus & STATUS_PLAYING) {
+        return "<div class=\"Status StatusPlaying\">J</div>";
     } else if (user.UserStatus & STATUS_WAITING) {
         return "<div class=\"Status StatusWaiting\">A</div>";
     } else if (user.UserStatus & STATUS_TRYING) {
@@ -396,12 +403,28 @@ function getTime(timestamp) {
     return date.getHours() + ":" + ("" + date.getMinutes()).padStart(2, '0');
 }
 
+function setStatus(status, enabled) {
+    STATE_SWITCH &= ~status;
+    STATE_SWITCH |= (STATE_STATUS & status) ^ (enabled ? status : 0);
+}
+
+/////////////////////////////////// SENDING //////////////////////////////////////////////
+
+function sendWriting() {
+    try {
+        setStatus(STATUS_WRITING, document.getElementById("WriteBox").value != "");
+    } catch {}
+}
+
+
 function sendMessage() {
     if (PUSH_MESSAGES) PUSH_MESSAGES += "`";
     else PUSH_MESSAGES = "";
     PUSH_MESSAGES += document.getElementById("WriteBox").value;
     document.getElementById("WriteBox").value = "";
 }
+
+/////////////////////////////////// GAME //////////////////////////////////////////////
 
 function startGame() {
     var ready = true;
@@ -418,9 +441,17 @@ function startGame() {
     STATE_LOCAL = GAME_CATCHOSE;
 }
 
+function quitGame() {
+    STATE_QUIT = true;
+}
+
+/////////////////////////////////// REFRESH //////////////////////////////////////////////
 function update(n) {
     var xhttp = new XMLHttpRequest();
     var post = "";
+
+    sendWriting();
+    //////////// POST ////////////
     post = buildpost(post, "LobbyID", LOBBY_ID);
     post = buildpost(post, "LastMID", STATE_LASTMID)
     if (PUSH_PAIR) {
@@ -435,12 +466,15 @@ function update(n) {
     }
     post = buildpost(post, "UserName", encodeURIComponent(USERNAME));
     post = buildpost(post, "UserStatus", STATE_SWITCH);
-    if (STATE_HOST && STATE_LOCAL != STATE_GAME) {
+    if (STATE_HOST && STATE_LOCAL != null && STATE_LOCAL != STATE_GAME) {
         post = buildpost(post, "GameState", STATE_LOCAL);
         post = buildpost(post, "Timer", encodeURIComponent(STATE_TIME));
     }
     if (STATE_HOST) {
-        post = buildpost(post, "RemoveInactive", 1);
+        post = buildpost(post, "RemoveInactive", true);
+    }
+    if (STATE_QUIT) {
+        post = buildpost(post, "Quit", true);
     }
     xhttp.onreadystatechange = async function() {
       if (this.readyState == 4 && this.status == 200) {
@@ -450,7 +484,6 @@ function update(n) {
         getPairs(vars);
         getMessages(vars);
 
-        uState();
         uGameTimer();
         uUsers();
         uPairs();
@@ -468,7 +501,7 @@ function update(n) {
     xhttp.send(post);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////// UTILS ////////////////////////////////////////////////////
 function buildpost(post, variable, value) {
     if (post != "") post += "&";
     return post + variable + "=" + value;
@@ -488,6 +521,16 @@ function hidePair(pair) {
         STATE_HIDDEN[STATE_HIDDEN.length] = pair;
     }
     for (let item of items) item.hidden = !item.hidden;
+}
+
+function inPairs(user) {
+    for (var pair of STATE_PAIRS) {
+        if (user.UserName == pair.UserA ||
+            user.UserName == pair.UserB ||
+            user.UserName == pair.UserC)
+            return pair;
+    }
+    return null;
 }
 
 function allowTrios() {

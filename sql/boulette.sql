@@ -84,7 +84,7 @@ CREATE FUNCTION user_active (
 RETURN EXISTS (
     SELECT * FROM users 
         WHERE LobbyID=PLobbyID AND UserName=PUserName
-        AND   TIMESTAMPDIFF(SECOND, LastUpdate, NOW()) < 30
+        AND   TIMESTAMPDIFF(SECOND, LastUpdate, NOW())<=30
 );
 
 CREATE FUNCTION game_active (
@@ -93,7 +93,7 @@ CREATE FUNCTION game_active (
 RETURN EXISTS (
     SELECT * FROM users 
         WHERE LobbyID=PLobbyID AND Host=TRUE
-        AND   TIMESTAMPDIFF(SECOND, LastUpdate, NOW()) < 30
+        AND   TIMESTAMPDIFF(SECOND, LastUpdate, NOW())<=30
 );
 
 DELIMITER .
@@ -172,9 +172,10 @@ BEGIN
     DECLARE PPairName   VARCHAR(128);
     DECLARE PDone       BOOLEAN;
     DECLARE PCursor CURSOR FOR SELECT PairName, UserA, UserB, UserC
-                               FROM pairs WHERE NOT user_active(PLobbyID, UserA) 
-                                             OR NOT user_active(PLobbyID, UserB)
-                                             OR (NOT UserC=NULL AND NOT user_active(PLobbyID, UserC));
+                               FROM pairs WHERE LobbyID=PLobbyID
+                                            AND (NOT user_active(PLobbyID, UserA) 
+                                             OR  NOT user_active(PLobbyID, UserB)
+                                             OR (NOT UserC=NULL AND NOT user_active(PLobbyID, UserC)));
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET PDone = 1;
 
     OPEN PCursor;
@@ -184,39 +185,28 @@ BEGIN
         IF user_active(PLobbyID, PUserA) THEN
             IF user_active(PLobbyID, PUserB) THEN
                 CALL notc_pair(PLobbyID, PPairName);
-                UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND UserName=PUserC;
             ELSEIF user_active(PLobbyID, PUserC) THEN
-                UPDATE pairs SET UserB=(@PUserB:=UserB), UserB=UserC, UserC=@PUserB
-                                WHERE LobbyID=PLobbyID AND PairName=PPairName;
+                UPDATE pairs SET UserB=(@PUserB:=UserB), UserB=UserC, UserC=@PUserB WHERE LobbyID=PLobbyID AND PairName=PPairName;
                 CALL notc_pair(PLobbyID, PPairName);
-                UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND UserName=PUserB;
             ELSE
                 CALL delete_pair(PLobbyID, PPairName);
-                UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND 
-                                        (UserName=PUserB OR UserName=PUserC);
             END IF;
         ELSEIF user_active(PLobbyID, PUserB) THEN
             IF user_active(PLobbyID, PUserC) THEN
-                UPDATE pairs SET UserA=(@PUserA:=UserA), UserA=UserC, UserC=@PUserA
-                                WHERE LobbyID=PLobbyID AND PairName=PPairName;
+                UPDATE pairs SET UserA=(@PUserA:=UserA), UserA=UserC, UserC=@PUserA WHERE LobbyID=PLobbyID AND PairName=PPairName;
                 CALL notc_pair(PLobbyID, PPairName);
-                UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND UserName=PUserA;
             ELSE
                 CALL delete_pair(PLobbyID, PPairName);
-                UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND 
-                                        (UserName=PUserA OR UserName=PUserC);
             END IF;
         ELSEIF user_active(PLobbyID, PUserC) THEN
             CALL delete_pair(PLobbyID, PPairName);
-            UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND 
-                                    (UserName=PUserA OR UserName=PUserB);
         ELSE
             CALL delete_pair(PLobbyID, PPairName);
-            UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND 
-                                    (UserName=PUserA OR UserName=PUserB OR UserName=PUserC);
         END IF;
     UNTIL PDone END REPEAT;
     CLOSE PCursor;
+
+    UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND TIMESTAMPDIFF(SECOND, LastUpdate, NOW())>30;
 END.
 DELIMITER ;
 
