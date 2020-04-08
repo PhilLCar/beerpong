@@ -6,9 +6,13 @@
     <link rel="stylesheet" type="text/css" href="/css/boulette.css"/>
   </head>
   <body>
-    <form method="POST" action="lobby.php">
-      <input type="text" name="UserName"/>
-      <input type="submit" value="GO!"/>
-    </form>
+    <div id="MainMenu">
+      <h1>Créer une partie</h1>
+      <p>Choisissez un nom d'utilisateur:</p>
+      <form method="POST" action="lobby.php">
+        <input type="text" name="UserName"/>
+        <input type="submit" value="GO!"/>
+      </form>
+    </div>
   </body>
 </html>

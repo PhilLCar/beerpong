@@ -1,4 +1,5 @@
 PARAMETER_GUESSTIME = 45;
+PARAMETER_GAMETIME  = 7 * 60;
 
 STATUS_NOT_PAIRED = 0;
 STATUS_PAIRED     = 1;
@@ -20,6 +21,7 @@ GAME_PAUSED   = 32;
 GAME_TIMEOUT  = 64;
 GAME_FINISHED = 128;
 
+STATE_HOST     = false;
 STATE_LOCAL    = 0;
 STATE_SWITCH   = 0;
 STATE_MYUSER   = null;
@@ -40,11 +42,19 @@ PAIRING  = false;
 CLEARFOR = 0;
 
 function uGameTimer() {
-    if (STATE_TIME) {
-        var time = 15 * 60 - (new Date().getTime() - Date.parse(STATE_TIME)) / 1000;
-        var minutes = ((time / 60) | 0) + "";
-        var seconds = ((time % 60) | 0) + "";
+    if (STATE_TIME && (STATE_GAME == (~GAME_TRIOS & GAME_STARTING))) {
+        var time = PARAMETER_GAMETIME - (new Date().getTime() - Date.parse(STATE_TIME)) / 1000;
+        var minutes = ((time / 60) | 0);
+        var seconds = ((time % 60) | 0);
+        if (minutes < 0) minutes = 0;
+        if (seconds < 0) seconds = 0;
+        if (minutes == 0 && seconds == 0) {
+            if (STATE_HOST) STATE_LOCAL = GAME_TIMEOUT;
+        }
+        seconds = seconds + "";
         document.getElementById("GlobalTime").innerHTML = minutes + ":" + seconds.padStart(2, '0');
+    } else {
+        document.getElementById("GlobalTime").innerHTML = "";
     }
 }
 
@@ -95,7 +105,7 @@ function uUsers() {
     }
     var paired = document.getElementById("Paired");
     var unpaired = document.getElementById("Unpaired");
-    if (STATE_USERS[STATE_MYUSER].Host == 1) {
+    if (STATE_HOST) {
         if (STATE_LOCAL & 1) userHTML += "<div id=\"AllowTrios\" class=\"Block\" onclick=\"allowTrios()\">Restreindre les trios</div>";
         else userHTML += "<div id=\"AllowTrios\" class=\"Allow\" onclick=\"allowTrios()\">Permettre les trios</div>";
         userHTML += "<div id=\"StartGame\" onclick=\"startGame()\">Commencer la partie</div>";
@@ -138,11 +148,17 @@ function uMessages() {
     STATE_MESSAGES = [];
 }
 
+function uState() {
+    STATE_SWITCH = 0;
+    STATE_SWITCH |= (STATE_STATUS & 127) | (document.getElementById("WriteBox").value != "" ? 1 << 7 : 0);
+    STATE_SWITCH ^= STATE_STATUS;
+}
+
 function pair(n) {
     if (STATE_MYPAIR != null && !(STATE_GAME & 1)) {
         alert("Vous faites déjà partie d'une paire!");
         return;
-    } else if (STATE_USERS[n].Status != 0) {
+    } else if (STATE_USERS[n].UserStatus != 0) {
         alert("Impossible de former une paire avec cet utilisateur pour l'instant!");
         return;
     }
@@ -229,6 +245,24 @@ function pairConfirm(n) {
     pairWait(STATE_USERS[n].UserName);
 }
 
+function getState(vars) {
+    if (vars[0][0] == 'F') {
+        alert("L'hôte a quitté la partie, elle va maintenant se terminer.");
+        window.location = "index.php";
+        return;
+    }
+    var game = vars[0].split(';');
+    STATE_GAME = game[0];
+    STATE_TIME = game[1];
+
+    switch (STATE_GAME | 0) {
+        case GAME_TIMEOUT:
+            alert("La partie n'a pas débutée avant le temps limite.");
+            window.location = "index.php";
+            return;
+    }
+}
+
 function getUsers(vars) {
     STATE_USERS = [];
     STATE_MYUSER = null;
@@ -244,6 +278,7 @@ function getUsers(vars) {
             }
             if (user[1] == USERNAME) {
                 STATE_MYUSER = n - 1;
+                STATE_HOST   = user[2] == "1";
                 STATE_STATUS = user[3];
             }
         }
@@ -361,17 +396,26 @@ function getTime(timestamp) {
     return date.getHours() + ":" + ("" + date.getMinutes()).padStart(2, '0');
 }
 
-function getState() {
-    STATE_SWITCH = 0;
-    STATE_SWITCH |= (STATE_STATUS & 127) | (document.getElementById("WriteBox").value != "" ? 1 << 7 : 0);
-    STATE_SWITCH ^= STATE_STATUS;
-}
-
 function sendMessage() {
     if (PUSH_MESSAGES) PUSH_MESSAGES += "`";
     else PUSH_MESSAGES = "";
     PUSH_MESSAGES += document.getElementById("WriteBox").value;
     document.getElementById("WriteBox").value = "";
+}
+
+function startGame() {
+    var ready = true;
+    for (var user of STATE_USERS) {
+        if (inPairs(user)) continue;
+        if ((user.UserStatus & ~STATUS_WRITING) != STATUS_NOT_PAIRED) continue;
+        ready = false;
+        break;
+    }
+    if (!ready) {
+        alert("Tous les utilisateurs ne sont pas en paire!");
+        return;
+    }
+    STATE_LOCAL = GAME_CATCHOSE;
 }
 
 function update(n) {
@@ -391,29 +435,22 @@ function update(n) {
     }
     post = buildpost(post, "UserName", encodeURIComponent(USERNAME));
     post = buildpost(post, "UserStatus", STATE_SWITCH);
-    if (STATE_LOCAL != STATE_GAME) {
+    if (STATE_HOST && STATE_LOCAL != STATE_GAME) {
         post = buildpost(post, "GameState", STATE_LOCAL);
         post = buildpost(post, "Timer", encodeURIComponent(STATE_TIME));
     }
-    if (STATE_MYUSER != null && STATE_USERS[STATE_MYUSER].Host == 1) {
+    if (STATE_HOST) {
         post = buildpost(post, "RemoveInactive", 1);
     }
     xhttp.onreadystatechange = async function() {
       if (this.readyState == 4 && this.status == 200) {
         var vars = this.responseText.split('`');
-        if (vars[0][0] == 'F') {
-            alert("L'hôte a quitté la partie, elle va maintenant se terminer.");
-            window.location = "index.php";
-            return;
-        }
-        var game = vars[0].split(';');
-        STATE_GAME = game[0];
-        STATE_TIME = game[1];
+        getState(vars);
         getUsers(vars);
         getPairs(vars);
         getMessages(vars);
-        getState();
 
+        uState();
         uGameTimer();
         uUsers();
         uPairs();

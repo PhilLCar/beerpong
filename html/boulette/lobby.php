@@ -47,7 +47,7 @@
         } else if (empty($_POST["UserName"])) {
             header("Location: join.php?error=1");
         } else {
-            $id = $_POST["LobbyID"];
+            $id = strtoupper($_POST["LobbyID"]);
         }
         if (empty($_COOKIE["LobbyID"]) || empty($_COOKIE["UserName"])) {
             // try insert user
@@ -108,6 +108,7 @@
     <div id="ChatWindow">
         <div id="MessageBoxTitle">MESSAGES</div>
         <div id="MessageBox">
+            <div style="margin-top: 200px; text-align: center; width:100%">Aucun message pour l'instant</div>
         </div>
         <div id="Write">
             <input id="WriteBox" type="text" onkeypress="checkEnter(event)"/>

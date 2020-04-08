@@ -6,10 +6,18 @@
     <link rel="stylesheet" type="text/css" href="/css/boulette.css"/>
   </head>
   <body>
-    <form method="POST" action="lobby.php">
-      <input type="text" name="UserName"/>
-      <input type="text" name="LobbyID"/>
-      <input type="submit" value="GO!"/>
-    </form>
+    <div id="MainMenu">
+        <h1>Créer une partie</h1>
+        <form method="POST" action="lobby.php">
+        <p>Choisissez un nom d'utilisateur:</p>
+        <input type="text" name="UserName"/><br>
+        <p>
+            Entrez le nom du salon que vous souhaitez rejoindre:<br>
+            (4 lettres majuscules)
+        <p>
+        <input type="text" name="LobbyID"/><br>
+        <input type="submit" value="GO!"/>
+        </form>
+    </div>
   </body>
 </html>

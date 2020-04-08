@@ -6,12 +6,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>THE PARTY HUB</title>
+    <title>LA BOULETTE</title>
     <link rel="stylesheet" type="text/css" href="/css/boulette.css"/> 
   </head>
   <body>
-    <h1>BOULETTE</h1>
-    <input id="Create" type="button" value="Nouvelle partie" onclick="window.location='create.php'"/>
-    <input id="Join"   type="button" value="Rejoindre" onclick="window.location='join.php'"/>
+    <div id="MainMenu">
+      <h1>LA BOULETTE</h1>
+      <input id="Create" type="button" value="Nouvelle partie" onclick="window.location='create.php'"/>
+      <input id="Join"   type="button" value="Rejoindre" onclick="window.location='join.php'"/>
+    </div>
   </body>
 </html>

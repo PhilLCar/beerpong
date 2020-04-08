@@ -16,6 +16,16 @@
 	?>
     <form id="GameList" method="POST" action="team.php">
       <?php
+	function escape($string) {
+		$final = "";
+		foreach (str_split($string) as $charA) {
+			if ($charA == "'") $final .= "\\";
+			if ($charA == "\\") $final .= "\\";
+			$final .= $charA;
+		}
+		return $final;
+	}
+
 	// DATABASE CONNECTION
 	$servername = "localhost";
 	$username   = "webserver";
@@ -36,18 +46,18 @@
 			$sql = "SELECT game_active(" . $row["GameID"] . ") AS active";
 			if (!$conn->query($sql)->fetch_assoc()["active"]) continue;
 			$numplayers = 1;
-			$sql = "SELECT * FROM teams WHERE TeamName='" . $row["TeamA"] . "'";
+			$sql = "SELECT * FROM teams WHERE TeamName='" . escape($row["TeamA"]) . "'";
 			$subres = $conn->query($sql);
 			$teamA = $subres->fetch_assoc();
 			if ($teamA["MemberB"] !== NULL) $numplayers += 1;
 
 			echo('<div class="JoinItem">');
 			if ($row["TeamB"] === NULL) {
-				echo('<p class="JoinItemTitle"><b class="TeamA" style="color:' . $teamA["Color"] . '">' .
+				echo('<p class="JoinItemTitle"><b class="TeamA" style="color:' . escape($teamA["Color"]) . '">' .
 					$row["TeamA"] . '</b>: waiting for an opposing team...</p>');
 			} else {
 				$numplayers += 1;
-				$sql = "SELECT * FROM teams WHERE TeamName='" . $row["TeamB"] . "'";
+				$sql = "SELECT * FROM teams WHERE TeamName='" . escape($row["TeamB"]) . "'";
 				$subres = $conn->query($sql);
 				$teamB = $subres->fetch_assoc();
 				if ($teamB["MemberB"] !== NULL) $numplayers += 1;

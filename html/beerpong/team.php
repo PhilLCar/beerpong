@@ -29,6 +29,16 @@
       <p>Choose team:<br>
 	<select name="TeamName" onchange="select()"/>
       <?php
+	function escape($string) {
+		$final = "";
+		foreach (str_split($string) as $charA) {
+			if ($charA == "'") $final .= "\\";
+			if ($charA == "\\") $final .= "\\";
+			$final .= $charA;
+		}
+		return $final;
+	}
+
 	// DATABASE CONNECTION
 	$servername = "localhost";
 	$username   = "webserver";
@@ -42,16 +52,16 @@
 		$result = $conn->query($sql);
 		$row = $result->fetch_assoc();
 		if ($row["Active"]) {
-			$sql = "SELECT * FROM teams WHERE TeamName='" . $row["TeamA"] . "'";
+			$sql = "SELECT * FROM teams WHERE TeamName='" . escape($row["TeamA"]) . "'";
 			$subres = $conn->query($sql);
 			$team = $subres->fetch_assoc();
-			if ($team["MemberB"] === NULL) echo('<option id="ITA" value="' . $row["TeamA"] . '">' .
+			if ($team["MemberB"] === NULL) echo('<option id="ITA" value="' . escape($row["TeamA"]) . '">' .
 									$row["TeamA"] . '</option>');
 			if ($row["TeamB"] !== NULL) {
-				$sql = "SELECT * FROM teams WHERE TeamName='" . $row["TeamB"] . "'";
+				$sql = "SELECT * FROM teams WHERE TeamName='" . escape($row["TeamB"]) . "'";
 				$subres = $conn->query($sql);
 				$team = $subres->fetch_assoc();
-				if ($team["MemberB"] === NULL) echo('<option id="ITB" partner="false" value="' . $row["TeamB"] . '">' .
+				if ($team["MemberB"] === NULL) echo('<option id="ITB" partner="false" value="' . escape($row["TeamB"]) . '">' .
 										$row["TeamB"] . '</option>');
 			} else {
 				$newteam = TRUE;

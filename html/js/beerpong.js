@@ -1,9 +1,9 @@
 function updatepartner() {
     if (document.getElementsByName("IsB")[0].checked) {
-	document.getElementsByName("MemberB")[0].disabled = false;
+	    document.getElementsByName("MemberB")[0].disabled = false;
     } else {
-	document.getElementsByName("MemberB")[0].value = "";
-	document.getElementsByName("MemberB")[0].disabled = true;
+	    document.getElementsByName("MemberB")[0].value = "";
+	    document.getElementsByName("MemberB")[0].disabled = true;
     }
 }
 
