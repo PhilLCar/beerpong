@@ -199,6 +199,23 @@ input[type="button"]:hover {
     cursor: pointer;
 }
 
+#StartGame {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 50px;
+    text-align: center;
+    color: white;
+    border-radius: 10px;
+    padding: 5px;
+    background-color: blue;
+}
+
+#StartGame:hover {
+    cursor: pointer;
+    background-color: #007;
+}
+
 .Allow {
     background-color: green;
 }

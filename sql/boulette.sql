@@ -174,7 +174,7 @@ BEGIN
     DECLARE PCursor CURSOR FOR SELECT PairName, UserA, UserB, UserC
                                FROM pairs WHERE NOT user_active(PLobbyID, UserA) 
                                              OR NOT user_active(PLobbyID, UserB)
-                                             OR NOT user_active(PLobbyID, UserC);
+                                             OR (NOT UserC=NULL AND NOT user_active(PLobbyID, UserC));
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET PDone = 1;
 
     OPEN PCursor;
@@ -229,9 +229,9 @@ BEGIN
     SELECT UserA INTO @PUserA FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
     SELECT UserB INTO @PUserB FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
     SELECT UserC INTO @PUserC FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
-    UPDATE users SET UserStatus=UserStatus&1021|5 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
-    UPDATE users SET UserStatus=UserStatus&1021|5 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
-    UPDATE users SET UserStatus=UserStatus&1021|5 WHERE LobbyID=PLobbyID AND UserName=@PUserC;
+    UPDATE users SET UserStatus=UserStatus&1020|5 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
+    UPDATE users SET UserStatus=UserStatus&1020|5 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
+    UPDATE users SET UserStatus=UserStatus&1020|5 WHERE LobbyID=PLobbyID AND UserName=@PUserC;
 END.
 DELIMITER ;
 
@@ -244,9 +244,9 @@ BEGIN
     UPDATE pairs SET UserC=(@UserC:=UserC), UserC=NULL WHERE LobbyID=PLobbyID AND PairName=PPairName;
     SELECT UserB INTO @PUserB FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
     SELECT UserC INTO @PUserC FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
-    UPDATE users SET UserStatus=UserStatus&1021|5 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
-    UPDATE users SET UserStatus=UserStatus&1021|5 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
-    UPDATE users SET UserStatus=UserStatus&1021   WHERE LobbyID=PLobbyID AND UserName=@PUserC;
+    UPDATE users SET UserStatus=UserStatus&1020|5 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
+    UPDATE users SET UserStatus=UserStatus&1020|5 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
+    UPDATE users SET UserStatus=0                 WHERE LobbyID=PLobbyID AND UserName=@PUserC;
 END.
 DELIMITER ;
 
@@ -259,9 +259,9 @@ BEGIN
     SELECT UserA INTO @PUserA FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
     SELECT UserB INTO @PUserB FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
     SELECT UserC INTO @PUserC FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
-    UPDATE users SET UserStatus=UserStatus&1201 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
-    UPDATE users SET UserStatus=UserStatus&1201 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
-    UPDATE users SET UserStatus=UserStatus&1201 WHERE LobbyID=PLobbyID AND UserName=@PUserC;
+    UPDATE users SET UserStatus=0 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
+    UPDATE users SET UserStatus=0 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
+    UPDATE users SET UserStatus=0 WHERE LobbyID=PLobbyID AND UserName=@PUserC;
     DELETE FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
 END.
 DELIMITER ;

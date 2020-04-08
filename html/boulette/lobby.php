@@ -55,8 +55,15 @@
             $sql = "INSERT INTO users(LobbyID, UserName, Host) VALUES ('" . $id . "', '" . escape($usr) . "', " . 
                         (empty($_POST["LobbyID"]) ? "TRUE" : "FALSE") . ")";
             if (!$conn->query($sql)) {
-                if (empty($_POST["LobbyID"])) header("Location: create.php?error=2");
-                else                          header("Location: join.php?error=2");
+                $sql = "SELECT user_active('" . escape($usr) . "') AS Active";
+                if (!$conn->query($sql)->fetch_assoc()["Active"]) {
+                    $sql = "UPDATE users SET LastUpdate=NOW(), UserStatus=0 WHERE LobbyID='" . $id . "' AND UserName='" . escape($usr) . "'";
+                    $conn->query($sql);
+                } else {
+                    if (empty($_POST["LobbyID"])) header("Location: create.php?error=2");
+                    else                          header("Location: join.php?error=2");
+                    exit();
+                }
             }
             setcookie("LobbyID", $id, time() + 86400, "/boulette");
             setcookie("UserName", $usr, time() + 86400, "/boulette");

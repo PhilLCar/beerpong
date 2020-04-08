@@ -10,8 +10,17 @@ STATUS_ASKING     = 32;
 STATUS_DONE       = 64;
 STATUS_WRITING    = 128;
 
+GAME_STARTING = 0;
+GAME_TRIOS    = 1;
+GAME_ROUND1   = 2;
+GAME_ROUND2   = 4;
+GAME_ROUND3   = 8;
+GAME_CATCHOSE = 16
+GAME_PAUSED   = 32;
+GAME_TIMEOUT  = 64;
+GAME_FINISHED = 128;
+
 STATE_LOCAL    = 0;
-STATE_STATUS   = 0;
 STATE_SWITCH   = 0;
 STATE_MYUSER   = null;
 STATE_MYPAIR   = null;
@@ -89,6 +98,7 @@ function uUsers() {
     if (STATE_USERS[STATE_MYUSER].Host == 1) {
         if (STATE_LOCAL & 1) userHTML += "<div id=\"AllowTrios\" class=\"Block\" onclick=\"allowTrios()\">Restreindre les trios</div>";
         else userHTML += "<div id=\"AllowTrios\" class=\"Allow\" onclick=\"allowTrios()\">Permettre les trios</div>";
+        userHTML += "<div id=\"StartGame\" onclick=\"startGame()\">Commencer la partie</div>";
     }
     if (paired.innerHTML != pairHTML) paired.innerHTML = pairHTML;
     if (unpaired.innerHTML != userHTML) unpaired.innerHTML = userHTML;
@@ -131,6 +141,9 @@ function uMessages() {
 function pair(n) {
     if (STATE_MYPAIR != null && !(STATE_GAME & 1)) {
         alert("Vous faites déjà partie d'une paire!");
+        return;
+    } else if (STATE_USERS[n].Status != 0) {
+        alert("Impossible de former une paire avec cet utilisateur pour l'instant!");
         return;
     }
     var dialogHTML;
@@ -218,6 +231,7 @@ function pairConfirm(n) {
 
 function getUsers(vars) {
     STATE_USERS = [];
+    STATE_MYUSER = null;
     var n = 0;
     for (var item of vars) {
         if (item[0] == 'U') {
@@ -238,6 +252,7 @@ function getUsers(vars) {
 
 function getPairs(vars) {
     STATE_PAIRS = []
+    STATE_MYPAIR = null;
     var n = 0;
     for (var item of vars) {
         if (item[0] == 'P') {
@@ -364,30 +379,33 @@ function update(n) {
     var post = "";
     post = buildpost(post, "LobbyID", LOBBY_ID);
     post = buildpost(post, "LastMID", STATE_LASTMID)
-    ///////////////// UNSAFE MUST ESCAPE ///////////////////////
     if (PUSH_PAIR) {
         post = buildpost(post, "PairStatus", PUSH_PAIR.PairStatus);
-        post = buildpost(post, "PairName", PUSH_PAIR.PairName);
-        post = buildpost(post, "UserB", PUSH_PAIR.UserB);
+        post = buildpost(post, "PairName", encodeURIComponent(PUSH_PAIR.PairName));
+        post = buildpost(post, "UserB", encodeURIComponent(PUSH_PAIR.UserB));
         PUSH_PAIR = null;
     }
     if (PUSH_MESSAGES) {
-        post = buildpost(post, "Messages", PUSH_MESSAGES);
+        post = buildpost(post, "Messages", encodeURIComponent(PUSH_MESSAGES));
         PUSH_MESSAGES = null;
     }
-    post = buildpost(post, "UserName", USERNAME);
+    post = buildpost(post, "UserName", encodeURIComponent(USERNAME));
     post = buildpost(post, "UserStatus", STATE_SWITCH);
     if (STATE_LOCAL != STATE_GAME) {
         post = buildpost(post, "GameState", STATE_LOCAL);
         post = buildpost(post, "Timer", encodeURIComponent(STATE_TIME));
     }
-    if (STATE_USERS[STATE_MYUSER].Host == 1) {
-        post = buildpost(post, "RemoveInactive");
+    if (STATE_MYUSER != null && STATE_USERS[STATE_MYUSER].Host == 1) {
+        post = buildpost(post, "RemoveInactive", 1);
     }
-    //////////////////////////////////////////////////////////
     xhttp.onreadystatechange = async function() {
       if (this.readyState == 4 && this.status == 200) {
         var vars = this.responseText.split('`');
+        if (vars[0][0] == 'F') {
+            alert("L'hôte a quitté la partie, elle va maintenant se terminer.");
+            window.location = "index.php";
+            return;
+        }
         var game = vars[0].split(';');
         STATE_GAME = game[0];
         STATE_TIME = game[1];
