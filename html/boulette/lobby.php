@@ -79,7 +79,7 @@
     <script>
         LOBBY_ID = "<?php echo($id); ?>";
         USERNAME = "<?php echo($usr); ?>";
-        window.setInterval(update, 1000);
+        update(1000);
     </script>
   </head>
   <body>
@@ -93,46 +93,9 @@
     <div id="SideBar">
         <div id="Paired">
             <div id="PairedTitle">PAIRÉ.E.S</div>
-            <div id="Pair1" class="Pair">
-                <div class="PairTitle" onclick="hidePair(1)">
-                    <div class="Status StatusPlaying">J</div>
-                    DemoPair1
-                    <div class="PairTime">15:00</div>
-                </div>
-                <div class="PairItem">
-                    <div class="Status StatusAsking">P</div>
-                    User1
-                </div>
-                <div class="PairItem">
-                    <div class="Status StatusGuessing">D</div>
-                    User2
-                </div>
-            </div>
-            <div id="Pair2" class="Pair">
-                <div class="PairTitle" onclick="hidePair(2)">
-                    <div class="Status StatusWaiting">A</div>
-                    DemoPair2
-                </div>
-                <div class="PairItem">
-                    <div class="Status StatusWaiting">A</div>
-                    User3
-                </div>
-                <div class="PairItem">
-                    <div class="Status StatusWaiting">A</div>
-                    User4
-                </div>
-            </div>
         </div>
         <div id="Unpaired">
             <div id="UnpairedTitle">NON-PAIRÉ.E.S</div>
-            <div class="User">
-                <div class="Status StatusWriting">...</div>
-                User 5
-            </div>
-            <div class="User Me">
-                <div class="Status StatusUnpaired">N</div>
-                User 6
-            </div>
         </div>
     </div>
     <div id="ChatWindow">
@@ -140,8 +103,8 @@
         <div id="MessageBox">
         </div>
         <div id="Write">
-            <input id="WriteBox" type="text"/>
-            <input id="WriteSend" type="button" value="Envoyer"/>
+            <input id="WriteBox" type="text" onkeypress="checkEnter(event)"/>
+            <input id="WriteSend" type="button" value="Envoyer" onclick="sendMessage()"/>
         </div>
     </div>
   </body>

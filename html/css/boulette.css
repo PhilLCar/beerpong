@@ -33,6 +33,7 @@ input[type="button"] {
     padding: 5px;
     border: 3px solid #333;
     border-radius: 10px;
+    margin: 10px;
 }
 
 input[type="button"]:hover {
@@ -158,6 +159,7 @@ input[type="button"]:hover {
     padding: 5px;
     border: 3px solid #333;
     border-radius: 10px;
+    margin: 0px;
 }
 
 #WriteSend:hover {
@@ -182,8 +184,44 @@ input[type="button"]:hover {
     top: 45%;
 }
 
+#AllowTrios {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    text-align: center;
+    color: white;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+#AllowTrios:hover {
+    cursor: pointer;
+}
+
+.Allow {
+    background-color: green;
+}
+
+.Allow:hover {
+    background-color: #030;
+}
+
+.Block {
+    background-color: red;
+}
+
+.Block:hover {
+    background-color: #700;
+}
+
 .PairTitle {
     padding-left: 20px;
+}
+
+.PairScore {
+    float: right;
+    padding-right: 20px;
 }
 
 .PairTime {
@@ -263,9 +301,13 @@ input[type="button"]:hover {
     background-color: red;
 }
 
+.StatusDone {
+    background-color: blue;
+}
+
 .Message {
     width: 80%;
-    float: left;
+    float: right;
     border: 3px solid white;
     border-radius: 10px;
     margin: 10px;
@@ -275,7 +317,7 @@ input[type="button"]:hover {
 }
 
 .Mine {
-    float: right;
+    float: left;
     border: 3px solid #333;
     background-color: #CCC;
     color: black;

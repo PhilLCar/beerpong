@@ -23,6 +23,7 @@ CREATE TABLE users (
     UserStatus      INT                 NOT NULL    DEFAULT     0,
     Played          BOOLEAN             NOT NULL    DEFAULT     FALSE,
     Score           INT                 NOT NULL    DEFAULT     0,
+    LastUpdate      TIMESTAMP           NOT NULL    DEFAULT     NOW(),
     PRIMARY KEY     (LobbyID, UserName),
     FOREIGN KEY     (LobbyID)           REFERENCES  lobbies(LobbyID)
 );
@@ -70,9 +71,30 @@ CREATE TABLE messages (
     FOREIGN KEY     (LobbyID,UserName)  REFERENCES  users(LobbyID, UserName)
 );
 
+DROP FUNCTION IF EXISTS user_active;
+DROP FUNCTION IF EXISTS game_active;
 DROP FUNCTION IF EXISTS create_pair;
 DROP FUNCTION IF EXISTS append_pair;
 DROP FUNCTION IF EXISTS pair_status;
+
+CREATE FUNCTION user_active (
+    PLobbyID    VARCHAR(4),
+    PUserName   VARCHAR(128)
+) RETURNS BOOLEAN 
+RETURN EXISTS (
+    SELECT * FROM users 
+        WHERE LobbyID=PLobbyID AND UserName=PUserName
+        AND   TIMESTAMPDIFF(SECOND, LastUpdate, NOW()) < 30
+);
+
+CREATE FUNCTION game_active (
+    PLobbyID    VARCHAR(4)
+) RETURNS BOOLEAN 
+RETURN EXISTS (
+    SELECT * FROM users 
+        WHERE LobbyID=PLobbyID AND Host=TRUE
+        AND   TIMESTAMPDIFF(SECOND, LastUpdate, NOW()) < 30
+);
 
 DELIMITER .
 CREATE FUNCTION create_pair (
@@ -102,7 +124,7 @@ CREATE FUNCTION append_pair (
 ) RETURNS BOOLEAN
 BEGIN
     DECLARE PUserCAvail BOOLEAN;
-    SET PUserCAvail = EXISTS(SELECT * FROM users WHERE LobbyID=PLobbyID AND UserName=PUserA AND UserStatus&3=0);
+    SET PUserCAvail = EXISTS(SELECT * FROM users WHERE LobbyID=PLobbyID AND UserName=PUserC AND UserStatus&3=0);
     IF PUserCAvail THEN
         UPDATE users SET UserStatus=UserStatus|2 WHERE LobbyID=PLobbyID AND UserName=PUserC;
         UPDATE pairs SET UserC=PUserC WHERE LobbyID=PLobbyID AND PairName=PPairName;
@@ -133,9 +155,70 @@ BEGIN
 END.
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS clear_inactive;
 DROP PROCEDURE IF EXISTS set_pair;
+DROP PROCEDURE IF EXISTS notc_pair;
 DROP PROCEDURE IF EXISTS delete_pair;
 DROP PROCEDURE IF EXISTS create_user_order;
+
+DELIMITER .
+CREATE PROCEDURE clear_inactive (
+    PLobbyID        VARCHAR(4)
+)
+BEGIN
+    DECLARE PUserA      VARCHAR(128);
+    DECLARE PUserB      VARCHAR(128);
+    DECLARE PUserC      VARCHAR(128);
+    DECLARE PPairName   VARCHAR(128);
+    DECLARE PDone       BOOLEAN;
+    DECLARE PCursor CURSOR FOR SELECT PairName, UserA, UserB, UserC
+                               FROM pairs WHERE NOT user_active(PLobbyID, UserA) 
+                                             OR NOT user_active(PLobbyID, UserB)
+                                             OR NOT user_active(PLobbyID, UserC);
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET PDone = 1;
+
+    OPEN PCursor;
+    SET PDone = 0;
+    REPEAT
+        FETCH PCursor INTO PPairName, PUserA, PUserB, PUserC;
+        IF user_active(PLobbyID, PUserA) THEN
+            IF user_active(PLobbyID, PUserB) THEN
+                CALL notc_pair(PLobbyID, PPairName);
+                UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND UserName=PUserC;
+            ELSEIF user_active(PLobbyID, PUserC) THEN
+                UPDATE pairs SET UserB=(@PUserB:=UserB), UserB=UserC, UserC=@PUserB
+                                WHERE LobbyID=PLobbyID AND PairName=PPairName;
+                CALL notc_pair(PLobbyID, PPairName);
+                UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND UserName=PUserB;
+            ELSE
+                CALL delete_pair(PLobbyID, PPairName);
+                UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND 
+                                        (UserName=PUserB OR UserName=PUserC);
+            END IF;
+        ELSEIF user_active(PLobbyID, PUserB) THEN
+            IF user_active(PLobbyID, PUserC) THEN
+                UPDATE pairs SET UserA=(@PUserA:=UserA), UserA=UserC, UserC=@PUserA
+                                WHERE LobbyID=PLobbyID AND PairName=PPairName;
+                CALL notc_pair(PLobbyID, PPairName);
+                UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND UserName=PUserA;
+            ELSE
+                CALL delete_pair(PLobbyID, PPairName);
+                UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND 
+                                        (UserName=PUserA OR UserName=PUserC);
+            END IF;
+        ELSEIF user_active(PLobbyID, PUserC) THEN
+            CALL delete_pair(PLobbyID, PPairName);
+            UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND 
+                                    (UserName=PUserA OR UserName=PUserB);
+        ELSE
+            CALL delete_pair(PLobbyID, PPairName);
+            UPDATE users SET UserStatus=1024 WHERE LobbyID=PLobbyID AND 
+                                    (UserName=PUserA OR UserName=PUserB OR UserName=PUserC);
+        END IF;
+    UNTIL PDone END REPEAT;
+    CLOSE PCursor;
+END.
+DELIMITER ;
 
 DELIMITER .
 CREATE PROCEDURE set_pair (
@@ -146,9 +229,24 @@ BEGIN
     SELECT UserA INTO @PUserA FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
     SELECT UserB INTO @PUserB FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
     SELECT UserC INTO @PUserC FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
-    UPDATE users SET UserStatus=UserStatus&125|1 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
-    UPDATE users SET UserStatus=UserStatus&125|1 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
-    UPDATE users SET UserStatus=UserStatus&125|1 WHERE LobbyID=PLobbyID AND UserName=@PUserC;
+    UPDATE users SET UserStatus=UserStatus&1021|5 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
+    UPDATE users SET UserStatus=UserStatus&1021|5 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
+    UPDATE users SET UserStatus=UserStatus&1021|5 WHERE LobbyID=PLobbyID AND UserName=@PUserC;
+END.
+DELIMITER ;
+
+DELIMITER .
+CREATE PROCEDURE notc_pair (
+    PLobbyID        VARCHAR(4),
+    PPairName       VARCHAR(128)
+)
+BEGIN
+    UPDATE pairs SET UserC=(@UserC:=UserC), UserC=NULL WHERE LobbyID=PLobbyID AND PairName=PPairName;
+    SELECT UserB INTO @PUserB FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
+    SELECT UserC INTO @PUserC FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
+    UPDATE users SET UserStatus=UserStatus&1021|5 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
+    UPDATE users SET UserStatus=UserStatus&1021|5 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
+    UPDATE users SET UserStatus=UserStatus&1021   WHERE LobbyID=PLobbyID AND UserName=@PUserC;
 END.
 DELIMITER ;
 
@@ -161,9 +259,9 @@ BEGIN
     SELECT UserA INTO @PUserA FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
     SELECT UserB INTO @PUserB FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
     SELECT UserC INTO @PUserC FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
-    UPDATE users SET UserStatus=UserStatus&125 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
-    UPDATE users SET UserStatus=UserStatus&125 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
-    UPDATE users SET UserStatus=UserStatus&125 WHERE LobbyID=PLobbyID AND UserName=@PUserC;
+    UPDATE users SET UserStatus=UserStatus&1201 WHERE LobbyID=PLobbyID AND UserName=@PUserA;
+    UPDATE users SET UserStatus=UserStatus&1201 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
+    UPDATE users SET UserStatus=UserStatus&1201 WHERE LobbyID=PLobbyID AND UserName=@PUserC;
     DELETE FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
 END.
 DELIMITER ;

@@ -21,12 +21,15 @@
         $conn->query("LOCK TABLES lobbies WRITE, users WRITE, pairs WRITE, categories WRITE, names WRITE, messages WRITE");
 
         // SEND
-        if (!empty($_POST["GameState"]) && !empty($_POST["Timer"])) {
-            $sql = "UPDATE lobbies SET GameState=" . $_POST["GameState"] . ", Timer='" . $_POST["Timer"] . "' WHERE LobbyID='" . $_POST["LobbyID"] . "'";
+        $sql = "UPDATE users SET LastUpdate=NOW() WHERE LobbyID='" . $_POST["LobbyID"] . "' AND UserName='" . escape($_POST["UserName"]) . "'";
+        $conn->query($sql);
+
+        if (!empty($_POST["Timer"])) {
+            $sql = "UPDATE lobbies SET GameState=" . $_POST["GameState"] . ", Timer='" . urldecode($_POST["Timer"]) . "' WHERE LobbyID='" . $_POST["LobbyID"] . "'";
             $conn->query($sql);
         }
         if (!empty($_POST["UserStatus"])) {
-            $sql = "UPDATE users SET UserStatus=" . $_POST["UserStatus"] . " WHERE UserName='" . escape($_POST["UserName"]) . "' AND LobbyID='" . 
+            $sql = "UPDATE users SET UserStatus=UserStatus^" . $_POST["UserStatus"] . " WHERE UserName='" . escape($_POST["UserName"]) . "' AND LobbyID='" . 
                             $_POST["LobbyID"] . "'";
             $conn->query($sql);
         }
@@ -43,12 +46,15 @@
                 $sql = "SELECT append_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "', '" . escape($_POST["UserB"]) . "')";
                 $conn->query($sql);
             } else if($_POST["PairStatus"] == "Confirm") {
-                $sql = "SELECT set_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "')";
+                $sql = "CALL set_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "')";
                 $conn->query($sql);
             } else if(!empty($_POST["UserB"]) && $_POST["PairStatus"] == "Delete") {
-                $sql = "SELECT delete_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "')";
+                $sql = "CALL delete_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "')";
                 $conn->query($sql);
-            } 
+            } else if ($_POST["PaitStatus"] == "NotC") {
+                $sql = "CALL notc_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "')";
+                $conn->query($sql);
+            }
         }
         if (!empty($_POST["CatName"]) && $_POST["CatStatus"] == "New") {
             $sql = "INSERT INTO categories(LobbyID, CatName, UserName) VALUES ('" . $_POST["LobbyID"] . "', '" . 
@@ -61,7 +67,7 @@
             $conn->query($sql);
         }
         if (!empty($_POST["Messages"])) {
-            $messages = split("`", $_POST["Messages"]);
+            $messages = explode("`", $_POST["Messages"]);
             foreach ($messages as $message) {
                 $sql = "INSERT INTO messages(LobbyID, UserName, Content) VALUES ('" . $_POST["LobbyID"] . "', '" . escape($_POST["UserName"]) . "', '" .
                         escape($message) . "')";
@@ -102,7 +108,8 @@
             echo("I;" . $item . "`");
         }
         
-        $sql = "SELECT MessageID, UserName, Content, TimeSent FROM messages WHERE MessageID>" . $_POST["LastMID"] . " AND LobbyID='" . $_POST["LobbyID"] . "'";
+        $sql = "SELECT MessageID, UserName, Content, TimeSent FROM messages WHERE MessageID>" . $_POST["LastMID"] . " AND LobbyID='" . $_POST["LobbyID"] . 
+                "' ORDER BY MessageID";
         $query = $conn->query($sql);
         while ($result = $query->fetch_assoc()) {
             echo("M;" . $result["MessageID"] . ";" . $result["UserName"] . ";" . $result["TimeSent"] . ";" . $result["Content"] . "`");
