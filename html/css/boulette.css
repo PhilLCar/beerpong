@@ -256,11 +256,31 @@ p {
 }
 
 #GameBoard {
+    position: relative;
     height: 500px;
     width: 500px;
     margin: auto;
     border: 1px solid orange;
     background-color: black;
+    overflow: hidden;
+}
+
+#Bubble {
+    position: absolute;
+    border-radius: 100px;
+    background-color: brown;
+}
+
+#Bubble:hover {
+    background-color: red;
+    cursor: pointer;
+}
+
+#GameText {
+    font-size: 30px;
+    word-wrap: break-word;
+    color: orange;
+    margin-top: 225px;
 }
 
 .Mask {
@@ -419,6 +439,7 @@ p {
     background-color: #444;
     color: white;
     word-wrap: break-word;
+    max-width: 500px;
 }
 
 .Mine {

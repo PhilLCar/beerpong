@@ -1,5 +1,7 @@
 PARAMETER_GUESSTIME = 45;
 PARAMETER_GAMETIME  = 60 * 60;
+PARAMETER_NUNFOLDS  = 5;
+PARAMETER_ANIMRESMS = 100;
 
 STATUS_NOT_PAIRED = 0;
 STATUS_PAIRED     = 1;
@@ -22,6 +24,15 @@ GAME_WORDCHOSE = 32
 GAME_PAUSED    = 64;
 GAME_TIMEOUT   = 128;
 GAME_FINISHED  = 256;
+
+BUBBLE_PREVUNF  = -1;
+BUBBLE_UNFOLD   = 0;
+BUBBLE_POSX     = 0;
+BUBBLE_POSY     = 0;
+BUBBLE_SIZEX    = 0;
+BUBBLE_SIZEY    = 0;
+BUBBLE_GROWRATE = 25;
+BUBBLE_MAXSIZE  = 100;
 
 STATE_HOST     = false;
 STATE_TURN     = 0;
@@ -51,12 +62,18 @@ PUSH_ORDER    = false;
 PUSH_TIME     = null;
 PUSH_USERTURN = null;
 PUSH_GAMETURN = null;
-PUSH_REQITEM  = false;
+PUSH_REQITEM  = null;
+PUSH_USEITEM  = null;
+PUSH_SCORE    = null;
+PUSH_CLEAR    = null;
 
 BLOCKERS_PAIRING   = false;
 BLOCKERS_CLEARFOR  = 0;
 BLOCKERS_CATCHOSE  = 0;
 BLOCKERS_PAUSED    = false;
+BLOCKERS_ROUND1    = false;
+BLOCKERS_ROUND2    = false;
+BLOCKERS_ROUND3    = false;
 
 /////////////////////////////////// UPDATE //////////////////////////////////////////////
 
@@ -67,12 +84,17 @@ function uState() {
             document.getElementById("Mask").hidden = true;
             document.getElementById("CatMask").hidden = true;
             document.getElementById("WordMask").hidden = true;
+            document.getElementById("GameMask").hidden = true;
+            document.getElementById("GuessMask").hidden = true;
 
             // Cancel all blockers
             BLOCKERS_PAIRING   = false;
             BLOCKERS_CLEARFOR  = 0;
             BLOCKERS_CATCHOSE  = 0;
             BLOCKERS_PAUSED    = true;
+            BLOCKERS_ROUND1    = false;
+            BLOCKERS_ROUND2    = false;
+            BLOCKERS_ROUND3    = false;
 
             // Cancel all pushes
             PUSH_PAIR     = null;
@@ -84,6 +106,9 @@ function uState() {
             PUSH_USERTURN = null;
             PUSH_GAMETURN = null;
             PUSH_REQITEM  = null;
+            PUSH_USEITEM  = null;
+            PUSH_SCORE    = null;
+            PUSH_CLEAR    = null;
 
             alert("Un utilisateur est parti, la partie est temporairement interrompue jusqu'à ce que les paires soient reformées!")
         }
@@ -103,7 +128,13 @@ function uState() {
             wordChose();
             break;
         case GAME_ROUND1:
-            doRound1();
+            doRound(1);
+            break;
+        case GAME_ROUND2:
+            doRound(2);
+            break;
+        case GAME_ROUND3:
+            doRound(3);
             break;
     }
 }
@@ -185,7 +216,13 @@ function uUsers() {
         userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"choseWords()\">Choisir les mots</div>";
     }
     if (STATE_HOST && (STATE_GAME & GAME_WORDCHOSE) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
-        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"round1()\">Passer à la première ronde</div>";
+        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"round(1)\">Passer à la première ronde</div>";
+    }
+    if (STATE_HOST && (STATE_GAME & GAME_ROUND1) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
+        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"round(2)\">Passer à la deuxième ronde</div>";
+    }
+    if (STATE_HOST && (STATE_GAME & GAME_ROUND2) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
+        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"round(3)\">Passer à la ronde finale</div>";
     }
     userHTML += "<div id=\"QuitGame\" class=\"CButton\" onclick=\"quitGame()\">Quitter la partie</div>";
     if (paired.innerHTML != pairHTML) paired.innerHTML = pairHTML;
@@ -341,7 +378,12 @@ function getItems(vars) {
     for (var item of vars) {
         if (item[0] == 'I') {
             var name = item.split(';');
-            STATE_ITEMS[n++] = name[1];
+            var itemname = name[2];
+            for (var i = 3; i < name.length; i++) itemname += ";" + name[i];
+            STATE_ITEMS[n++] = {
+                "UserName": name[1],
+                "Item": itemname
+            }
         }
     }
 }
@@ -509,12 +551,13 @@ function displayUser(user) {
 }
 
 function getPairInfo(pair) {
-    if (pair.Playing) {
+    if (pair.Playing == 1) {
         return getRemainingTime();
     } else {
+        var usera = getUser(pair.UserA);
         var userb = getUser(pair.UserB);
         var userc = getUser(pair.UserC);
-        return (parseInt(user.Score) + parseInt(userb.Score) + (userc ? parseInt(userc.Score) : 0)) + " pts";
+        return (parseInt(usera.Score) + parseInt(userb.Score) + (userc ? parseInt(userc.Score) : 0)) + " pts";
     }
 }
 
@@ -647,28 +690,72 @@ function wordChose() {
     }
 }
 
-function round1() {
-    STATE_LOCAL = GAME_ROUND1;
-    PUSH_ORDER  = true;
+function round(r) {
+    switch(r) {
+        case 1:
+            STATE_LOCAL = GAME_ROUND1;
+            PUSH_ORDER  = true;
+            break;
+        case 2:
+            STATE_LOCAL = GAME_ROUND2;
+            PUSH_CLEAR  = true;
+            break;
+        case 3:
+            STATE_LOCAL = GAME_ROUND3;
+            PUSH_CLEAR  = true;
+            break;
+    }
 }
 
-function doRound1() {
-    var user = null;
-    var n    = null;
-    var pair = null;
+function doRound(r) {
+    var user  = null;
+    var n     = null;
+    var pair  = null;
+    var total = 0;
     for (var i = 0; i < STATE_USERS.length; i++) {
-        if (STATE_USERS[i].Turn == STATE_TURN) {
+        if (!user && STATE_USERS[i].Turn == STATE_TURN) {
             user = STATE_USERS[i];
             n = i;
-            break;
         }
+        total += parseInt(STATE_USERS[i].Score);
+    }
+    if (user) pair = inPairs(user);
+    if (total == 2 * r * STATE_USERS.length && !(pair.Playing == 1)) {
+        setStatus(STATUS_DONE, true);
+        setStatus(STATUS_WAITING, false);
+        setStatus(STATUS_GUESSING, false);
+        setStatus(STATUS_ASKING, false);
+        var mask1 = document.getElementById("GameMask");
+        var mask2 = document.getElementById("GuessMask");
+        if (!mask1.hidden) mask1.hidden = true;
+        if (!mask2.hidden) mask2.hidden = true;
+        switch (r) {
+            case 1:
+                if (!BLOCKERS_ROUND1) {
+                    alert("La première ronde est terminée!");
+                    BLOCKERS_ROUND1 = true;
+                }
+                break;
+            case 2:
+                if (!BLOCKERS_ROUND2) {
+                    alert("La deuxième ronde est terminée!");
+                    BLOCKERS_ROUND2 = true;
+                }
+                break;
+            case 3:
+                if (!BLOCKERS_ROUND3) {
+                    alert("La partie est terminée!");
+                    BLOCKERS_ROUND3 = true;
+                }
+                break;
+        }
+        return;
     }
     if (STATE_HOST && (n == null)) {
         PUSH_GAMETURN = STATE_TURN + 1;
     }
-    if (user) pair = inPairs(user);
     if (n == STATE_MYUSER) {
-        play(1);
+        play(r);
     } else if (pair && (pair.UserA == USERNAME ||
                         pair.UserB == USERNAME ||
                         pair.UserC == USERNAME)) {
@@ -699,12 +786,27 @@ function play(round) {
     setStatus(STATUS_GUESSING, false);
     var mask1 = document.getElementById("GameMask");
     var mask2 = document.getElementById("GuessMask");
+    var dialog1 = "Cliquez quand vous êtes prêt à commencer!";
+    var dialog2;
+    switch (round) {
+        case 1:
+            dialog2 = "Faites deviner le mot affiché comme vous voulez!";
+            break;
+        case 2:
+            dialog2 = "Vous ne devez prononcer qu'un seul mot!";
+            break;
+        case 3:
+            dialog2 = "Vous devez mimer!";
+            break;
+    }
     if (mask1.hidden) mask1.hidden = false;
     if (!mask2.hidden) mask2.hidden = true;
     if (STATE_PAIRS[STATE_MYPAIR].Playing == 1) {
         var time = getRemainingTime();
+        var dialog = document.getElementById("GameDialogText");
+        if (dialog.innerHTML != dialog2) dialog.innerHTML = dialog2;
         document.getElementById("GameTimer").innerHTML = time;
-        document.getElementById("GameDialog").hidden = true;
+        document.getElementById("GameStartButton").hidden = true;
         document.getElementById("GameBoard").hidden = false;
 
         if (time == secondsToTime(0)) {
@@ -716,14 +818,24 @@ function play(round) {
             }
             mask1.hidden = true;
         }
+
+        if (!STATE_ITEM) {
+            if (STATE_ITEMS.length == 0) {
+                PUSH_REQITEM = true;
+                bubbleReset();
+                setTimeout(unfold, PARAMETER_ANIMRESMS);
+            } else {
+                if (STATE_ITEMS.length > 0) STATE_ITEM = STATE_ITEMS[0];
+            }
+        }
     } else {
+        STATE_ITEM = null;
+        var dialog = document.getElementById("GameDialogText");
+        if (dialog.innerHTML != dialog1) dialog.innerHTML = dialog1;
         document.getElementById("GameTimer").innerHTML = secondsToTime(PARAMETER_GUESSTIME);
-        document.getElementById("GameDialog").hidden = false;
+        document.getElementById("GameStartButton").hidden = false;
         document.getElementById("GameBoard").hidden = true;
-    }
-    if (!STATE_ITEM) {
-        if (STATE_ITEMS.length == 0) PUSH_REQITEM = true;
-        else STATE_ITEM = STATE_ITEMS[0];
+        document.getElementById("GameOK").hidden = true;
     }
 }
 
@@ -752,6 +864,72 @@ function startTurn() {
         "PairStatus": "Playing",
         "Playing": 1
     }
+}
+
+function newWord(r) {
+    document.getElementById("GameOK").hidden = true;
+    document.getElementById("GameText").hidden = true;
+    PUSH_SCORE = parseInt(STATE_USERS[STATE_MYUSER].Score) + 1;
+    var total = 0;
+    for (user of STATE_USERS) {
+        total += parseInt(user.Score);
+    }
+    var round = 0;
+    if (STATE_GAME & GAME_ROUND1) round = 1;
+    if (STATE_GAME & GAME_ROUND2) round = 2;
+    if (STATE_GAME & GAME_ROUND3) round = 3;
+    if (total == 2 * round * STATE_USERS.length - 1) {
+        PUSH_USERTURN = STATE_TURN + 1;
+        PUSH_PAIR = {
+            "PairName": STATE_PAIRS[STATE_MYPAIR].PairName,
+            "PairStatus": "Playing",
+            "Playing": 0
+        }
+    }
+    PUSH_USEITEM = STATE_ITEM;
+    STATE_ITEM = null;
+}
+
+function bubbleReset() {
+    BUBBLE_PREVUNF = -1;
+    BUBBLE_UNFOLD  = 0;
+}
+
+function unfold() {
+    var bubble = document.getElementById("Bubble");
+    if (BUBBLE_UNFOLD == BUBBLE_PREVUNF) {
+        if (BUBBLE_SIZEX < BUBBLE_MAXSIZE) {
+            BUBBLE_SIZEX += BUBBLE_GROWRATE / (1000 / PARAMETER_ANIMRESMS);
+            BUBBLE_SIZEY += BUBBLE_GROWRATE / (1000 / PARAMETER_ANIMRESMS);
+            bubble.style.left   = BUBBLE_POSX - (BUBBLE_SIZEX / 2) + "px";
+            bubble.style.top    = BUBBLE_POSY - (BUBBLE_SIZEY / 2) + "px";
+            bubble.style.width  = BUBBLE_SIZEX + "px";
+            bubble.style.height = BUBBLE_SIZEY + "px";
+        }
+    } else {
+        if (BUBBLE_UNFOLD == 0) {
+            bubble.hidden = false;
+        } else if (BUBBLE_UNFOLD >= PARAMETER_NUNFOLDS) {
+            BUBBLE_UNFOLD  = 0;
+            BUBBLE_PREVUNF = -1;
+            bubble.hidden  = true;
+            var text = document.getElementById("GameText");
+            text.hidden = false;
+            text.innerHTML = STATE_ITEM.Item;
+            document.getElementById("GameOK").hidden = false;
+            return;
+        }
+        BUBBLE_POSX = (Math.random() * 500) | 0;
+        BUBBLE_POSY = (Math.random() * 500) | 0;
+        BUBBLE_SIZEX = 1;
+        BUBBLE_SIZEY = 1;
+        bubble.style.left   = BUBBLE_POSX  + "px";
+        bubble.style.top    = BUBBLE_POSY  + "px";
+        bubble.style.width  = BUBBLE_SIZEX + "px";
+        bubble.style.height = BUBBLE_SIZEY + "px";
+        BUBBLE_PREVUNF = BUBBLE_UNFOLD;
+    }
+    setTimeout(unfold, PARAMETER_ANIMRESMS);
 }
 
 /////////////////////////////////// REFRESH //////////////////////////////////////////////
@@ -804,6 +982,19 @@ function update(n) {
     if (PUSH_REQITEM) {
         post = buildpost(post, "RequestItem", PUSH_REQITEM);
         PUSH_REQITEM = null;
+    }
+    if (PUSH_USEITEM) {
+        post = buildpost(post, "UsedItem", PUSH_USEITEM.Item);
+        post = buildpost(post, "ItemUser", PUSH_USEITEM.UserName);
+        PUSH_USERTURN = null;
+    }
+    if (PUSH_SCORE) {
+        post = buildpost(post, "Score", PUSH_SCORE);
+        PUSH_SCORE = null;
+    }
+    if (PUSH_CLEAR) {
+        post = buildpost(post, "Clear", true);
+        PUSH_CLEAR = null;
     }
     post = buildpost(post, "UserName", USERNAME);
     post = buildpost(post, "UserStatus", STATE_SWITCH);

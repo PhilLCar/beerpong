@@ -89,7 +89,11 @@
                     $conn->query($sql);
                 }
                 if (!empty($_POST["UsedItem"])) {
-                    $sql = "UPDATE names SET Used=TRUE WHERE LobbyID='" . $_POST["LobbyID"] . "' AND UserName='" . escape($_POST["UserName"]) . "' AND Item='" . escape($_POST["UsedItem"]) . "'";
+                    $sql = "UPDATE names SET Used=TRUE WHERE LobbyID='" . $_POST["LobbyID"] . "' AND UserName='" . escape($_POST["ItemUser"]) . "' AND Item='" . escape($_POST["UsedItem"]) . "'";
+                    $conn->query($sql);
+                }
+                if (!empty($_POST["Clear"])) {
+                    $sql = "UPDATE names SET Used=FALSE WHERE LobbyID='" . $_POST["LobbyID"] . "'";
                     $conn->query($sql);
                 }
                 if (!empty($_POST["Messages"])) {
@@ -135,18 +139,16 @@
                 }
 
                 if (!empty($_POST["RequestItem"])) {
-                    $sql = "SELECT Item FROM names WHERE LobbyID='" . $_POST["LobbyID"] . "' AND Used=FALSE ORDER BY RAND() LIMIT 1";
-                    $item = $conn->query($sql)->fetch_assoc()["Item"];
-                    $sql = "UPDATE names SET Used=TRUE WHERE Item='" . $item . "' AND LobbyID='" . $_POST["LobbyID"] . "'";
-                    $conn->query($sql);
-                    echo("I;" . $item . "`");
+                    $sql = "SELECT UserName, Item FROM names WHERE LobbyID='" . $_POST["LobbyID"] . "' AND Used=FALSE ORDER BY RAND() LIMIT 1";
+                    $result = $conn->query($sql)->fetch_assoc();
+                    echo("I;" . $result["UserName"] . ";" . $result["Item"] . "`");
                 }
 
                 if (!empty($_POST["RequestItems"])) {
-                    $sql = "SELECT Item FROM names WHERE LobbyID='" . $_POST["LobbyID"] . "' AND UserName='" . escape($_POST["UserName"]) . "'";
+                    $sql = "SELECT UserName, Item FROM names WHERE LobbyID='" . $_POST["LobbyID"] . "' AND UserName='" . escape($_POST["UserName"]) . "'";
                     $query = $conn->query($sql);
                     while ($result = $query->fetch_assoc()) {
-                        echo("I;" . $result["Item"] . "`");
+                        echo("I;" . $result["UserName"] . ";" . $result["Item"] . "`");
                     }
                 }
                 

@@ -128,11 +128,14 @@
     <div id="GameMask" class="Mask" hidden="true">
         <div id="GameTimer" class="Timer">00:45</div>
         <div id="GameDialog" class="Dialog">
-            Cliquez quand vous êtes prêt à commencer!<br>
+            <div id="GameDialogText">Cliquez quand vous êtes prêt à commencer!</div>
             <input id="GameStartButton" type="button" value="GO!" onclick="startTurn()"/>
         </div>
         <div id="GameBoard" hidden="true">
+            <div id="Bubble" hidden=true" onclick="BUBBLE_UNFOLD+=1"></div>
+            <div id="GameText" hidden="true"></div>
         </div>
+        <input id="GameOK" hidden="true" type="button" value="OK!" onclick="newWord()"/>
     </div>
     <div id="GuessMask" class="Mask" hidden="true">
         <div id="GuessTimer" class="Timer">00:45</div>
