@@ -13,6 +13,7 @@ STATUS_ASKING     = 32;
 STATUS_DONE       = 64;
 STATUS_WRITING    = 128;
 STATUS_ALL        = 1023;
+STATUS_OFFLINE    = 1024;
 
 GAME_STARTING  = 0;
 GAME_TRIOS     = 1;
@@ -713,7 +714,7 @@ function doRound(r) {
     var pair  = null;
     var total = 0;
     for (var i = 0; i < STATE_USERS.length; i++) {
-        if (!user && STATE_USERS[i].Turn == STATE_TURN) {
+        if (!user && STATE_USERS[i].Turn == STATE_TURN && (STATE_USERS[i].UserStatus & STATUS_ALL)) {
             user = STATE_USERS[i];
             n = i;
         }
@@ -986,7 +987,7 @@ function update(n) {
     if (PUSH_USEITEM) {
         post = buildpost(post, "UsedItem", PUSH_USEITEM.Item);
         post = buildpost(post, "ItemUser", PUSH_USEITEM.UserName);
-        PUSH_USERTURN = null;
+        PUSH_USEITEM = null;
     }
     if (PUSH_SCORE) {
         post = buildpost(post, "Score", PUSH_SCORE);
