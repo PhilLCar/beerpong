@@ -99,6 +99,7 @@
       }
 
       // Team
+      $newteam = true;
       $sql = "SELECT * FROM teams WHERE TeamName='" . $_POST["TeamName"] . "'";
       $result = $conn->query($sql);
       if (!$conn->query($sql)->num_rows) {
@@ -109,8 +110,8 @@
                     ", 0, 0)";
       } else {
         $sql = "SELECT * FROM games WHERE Active=TRUE AND " .
-          "TeamA='" . $_POST["TeamName"] . "' OR " .
-          "TeamB='" . $_POST["TeamName"] . "'";
+          "(TeamA='" . $_POST["TeamName"] . "' OR " .
+           "TeamB='" . $_POST["TeamName"] . "')";
         if ($conn->query($sql)->num_rows) {
           $sql = "SELECT * FROM teams WHERE TeamName='" . $_POST["TeamName"] . "' AND NOT MemberB=NULL";
           if ($conn->query($sql)->num_rows || !empty($_POST["MemberB"])) {
@@ -119,6 +120,7 @@
             $conn->close();
             exit();
           } else {
+            $newteam = false;
             $update[] = "UPDATE teams SET MemberB='" . $_POST["MemberA"] . "' WHERE TeamName='" . $_POST["TeamName"] . "'";
           }
         } else {
@@ -128,7 +130,9 @@
         }
       }
 
-      $update[] = "UPDATE games SET TeamB='" . $_POST["TeamName"] . "' WHERE GameID=" . $_POST["GameID"];
+      if ($newteam) {
+        $update[] = "UPDATE games SET TeamB='" . $_POST["TeamName"] . "' WHERE GameID=" . $_POST["GameID"];
+      }
  
       foreach ($update as $sql) {
         if (!$conn->query($sql)) {

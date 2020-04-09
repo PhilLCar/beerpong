@@ -93,7 +93,7 @@
                     } else if ($_POST["Rack"] == "Turn") {
                         $sql = "UPDATE games SET Turn=NOT Turn WHERE GameID=" . $_COOKIE["GameID"];
                     } else if ($_POST["Rack"] == "End") {
-                        $sql = "CALL end_game(" . $_COOKIE["GameID"] . ", '" . $_COOKIE["TeamName"] . "')";          
+                        $sql = "CALL end_game(" . $_COOKIE["GameID"] . ", '" . escape($_COOKIE["TeamName"]) . "')";          
                     } else {
                         if ($_COOKIE["TeamName"] == $row["TeamA"] && !$row["RackB"]) {
                             if (!$row["Turn"]) $sql = "UPDATE games SET GlassesB=63, RackB=" . $_POST["Rack"] . " WHERE GameID=" . $_COOKIE["GameID"];
