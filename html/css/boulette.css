@@ -255,6 +255,14 @@ p {
     font-size: 30px;
 }
 
+#GameBoard {
+    height: 500px;
+    width: 500px;
+    margin: auto;
+    border: 1px solid orange;
+    background-color: black;
+}
+
 .Mask {
     position: absolute;
     top: 0px;

@@ -37,6 +37,7 @@ STATE_HIDDEN   = [];
 STATE_USERS    = [];
 STATE_PAIRS    = [];
 STATE_CATS     = [];
+STATE_ITEM     = null;
 STATE_ITEMS    = [];
 STATE_MEMPTY   = true;
 STATE_MESSAGES = [];
@@ -50,6 +51,7 @@ PUSH_ORDER    = false;
 PUSH_TIME     = null;
 PUSH_USERTURN = null;
 PUSH_GAMETURN = null;
+PUSH_REQITEM  = false;
 
 BLOCKERS_PAIRING   = false;
 BLOCKERS_CLEARFOR  = 0;
@@ -81,6 +83,7 @@ function uState() {
             PUSH_TIME     = null;
             PUSH_USERTURN = null;
             PUSH_GAMETURN = null;
+            PUSH_REQITEM  = null;
 
             alert("Un utilisateur est parti, la partie est temporairement interrompue jusqu'à ce que les paires soient reformées!")
         }
@@ -506,17 +509,18 @@ function displayUser(user) {
 }
 
 function getPairInfo(pair) {
-    var user = getUser(pair.UserA);
-    if (user.UserStatus == STATUS_GUESSING || user.UserStatus == STATUS_ASKING) {
-        var time = PARAMETER_GUESSTIME - (new Date().getTime() - STATE_TIME) / 1000;
-        var minutes = ((time / 60) | 0) + "";
-        var seconds = ((time % 60) | 0) + "";
-        return minutes + ":" + seconds.padStart(2, '0');
+    if (pair.Playing) {
+        return getRemainingTime();
     } else {
         var userb = getUser(pair.UserB);
         var userc = getUser(pair.UserC);
         return (parseInt(user.Score) + parseInt(userb.Score) + (userc ? parseInt(userc.Score) : 0)) + " pts";
     }
+}
+
+function getRemainingTime() {
+    var time = PARAMETER_GUESSTIME - (new Date().getTime() - Date.parse(STATE_TIME)) / 1000;
+    return secondsToTime(time);
 }
 
 function getTime(timestamp) {
@@ -670,6 +674,10 @@ function doRound1() {
                         pair.UserC == USERNAME)) {
         guess();
     } else {
+        var mask1 = document.getElementById("GameMask");
+        var mask2 = document.getElementById("GuessMask");
+        if (!mask1.hidden) mask1.hidden = true;
+        if (!mask2.hidden) mask2.hidden = true;
         if (STATE_USERS[STATE_MYUSER].Turn <= STATE_TURN) {
             setStatus(STATUS_WAITING, true);
             setStatus(STATUS_GUESSING, false);
@@ -689,8 +697,34 @@ function play(round) {
     setStatus(STATUS_DONE, false);
     setStatus(STATUS_WAITING, false);
     setStatus(STATUS_GUESSING, false);
-    document.getElementById("GameMask").hidden = false;
+    var mask1 = document.getElementById("GameMask");
+    var mask2 = document.getElementById("GuessMask");
+    if (mask1.hidden) mask1.hidden = false;
+    if (!mask2.hidden) mask2.hidden = true;
+    if (STATE_PAIRS[STATE_MYPAIR].Playing == 1) {
+        var time = getRemainingTime();
+        document.getElementById("GameTimer").innerHTML = time;
+        document.getElementById("GameDialog").hidden = true;
+        document.getElementById("GameBoard").hidden = false;
 
+        if (time == secondsToTime(0)) {
+            PUSH_USERTURN = STATE_TURN + 1;
+            PUSH_PAIR = {
+                "PairName": STATE_PAIRS[STATE_MYPAIR].PairName,
+                "PairStatus": "Playing",
+                "Playing": 0
+            }
+            mask1.hidden = true;
+        }
+    } else {
+        document.getElementById("GameTimer").innerHTML = secondsToTime(PARAMETER_GUESSTIME);
+        document.getElementById("GameDialog").hidden = false;
+        document.getElementById("GameBoard").hidden = true;
+    }
+    if (!STATE_ITEM) {
+        if (STATE_ITEMS.length == 0) PUSH_REQITEM = true;
+        else STATE_ITEM = STATE_ITEMS[0];
+    }
 }
 
 function guess() {
@@ -698,12 +732,26 @@ function guess() {
     setStatus(STATUS_DONE, false);
     setStatus(STATUS_WAITING, false);
     setStatus(STATUS_ASKING, true);
-    document.getElementById("GuessMask").hidden = false;
+    var mask1 = document.getElementById("GuessMask");
+    var mask2 = document.getElementById("GameMask");
+    if (mask1.hidden) mask1.hidden = false;
+    if (!mask2.hidden) mask2.hidden = true;
+    if (STATE_PAIRS[STATE_MYPAIR].Playing == 1) {
+        document.getElementById("GuessTimer").innerHTML = getRemainingTime();
+        document.getElementById("GuessDialog").innerHTML = "C'est parti!";
+    } else {
+        document.getElementById("GuessTimer").innerHTML = secondsToTime(PARAMETER_GUESSTIME);
+        document.getElementById("GuessDialog").innerHTML = "Préparez-vous à deviner!";
+    }
 }
 
 function startTurn() {
     PUSH_TIME = getFormattedDate();
-
+    PUSH_PAIR = {
+        "PairName": STATE_PAIRS[STATE_MYPAIR].PairName,
+        "PairStatus": "Playing",
+        "Playing": 1
+    }
 }
 
 /////////////////////////////////// REFRESH //////////////////////////////////////////////
@@ -745,9 +793,17 @@ function update(n) {
         post = buildpost(post, "Timer", PUSH_TIME);
         PUSH_TIME = null
     }
-    if (PUSH_GAMETURN) {
+    if (PUSH_GAMETURN != null) {
         post = buildpost(post, "GameTurn", PUSH_GAMETURN);
-        PUSH_GAMETURN = 0;
+        PUSH_GAMETURN = null;
+    }
+    if (PUSH_USERTURN != null) {
+        post = buildpost(post, "UserTurn", PUSH_USERTURN);
+        PUSH_USERTURN = null;
+    }
+    if (PUSH_REQITEM) {
+        post = buildpost(post, "RequestItem", PUSH_REQITEM);
+        PUSH_REQITEM = null;
     }
     post = buildpost(post, "UserName", USERNAME);
     post = buildpost(post, "UserStatus", STATE_SWITCH);
@@ -866,4 +922,14 @@ function getCookie(name) {
              (date.getSeconds() + "").padStart(2, '0');
 
     return str;
+}
+
+function secondsToTime(time) {
+    var minutes = ((time / 60) | 0);
+    var seconds = ((time % 60) | 0);
+    if (minutes < 0) minutes = 0;
+    if (seconds < 0) seconds = 0;
+    minutes = minutes + "";
+    seconds = seconds + "";
+    return minutes + ":" + seconds.padStart(2, '0');
 }
