@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS lobbies;
 CREATE TABLE lobbies (
     LobbyID         VARCHAR(4)          NOT NULL    PRIMARY KEY,
     GameState       INT                 NOT NULL    DEFAULT     0,
+    Turn            INT                 NOT NULL    DEFAULT     0,
     Timer           TIMESTAMP           NOT NULL    DEFAULT     NOW()
 );
 
@@ -21,8 +22,8 @@ CREATE TABLE users (
     Host            BOOLEAN             NOT NULL    DEFAULT     FALSE,
     UserOrder       INT                             DEFAULT     NULL,
     UserStatus      INT                 NOT NULL    DEFAULT     0,
-    Played          BOOLEAN             NOT NULL    DEFAULT     FALSE,
     Score           INT                 NOT NULL    DEFAULT     0,
+    Turn            INT                 NOT NULL    DEFAULT     0,
     LastUpdate      TIMESTAMP           NOT NULL    DEFAULT     NOW(),
     PRIMARY KEY     (LobbyID, UserName),
     FOREIGN KEY     (LobbyID)           REFERENCES  lobbies(LobbyID)
@@ -34,6 +35,7 @@ CREATE TABLE pairs (
     UserA           VARCHAR(128)        NOT NULL,
     UserB           VARCHAR(128)        NOT NULL,
     UserC           VARCHAR(128)                    DEFAULT     NULL,
+    Playing         BOOLEAN                         DEFAULT     FALSE,
     PRIMARY KEY     (LobbyID, PairName),
     FOREIGN KEY     (LobbyID)           REFERENCES  lobbies(LobbyID),
     FOREIGN KEY     (LobbyID, UserA)    REFERENCES  users(LobbyID, UserName),
@@ -159,7 +161,7 @@ DROP PROCEDURE IF EXISTS clear_inactive;
 DROP PROCEDURE IF EXISTS set_pair;
 DROP PROCEDURE IF EXISTS notc_pair;
 DROP PROCEDURE IF EXISTS delete_pair;
-DROP PROCEDURE IF EXISTS create_user_order;
+DROP PROCEDURE IF EXISTS order_users;
 
 DELIMITER .
 CREATE PROCEDURE clear_inactive (
@@ -176,32 +178,35 @@ BEGIN
                                             AND (NOT user_active(PLobbyID, UserA) 
                                              OR  NOT user_active(PLobbyID, UserB)
                                              OR (NOT UserC=NULL AND NOT user_active(PLobbyID, UserC)));
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET PDone = 1;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET PDone=TRUE;
+
+    SET PDone=FALSE;
 
     OPEN PCursor;
-    SET PDone = 0;
     REPEAT
         FETCH PCursor INTO PPairName, PUserA, PUserB, PUserC;
-        IF user_active(PLobbyID, PUserA) THEN
-            IF user_active(PLobbyID, PUserB) THEN
-                CALL notc_pair(PLobbyID, PPairName);
+        IF NOT PDone THEN
+            IF user_active(PLobbyID, PUserA) THEN
+                IF user_active(PLobbyID, PUserB) THEN
+                    CALL notc_pair(PLobbyID, PPairName);
+                ELSEIF user_active(PLobbyID, PUserC) THEN
+                    UPDATE pairs SET UserB=(@PUserB:=UserB), UserB=UserC, UserC=@PUserB WHERE LobbyID=PLobbyID AND PairName=PPairName;
+                    CALL notc_pair(PLobbyID, PPairName);
+                ELSE
+                    CALL delete_pair(PLobbyID, PPairName);
+                END IF;
+            ELSEIF user_active(PLobbyID, PUserB) THEN
+                IF user_active(PLobbyID, PUserC) THEN
+                    UPDATE pairs SET UserA=(@PUserA:=UserA), UserA=UserC, UserC=@PUserA WHERE LobbyID=PLobbyID AND PairName=PPairName;
+                    CALL notc_pair(PLobbyID, PPairName);
+                ELSE
+                    CALL delete_pair(PLobbyID, PPairName);
+                END IF;
             ELSEIF user_active(PLobbyID, PUserC) THEN
-                UPDATE pairs SET UserB=(@PUserB:=UserB), UserB=UserC, UserC=@PUserB WHERE LobbyID=PLobbyID AND PairName=PPairName;
-                CALL notc_pair(PLobbyID, PPairName);
+                CALL delete_pair(PLobbyID, PPairName);
             ELSE
                 CALL delete_pair(PLobbyID, PPairName);
             END IF;
-        ELSEIF user_active(PLobbyID, PUserB) THEN
-            IF user_active(PLobbyID, PUserC) THEN
-                UPDATE pairs SET UserA=(@PUserA:=UserA), UserA=UserC, UserC=@PUserA WHERE LobbyID=PLobbyID AND PairName=PPairName;
-                CALL notc_pair(PLobbyID, PPairName);
-            ELSE
-                CALL delete_pair(PLobbyID, PPairName);
-            END IF;
-        ELSEIF user_active(PLobbyID, PUserC) THEN
-            CALL delete_pair(PLobbyID, PPairName);
-        ELSE
-            CALL delete_pair(PLobbyID, PPairName);
         END IF;
     UNTIL PDone END REPEAT;
     CLOSE PCursor;
@@ -253,12 +258,38 @@ BEGIN
     UPDATE users SET UserStatus=0 WHERE LobbyID=PLobbyID AND UserName=@PUserB;
     UPDATE users SET UserStatus=0 WHERE LobbyID=PLobbyID AND UserName=@PUserC;
     DELETE FROM pairs WHERE LobbyID=PLobbyID AND PairName=PPairName;
+    UPDATE lobbies SET GameState=GameState|64 WHERE LobbyID=PLobbyID AND GameState>1;
 END.
 DELIMITER ;
 
 DELIMITER .
-CREATE PROCEDURE create_user_order (
+CREATE PROCEDURE order_users (
+        PLobbyID        VARCHAR(4)
 )
 BEGIN
+    DECLARE PUserA      VARCHAR(128);
+    DECLARE PUserB      VARCHAR(128);
+    DECLARE PUserC      VARCHAR(128);
+    DECLARE PDone       BOOLEAN;
+    DECLARE POrder      INT;
+    DECLARE PCount      INT;
+    DECLARE PCursor CURSOR FOR SELECT UserA, UserB, UserC FROM pairs WHERE LobbyID=PLobbyID;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET PDone=TRUE;
+
+    SET PDone=FALSE;
+    SET POrder=0;
+    SELECT COUNT(PairName) INTO PCount FROM pairs WHERE LobbyID=PLobbyID;
+
+    OPEN PCursor;
+    REPEAT
+        FETCH PCursor INTO PUserA, PUserB, PUserC;
+        IF NOT PDone THEN
+            UPDATE users SET UserOrder=POrder          WHERE LobbyID=PLobbyID AND UserName=PUserA;
+            UPDATE users SET UserOrder=POrder+PCount   WHERE LobbyID=PLobbyID AND UserName=PUserB;
+            UPDATE users SET UserOrder=POrder+PCount*2 WHERE LobbyID=PLobbyID AND UserName=PUserC;
+            SET POrder=POrder+1;
+        END IF;
+    UNTIL PDone END REPEAT;
+    CLOSE PCursor;
 END.
 DELIMITER ;

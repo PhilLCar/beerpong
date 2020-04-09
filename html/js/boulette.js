@@ -10,40 +10,100 @@ STATUS_GUESSING   = 16;
 STATUS_ASKING     = 32;
 STATUS_DONE       = 64;
 STATUS_WRITING    = 128;
+STATUS_ALL        = 1023;
 
-GAME_STARTING = 0;
-GAME_TRIOS    = 1;
-GAME_ROUND1   = 2;
-GAME_ROUND2   = 4;
-GAME_ROUND3   = 8;
-GAME_CATCHOSE = 16
-GAME_PAUSED   = 32;
-GAME_TIMEOUT  = 64;
-GAME_FINISHED = 128;
+GAME_STARTING  = 0;
+GAME_TRIOS     = 1;
+GAME_ROUND1    = 2;
+GAME_ROUND2    = 4;
+GAME_ROUND3    = 8;
+GAME_CATCHOSE  = 16
+GAME_WORDCHOSE = 32
+GAME_PAUSED    = 64;
+GAME_TIMEOUT   = 128;
+GAME_FINISHED  = 256;
 
 STATE_HOST     = false;
-STATE_LOCAL    = null;
+STATE_TURN     = 0;
 STATE_SWITCH   = 0;
 STATE_MYUSER   = null;
 STATE_MYPAIR   = null;
 STATE_STATUS   = 0;
 STATE_LASTMID  = -1;
 STATE_GAME     = 0;
+STATE_LOCAL    = null;
 STATE_TIME     = 0;
 STATE_HIDDEN   = [];
 STATE_USERS    = [];
 STATE_PAIRS    = [];
+STATE_CATS     = [];
+STATE_ITEMS    = [];
 STATE_MEMPTY   = true;
 STATE_MESSAGES = [];
 STATE_QUIT     = false;
 
 PUSH_PAIR     = null;
 PUSH_MESSAGES = null;
+PUSH_CAT      = null;
+PUSH_ITEM     = null;
+PUSH_ORDER    = false;
+PUSH_TIME     = null;
+PUSH_USERTURN = null;
+PUSH_GAMETURN = null;
 
-BLOCKERS_PAIRING  = false;
-BLOCKERS_CLEARFOR = 0;
+BLOCKERS_PAIRING   = false;
+BLOCKERS_CLEARFOR  = 0;
+BLOCKERS_CATCHOSE  = 0;
+BLOCKERS_PAUSED    = false;
 
 /////////////////////////////////// UPDATE //////////////////////////////////////////////
+
+function uState() {
+    if (STATE_GAME & GAME_PAUSED) {
+        if (!BLOCKERS_PAUSED) {
+            if (STATE_HOST) STATE_LOCAL |= GAME_PAUSED;
+            document.getElementById("Mask").hidden = true;
+            document.getElementById("CatMask").hidden = true;
+            document.getElementById("WordMask").hidden = true;
+
+            // Cancel all blockers
+            BLOCKERS_PAIRING   = false;
+            BLOCKERS_CLEARFOR  = 0;
+            BLOCKERS_CATCHOSE  = 0;
+            BLOCKERS_PAUSED    = true;
+
+            // Cancel all pushes
+            PUSH_PAIR     = null;
+            PUSH_MESSAGES = null;
+            PUSH_CAT      = null;
+            PUSH_ITEM     = null;
+            PUSH_ORDER    = false;
+            PUSH_TIME     = null;
+            PUSH_USERTURN = null;
+            PUSH_GAMETURN = null;
+
+            alert("Un utilisateur est parti, la partie est temporairement interrompue jusqu'à ce que les paires soient reformées!")
+        }
+    } else {
+        BLOCKERS_PAUSED = false;
+    }
+
+    switch (STATE_GAME & ~GAME_TRIOS) {
+        case GAME_TIMEOUT:
+            alert("La partie n'a pas débutée avant le temps limite.");
+            window.location = "index.php";
+            return;
+        case GAME_CATCHOSE:
+            catChose();
+            break;
+        case GAME_WORDCHOSE:
+            wordChose();
+            break;
+        case GAME_ROUND1:
+            doRound1();
+            break;
+    }
+}
 
 function uGameTimer() {
     if (STATE_TIME && ((~GAME_TRIOS & STATE_GAME) == GAME_STARTING)) {
@@ -64,55 +124,65 @@ function uGameTimer() {
 
 function uUsers() {
     var pairHTML = "<div id=\"PairedTitle\">PAIRÉ.E.S</div>";
-    var userHTML = "<div id=\"UnpairedTitle\">NON-PAIRÉ.E.S</div>";
+    var userHTML = (!(STATE_GAME & ~GAME_TRIOS) || (STATE_GAME & GAME_PAUSED)) ? "<div id=\"UnpairedTitle\">NON-PAIRÉ.E.S</div>" : "";
 
-    var n = 0;
-    for (var pair of STATE_PAIRS) {
+    for (var i = 0; i < STATE_PAIRS.length; i++) {
+        var pair  = STATE_PAIRS[i];
         var userA = getUser(pair.UserA);
         var userB = getUser(pair.UserB);
         var userC = getUser(pair.UserC);
 
-        pairHTML += "<div id=\"Pair" + n + "\" class=\"Pair\">" +
-                    "<div class=\"PairTitle\" onclick=\"hidePair(" + n + ")\">" +
+        pairHTML += "<div id=\"Pair" + i + "\" class=\"Pair\">" +
+                    "<div class=\"PairTitle\" onclick=\"hidePair(" + i + ")\">" +
                         getPairStatusClass(pair) +
                         pair.PairName +
                     "<div class=\"PairTime\">" + getPairInfo(pair) + "</div>" +
                     "</div>" +
-                    "<div class=\"PairItem" + (userA.UserName == USERNAME ? " Me" : "") + "\"" + (n in STATE_HIDDEN ? " hidden=\"true\"" : "" ) + ">" +
+                    "<div class=\"PairItem" + (userA.UserName == USERNAME ? " Me" : "") + "\"" + (i in STATE_HIDDEN ? " hidden=\"true\"" : "" ) + ">" +
                         getUserStatusClass(userA) +
                         displayUser(userA) +
                         "<div class=\"PairScore\">" + userA.Score + " pts</div>" +
                     "</div>" +
-                    "<div class=\"PairItem" + (userB.UserName == USERNAME ? " Me" : "") + "\"" + (n in STATE_HIDDEN ? " hidden=\"true\"" : "" ) + ">" +
+                    "<div class=\"PairItem" + (userB.UserName == USERNAME ? " Me" : "") + "\"" + (i in STATE_HIDDEN ? " hidden=\"true\"" : "" ) + ">" +
                         getUserStatusClass(userB) +
                         displayUser(userB) +
                         "<div class=\"PairScore\">" + userB.Score + " pts</div>" +
                     "</div>" +
                     (userC == null ? "" :
-                    "<div class=\"PairItem" + (userC.UserName == USERNAME ? " Me" : "") + "\"" + (n in STATE_HIDDEN ? " hidden=\"true\"" : "" ) + ">" +
+                    "<div class=\"PairItem" + (userC.UserName == USERNAME ? " Me" : "") + "\"" + (i in STATE_HIDDEN ? " hidden=\"true\"" : "" ) + ">" +
                         getUserStatusClass(userC) +
                         displayUser(userC) +
                         "<div class=\"PairScore\">" + userC.Score + " pts</div>" +
                     "</div>") +
                     "</div>";
-        n++;
     }
-    n=0;
-    for (var user of STATE_USERS) {
+    for (var i = 0; i < STATE_USERS.length; i++) {
+        var user = STATE_USERS[i];
         if (!inPairs(user)) {
-            userHTML += "<div class=\"User" + (user.UserName == USERNAME ? " Me\"" : "\" onclick=\"pair(" + n + ")\"") + ">" +
+            userHTML += "<div class=\"User" + (user.UserName == USERNAME ? " Me\"" : "\" onclick=\"pair(" + i + ")\"") + ">" +
                             getUserStatusClass(user) +
                             displayUser(user) +
                         "</div>";
-            n++;
         }
     }
     var paired = document.getElementById("Paired");
     var unpaired = document.getElementById("Unpaired");
-    if (STATE_HOST && ((~GAME_TRIOS & STATE_GAME) == GAME_STARTING)) {
-        if (STATE_GAME & 1) userHTML += "<div id=\"AllowTrios\" class=\"CButton Block\" onclick=\"allowTrios()\">Restreindre les trios</div>";
-        else userHTML += "<div id=\"AllowTrios\" class=\"CButton Allow\" onclick=\"allowTrios()\">Permettre les trios</div>";
-        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"startGame()\">Commencer la partie</div>";
+    if (STATE_HOST) {
+        if ((~GAME_TRIOS & STATE_GAME) == GAME_STARTING) {
+            if (STATE_GAME & 1) userHTML += "<div id=\"AllowTrios\" class=\"CButton Block\" onclick=\"allowTrios()\">Restreindre les trios</div>";
+            else userHTML += "<div id=\"AllowTrios\" class=\"CButton Allow\" onclick=\"allowTrios()\">Permettre les trios</div>";
+            userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"startGame()\">Commencer la partie</div>";
+        } else if (STATE_GAME & GAME_PAUSED) {
+            if (STATE_GAME & 1) userHTML += "<div id=\"AllowTrios\" class=\"CButton Block\" onclick=\"allowTrios()\">Restreindre les trios</div>";
+            else userHTML += "<div id=\"AllowTrios\" class=\"CButton Allow\" onclick=\"allowTrios()\">Permettre les trios</div>";
+            userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"unpauseGame()\">Rependre la partie</div>";
+        }
+    }
+    if (STATE_HOST && (STATE_GAME & GAME_CATCHOSE) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
+        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"choseWords()\">Choisir les mots</div>";
+    }
+    if (STATE_HOST && (STATE_GAME & GAME_WORDCHOSE) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
+        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"round1()\">Passer à la première ronde</div>";
     }
     userHTML += "<div id=\"QuitGame\" class=\"CButton\" onclick=\"quitGame()\">Quitter la partie</div>";
     if (paired.innerHTML != pairHTML) paired.innerHTML = pairHTML;
@@ -135,6 +205,22 @@ function uPairs() {
     } else if (!BLOCKERS_PAIRING) {
         clearDialog();
         if (BLOCKERS_CLEARFOR > 0) BLOCKERS_CLEARFOR--;
+    }
+}
+
+function uCats() {
+    var cats = document.getElementById("Categories");
+    if (((STATE_GAME & GAME_CATCHOSE) || (STATE_GAME & GAME_WORDCHOSE)) && !(STATE_GAME & GAME_PAUSED)) {
+        cats.hidden = false;
+        var catsHTML = "<div id=\"CatTitle\">CATÉGORIES</div>";
+        for (cat of STATE_CATS) {
+            catsHTML += "<div class=\"CatItem" + (cat.UserName == USERNAME ? " Me" : "") + "\">" +
+                            cat.CatName + "<div class=\"CatUser\">" + cat.UserName + "</div>" +
+                        "</div>";
+        }
+        cats.innerHTML = catsHTML;
+    } else {
+        cats.hidden = true;
     }
 }
 
@@ -170,30 +256,26 @@ function getState(vars) {
     }
     var game = vars[0].split(';');
     STATE_GAME = game[0] | 0;
-    STATE_TIME = game[1];
+    STATE_TURN = game[1] | 0;
+    STATE_TIME = game[2];
 
     if (STATE_LOCAL == null) STATE_LOCAL = STATE_GAME;
-
-    switch (STATE_GAME & ~GAME_TRIOS) {
-        case GAME_TIMEOUT:
-            alert("La partie n'a pas débutée avant le temps limite.");
-            window.location = "index.php";
-            return;
-    }
 }
 
 function getUsers(vars) {
     STATE_USERS = [];
     STATE_MYUSER = null;
     var n = 0;
-    for (var item of vars) {
+    for (var i = 0; i < vars.length; i++) {
+        var item = vars[i];
         if (item[0] == 'U') {
             var user = item.split(';');
             STATE_USERS[n++] = {
                 "UserName": user[1],
                 "Host": user[2],
                 "UserStatus": user[3],
-                "Score": user[4]
+                "Score": user[4],
+                "Turn": user[5]
             }
             if (user[1] == USERNAME) {
                 STATE_MYUSER = n - 1;
@@ -216,15 +298,47 @@ function getPairs(vars) {
                 "PairName": pair[1],
                 "UserA": pair[2],
                 "UserB": pair[3],
-                "UserC": pair[4]
+                "UserC": pair[4],
+                "Playing": pair[5]
             }
             if (pair[2] == USERNAME ||
                 pair[3] == USERNAME ||
                 pair[4] == USERNAME) {
                 STATE_MYPAIR = n - 1;
-            } else {
-                STATE_MYPAIR = null;
             }
+        }
+    }
+}
+
+function getCats(vars) {
+    STATE_CATS = [];
+    if (!(STATE_GAME & GAME_CATCHOSE) && !(STATE_GAME & GAME_WORDCHOSE)) return;
+    var n = 0;
+    for (var item of vars) {
+        if (item[0] == 'C') {
+            var cat = item.split(';');
+            var catname = cat[2];
+            for (var i = 3; i < cat.length; i++) catname += ";" + cat[i];
+            STATE_CATS[n++] = {
+                "UserName": cat[1],
+                "CatName": catname
+            }
+        }
+    }
+}
+
+function getItems(vars) {
+    STATE_ITEMS = [];
+    if (!(STATE_GAME & GAME_WORDCHOSE) && 
+        !(STATE_GAME & GAME_ROUND1)    && 
+        !(STATE_GAME & GAME_ROUND2)    && 
+        !(STATE_GAME & GAME_ROUND3))
+        return;
+    var n = 0;
+    for (var item of vars) {
+        if (item[0] == 'I') {
+            var name = item.split(';');
+            STATE_ITEMS[n++] = name[1];
         }
     }
 }
@@ -351,11 +465,18 @@ function getUser(username) {
 }
 
 function getPairStatusClass(pair) {
-    var user = getUser(pair.UserA);
-    if ((user.UserStatus & STATUS_GUESSING) || (user.UserStatus & STATUS_ASKING)) 
+    var usera = getUser(pair.UserA);
+    var userb = getUser(pair.UserB);
+
+    if ((usera.UserStatus & STATUS_GUESSING) || 
+        (usera.UserStatus & STATUS_ASKING)   ||
+        (usera.UserStatus & STATUS_PLAYING)  || 
+        (userb.UserStatus & STATUS_PLAYING)) 
         return "<div class=\"Status StatusPlaying\">J</div>";
-    else if ((user.UserStatus & STATUS_TRYING))
+    else if ((usera.UserStatus & STATUS_TRYING))
         return "<div class=\"Status StatusTrying\">?</div>";
+    else if ((usera.UserStatus & STATUS_DONE) && (userb.UserStatus & STATUS_DONE))
+        return "<div class=\"Status StatusDone\">F</div>";
     else return "<div class=\"Status StatusWaiting\">A</div>";
 }
 
@@ -408,6 +529,16 @@ function setStatus(status, enabled) {
     STATE_SWITCH |= (STATE_STATUS & status) ^ (enabled ? status : 0);
 }
 
+function allDone() {
+    var done = true;
+    for (user of STATE_USERS) {
+        if (user.UserStatus & STATUS_PAIRED) {
+            done = done && (user.UserStatus & STATUS_DONE);
+        }
+    }
+    return done;
+}
+
 /////////////////////////////////// SENDING //////////////////////////////////////////////
 
 function sendWriting() {
@@ -416,6 +547,17 @@ function sendWriting() {
     } catch {}
 }
 
+function sendCat() {
+    var input = document.getElementById("CatsInput");
+    PUSH_CAT = input.value;
+    input.value = "";
+}
+
+function sendWord() {
+    var input = document.getElementById("WordInput");
+    PUSH_ITEM = input.value;
+    input.value = "";
+}
 
 function sendMessage() {
     if (PUSH_MESSAGES) PUSH_MESSAGES += "`";
@@ -441,8 +583,127 @@ function startGame() {
     STATE_LOCAL = GAME_CATCHOSE;
 }
 
+function unpauseGame() {
+    var ready = true;
+    for (var user of STATE_USERS) {
+        if (inPairs(user)) continue;
+        if ((user.UserStatus & ~STATUS_WRITING) != STATUS_NOT_PAIRED) continue;
+        ready = false;
+        break;
+    }
+    if (!ready) {
+        alert("Tous les utilisateurs ne sont pas en paire!");
+        return;
+    }
+    STATE_LOCAL ^= GAME_PAUSED;
+}
+
 function quitGame() {
     STATE_QUIT = true;
+}
+
+function catChose() {
+    if (BLOCKERS_CATCHOSE > 1) {
+        return;
+    } else if (BLOCKERS_CATCHOSE == 0) {
+        var mask = document.getElementById("CatMask");
+        mask.hidden = false;
+        BLOCKERS_CATCHOSE = 1;
+        setStatus(STATUS_PLAYING, true);
+        setStatus(STATUS_WAITING, false);
+    }
+    var catsHTML = "<div id=\"CurentCatsTitle\">Catégories choisies jusqu'à présent:</div>";
+    for (cat of STATE_CATS) {
+        catsHTML += cat.CatName + "<br>";
+        if (cat.UserName == USERNAME) {
+            document.getElementById("CatMask").hidden = true;
+            BLOCKERS_CATCHOSE = 2;
+            setStatus(STATUS_DONE, true);
+            setStatus(STATUS_PLAYING, false);
+            return;
+        }
+    }
+    document.getElementById("CurrentCats").innerHTML = catsHTML;
+}
+
+function choseWords() {
+    STATE_LOCAL = GAME_WORDCHOSE;
+}
+
+function wordChose() {
+    if (STATE_CATS.length > STATE_ITEMS.length) {
+        document.getElementById("WordMask").hidden = false;
+        document.getElementById("WordCat").innerHTML = STATE_CATS[STATE_ITEMS.length].CatName;
+        setStatus(STATUS_PLAYING, true);
+        setStatus(STATUS_DONE, false);
+    } else {
+        document.getElementById("WordMask").hidden = true;
+        setStatus(STATUS_PLAYING, false);
+        setStatus(STATUS_DONE, true);
+    }
+}
+
+function round1() {
+    STATE_LOCAL = GAME_ROUND1;
+    PUSH_ORDER  = true;
+}
+
+function doRound1() {
+    var user = null;
+    var n    = null;
+    var pair = null;
+    for (var i = 0; i < STATE_USERS.length; i++) {
+        if (STATE_USERS[i].Turn == STATE_TURN) {
+            user = STATE_USERS[i];
+            n = i;
+            break;
+        }
+    }
+    if (STATE_HOST && (n == null)) {
+        PUSH_GAMETURN = STATE_TURN + 1;
+    }
+    if (user) pair = inPairs(user);
+    if (n == STATE_MYUSER) {
+        play(1);
+    } else if (pair && (pair.UserA == USERNAME ||
+                        pair.UserB == USERNAME ||
+                        pair.UserC == USERNAME)) {
+        guess();
+    } else {
+        if (STATE_USERS[STATE_MYUSER].Turn <= STATE_TURN) {
+            setStatus(STATUS_WAITING, true);
+            setStatus(STATUS_GUESSING, false);
+            setStatus(STATUS_ASKING, false);
+            setStatus(STATUS_DONE, false);
+        } else {
+            setStatus(STATUS_DONE, true);
+            setStatus(STATUS_WAITING, false);
+            setStatus(STATUS_GUESSING, false);
+            setStatus(STATUS_ASKING, false);
+        }
+    }
+}
+
+function play(round) {
+    setStatus(STATUS_ASKING, true);
+    setStatus(STATUS_DONE, false);
+    setStatus(STATUS_WAITING, false);
+    setStatus(STATUS_GUESSING, false);
+    document.getElementById("GameMask").hidden = false;
+
+}
+
+function guess() {
+    setStatus(STATUS_GUESSING, true);
+    setStatus(STATUS_DONE, false);
+    setStatus(STATUS_WAITING, false);
+    setStatus(STATUS_ASKING, true);
+    document.getElementById("GuessMask").hidden = false;
+}
+
+function startTurn() {
+    PUSH_TIME = getFormattedDate();
+
 }
 
 /////////////////////////////////// REFRESH //////////////////////////////////////////////
@@ -451,24 +712,47 @@ function update(n) {
     var post = "";
 
     sendWriting();
+    setStatus(1024, false);
     //////////// POST ////////////
     post = buildpost(post, "LobbyID", LOBBY_ID);
     post = buildpost(post, "LastMID", STATE_LASTMID)
     if (PUSH_PAIR) {
         post = buildpost(post, "PairStatus", PUSH_PAIR.PairStatus);
-        post = buildpost(post, "PairName", encodeURIComponent(PUSH_PAIR.PairName));
-        post = buildpost(post, "UserB", encodeURIComponent(PUSH_PAIR.UserB));
+        post = buildpost(post, "PairName", PUSH_PAIR.PairName);
+        post = buildpost(post, "UserB", PUSH_PAIR.UserB);
+        post = buildpost(post, "Playing", PUSH_PAIR.Playing);
         PUSH_PAIR = null;
     }
     if (PUSH_MESSAGES) {
-        post = buildpost(post, "Messages", encodeURIComponent(PUSH_MESSAGES));
+        post = buildpost(post, "Messages", PUSH_MESSAGES);
         PUSH_MESSAGES = null;
     }
-    post = buildpost(post, "UserName", encodeURIComponent(USERNAME));
+    if (PUSH_CAT) {
+        post = buildpost(post, "CatName", PUSH_CAT)
+        post = buildpost(post, "CatNew", true);
+        PUSH_CAT = null;
+    }
+    if (PUSH_ITEM) {
+        post = buildpost(post, "CatName", STATE_CATS[STATE_ITEMS.length].CatName);
+        post = buildpost(post, "Item", PUSH_ITEM)
+        PUSH_ITEM = null;
+    }
+    if (PUSH_ORDER) {
+        post = buildpost(post, "Order", true);
+        PUSH_ORDER = false;
+    }
+    if (PUSH_TIME) {
+        post = buildpost(post, "Timer", PUSH_TIME);
+        PUSH_TIME = null
+    }
+    if (PUSH_GAMETURN) {
+        post = buildpost(post, "GameTurn", PUSH_GAMETURN);
+        PUSH_GAMETURN = 0;
+    }
+    post = buildpost(post, "UserName", USERNAME);
     post = buildpost(post, "UserStatus", STATE_SWITCH);
-    if (STATE_HOST && STATE_LOCAL != null && STATE_LOCAL != STATE_GAME) {
+    if (STATE_HOST && STATE_LOCAL != null && STATE_LOCAL != STATE_GAME && !(STATE_LOCAL & GAME_PAUSED)) {
         post = buildpost(post, "GameState", STATE_LOCAL);
-        post = buildpost(post, "Timer", encodeURIComponent(STATE_TIME));
     }
     if (STATE_HOST) {
         post = buildpost(post, "RemoveInactive", true);
@@ -476,17 +760,27 @@ function update(n) {
     if (STATE_QUIT) {
         post = buildpost(post, "Quit", true);
     }
+    if (STATE_GAME & GAME_CATCHOSE || STATE_GAME & GAME_WORDCHOSE) {
+        post = buildpost(post, "RequestCat", true);
+    }
+    if (STATE_GAME & GAME_WORDCHOSE) {
+        post = buildpost(post, "RequestItems", true);
+    }
     xhttp.onreadystatechange = async function() {
       if (this.readyState == 4 && this.status == 200) {
         var vars = this.responseText.split('`');
         getState(vars);
         getUsers(vars);
         getPairs(vars);
+        getCats(vars)
+        getItems(vars);
         getMessages(vars);
 
+        uState();
         uGameTimer();
         uUsers();
         uPairs();
+        uCats();
         uMessages();
 
         await sleep(n);
@@ -504,7 +798,7 @@ function update(n) {
 ////////////////////////////////////////// UTILS ////////////////////////////////////////////////////
 function buildpost(post, variable, value) {
     if (post != "") post += "&";
-    return post + variable + "=" + value;
+    return post + variable + "=" + encodeURIComponent(value);
 }
 
 function hidePair(pair) {
@@ -553,4 +847,23 @@ function checkEnter(event) {
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// https://stackoverflow.com/questions/10730362/get-cookie-by-name
+function getCookie(name) {
+    var value = "; " + document.cookie;
+    var parts = value.split("; " + name + "=");
+    if (parts.length == 2) return parts.pop().split(";").shift();
+  }
+
+  function getFormattedDate() {
+    var date = new Date();
+    var str = date.getFullYear() + "-" + 
+             ((date.getMonth() + 1) + "").padStart(2, '0') + "-" + 
+             (date.getDate() + "").padStart(2, '0') + " " + 
+             (date.getHours() + "").padStart(2, '0') + ":" + 
+             (date.getMinutes() + "").padStart(2, '0') + ":" + 
+             (date.getSeconds() + "").padStart(2, '0');
+
+    return str;
 }

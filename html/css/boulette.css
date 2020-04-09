@@ -96,6 +96,16 @@ p {
     margin-bottom: 10px;
 }
 
+#CatTitle {
+    background-color: #333;
+    color: #CCC;
+    padding-left: 20px;
+    margin-bottom: 10px;
+    margin-top: 20px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
 #UnpairedTitle {
     background-color: #333;
     color: #CCC;
@@ -182,17 +192,6 @@ p {
     cursor: pointer;
 }
 
-#Mask {
-    position: absolute;
-    top: 0px;
-    bottom: 0px;
-    left: 0px;
-    right: 0px;
-    background-color: rgba(0,0,0,0.8);
-    z-index: 100;
-    text-align: center;
-}
-
 #PairingDialog {
     position: relative;
     top: 45%;
@@ -222,6 +221,49 @@ p {
 
 #QuitGame:hover {
     background-color: orangered;
+}
+
+#CurrentCats {
+    width: 400px;
+    margin: auto;
+    margin-top: 100px;
+    margin-bottom: 20px;
+    height: 300px;
+    border: 3px solid orange;
+    border-radius: 10px;
+    background-color: black;
+    color: orange;
+    text-align: center;
+    font-size: 30px;
+    line-height: 40px;
+    overflow: auto;
+}
+
+#CurentCatsTitle {
+    background-color: orange;
+    color: #333;
+    font-size: 20px;
+}
+
+#WordContent {
+    margin-top: 300px;
+    font-size: 20px;
+}
+
+#WordCat {
+    display: inline-block;
+    font-size: 30px;
+}
+
+.Mask {
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    background-color: rgba(0,0,0,0.8);
+    z-index: 100;
+    text-align: center;
 }
 
 .CButton {
@@ -261,6 +303,7 @@ p {
 .PairScore {
     float: right;
     padding-right: 20px;
+    font-weight: 100;
 }
 
 .PairTime {
@@ -276,6 +319,20 @@ p {
 
 .PairItem {
     padding-left: 40px;
+    cursor: default;
+    font-weight: 100;
+}
+
+.CatItem {
+    padding-left: 40px;
+    font-weight: 900;
+    cursor: default;
+}
+
+.CatUser {
+    font-weight: 100;
+    float: right;
+    padding-right: 20px;
 }
 
 .User {
@@ -379,4 +436,14 @@ p {
 
 .Mine .MessageTime {
     color: #444;
+}
+
+.Timer {
+    color: orange;
+    font-size: 80px;
+    margin-top: 100px;
+}
+
+.Dialog {
+    font-size: 30px;
 }
