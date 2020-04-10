@@ -41,18 +41,65 @@ input[type="button"]:hover, input[type="submit"]:hover {
     background-color: orange;
 }
 
-h1 {
-    font-size: 100px;
-}
-
 p {
     font-size: 20px;
+}
+
+a {
+    color: orange;
 }
 
 #MainMenu {
     width: 100%;
     text-align: center;
     padding-top: 100px;
+}
+
+#MainMenuTitle {
+    font-size: 100px;
+}
+
+
+#Help {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    font-size: 30px;
+    font-weight: 900;
+    border: 3px solid white;
+    border-radius: 50px;
+    text-align: center;
+    line-height: 50px;
+}
+
+#Help:hover {
+    cursor: pointer;
+    color: #333;
+    background-color: orange;
+    border-color: #333;
+}
+
+#Back {
+    position: absolute;
+    bottom: 30px;
+    right: 100px;
+    width: 50px;
+    height: 50px;
+    font-size: 30px;
+    font-weight: 900;
+    border: 3px solid white;
+    border-radius: 50px;
+    text-align: center;
+    line-height: 50px;
+}
+
+#Back:hover {
+    cursor: pointer;
+    color: #333;
+    background-color: orange;
+    border-color: #333;
 }
 
 #LobbyTitle {
@@ -475,4 +522,8 @@ p {
 
 .Dialog {
     font-size: 30px;
+}
+
+.error {
+    color: orange;
 }

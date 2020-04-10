@@ -11,9 +11,11 @@
   </head>
   <body>
     <div id="MainMenu">
-      <h1>LA BOULETTE</h1>
+      <h1 id="MainMenuTitle">LA BOULETTE</h1>
       <input id="Create" type="button" value="Nouvelle partie" onclick="window.location='create.php'"/>
       <input id="Join"   type="button" value="Rejoindre" onclick="window.location='join.php'"/>
     </div>
+    <div id="Help" onclick="window.location='help.php'">?</div>
+    <div id="Back" onclick="window.location='/'"><</div>
   </body>
 </html>

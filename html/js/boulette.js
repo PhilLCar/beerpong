@@ -1,7 +1,9 @@
 PARAMETER_GUESSTIME = 45;
-PARAMETER_GAMETIME  = 60 * 60;
+PARAMETER_GAMETIME  = 15 * 60;
+PARAMETER_ENDTIME   = 5 * 60;
 PARAMETER_NUNFOLDS  = 5;
 PARAMETER_ANIMRESMS = 100;
+PARAMETER_DFLTCAT   = "Libre";
 
 STATUS_NOT_PAIRED = 0;
 STATUS_PAIRED     = 1;
@@ -26,6 +28,7 @@ GAME_PAUSED    = 64;
 GAME_TIMEOUT   = 128;
 GAME_FINISHED  = 256;
 
+BUBBLE_RUNNING  = false;
 BUBBLE_PREVUNF  = -1;
 BUBBLE_UNFOLD   = 0;
 BUBBLE_POSX     = 0;
@@ -137,18 +140,26 @@ function uState() {
         case GAME_ROUND3:
             doRound(3);
             break;
+        case GAME_FINISHED:
+            alert("La partie a pris fin.");
+            window.location = "index.php";
+            return;
     }
 }
 
 function uGameTimer() {
-    if (STATE_TIME && ((~GAME_TRIOS & STATE_GAME) == GAME_STARTING)) {
-        var time = PARAMETER_GAMETIME - (new Date().getTime() - Date.parse(STATE_TIME)) / 1000;
+    if (STATE_TIME && (((~GAME_TRIOS & STATE_GAME) == GAME_STARTING) || ((STATE_GAME & GAME_ROUND3) && allDone()))) {
+        var subtime = (STATE_GAME & GAME_ROUND3 ? PARAMETER_ENDTIME : PARAMETER_GAMETIME)
+        var time = subtime - (new Date().getTime() - Date.parse(STATE_TIME)) / 1000;
         var minutes = ((time / 60) | 0);
         var seconds = ((time % 60) | 0);
         if (minutes < 0) minutes = 0;
         if (seconds < 0) seconds = 0;
         if (minutes == 0 && seconds == 0) {
-            if (STATE_HOST) STATE_LOCAL = GAME_TIMEOUT;
+            if (STATE_HOST) {
+                if ((~GAME_TRIOS & STATE_GAME) == GAME_STARTING) STATE_LOCAL = GAME_TIMEOUT;
+                if ((STATE_GAME & GAME_ROUND3) && allDone())     STATE_LOCAL = GAME_FINISHED;
+            } 
         }
         seconds = seconds + "";
         document.getElementById("GlobalTime").innerHTML = minutes + ":" + seconds.padStart(2, '0');
@@ -255,8 +266,8 @@ function uCats() {
         cats.hidden = false;
         var catsHTML = "<div id=\"CatTitle\">CATÉGORIES</div>";
         for (cat of STATE_CATS) {
-            catsHTML += "<div class=\"CatItem" + (cat.UserName == USERNAME ? " Me" : "") + "\">" +
-                            cat.CatName + "<div class=\"CatUser\">" + cat.UserName + "</div>" +
+            catsHTML += "<div class=\"CatItem" + (cat.UserName == USERNAME && cat.CatName != PARAMETER_DFLTCAT ? " Me" : "") + "\">" +
+                            cat.CatName + "<div class=\"CatUser\">" + (cat.CatName != PARAMETER_DFLTCAT ? cat.UserName : "automatique") + "</div>" +
                         "</div>";
         }
         cats.innerHTML = catsHTML;
@@ -661,9 +672,11 @@ function catChose() {
         setStatus(STATUS_WAITING, false);
     }
     var catsHTML = "<div id=\"CurentCatsTitle\">Catégories choisies jusqu'à présent:</div>";
+    var pushFree = true;
     for (cat of STATE_CATS) {
         catsHTML += cat.CatName + "<br>";
-        if (cat.UserName == USERNAME) {
+        if (cat.CatName == PARAMETER_DFLTCAT) pushFree = false;
+        else if (cat.UserName == USERNAME && cat.CatName != PARAMETER_DFLTCAT) {
             document.getElementById("CatMask").hidden = true;
             BLOCKERS_CATCHOSE = 2;
             setStatus(STATUS_DONE, true);
@@ -672,6 +685,7 @@ function catChose() {
         }
     }
     document.getElementById("CurrentCats").innerHTML = catsHTML;
+    if (STATE_HOST && pushFree && !PUSH_CAT) PUSH_CAT = PARAMETER_DFLTCAT;
 }
 
 function choseWords() {
@@ -721,7 +735,7 @@ function doRound(r) {
         total += parseInt(STATE_USERS[i].Score);
     }
     if (user) pair = inPairs(user);
-    if (total == 2 * r * STATE_USERS.length && !(pair.Playing == 1)) {
+    if (total == r * STATE_USERS.length * (STATE_USERS.length + 1) && pair && !(pair.Playing == 1)) {
         setStatus(STATUS_DONE, true);
         setStatus(STATUS_WAITING, false);
         setStatus(STATUS_GUESSING, false);
@@ -746,6 +760,7 @@ function doRound(r) {
             case 3:
                 if (!BLOCKERS_ROUND3) {
                     alert("La partie est terminée!");
+                    if (STATE_HOST) PUSH_TIME = getFormattedDate();
                     BLOCKERS_ROUND3 = true;
                 }
                 break;
@@ -824,7 +839,7 @@ function play(round) {
             if (STATE_ITEMS.length == 0) {
                 PUSH_REQITEM = true;
                 bubbleReset();
-                setTimeout(unfold, PARAMETER_ANIMRESMS);
+                if (!BUBBLE_RUNNING) setTimeout(unfold, PARAMETER_ANIMRESMS);
             } else {
                 if (STATE_ITEMS.length > 0) STATE_ITEM = STATE_ITEMS[0];
             }
@@ -837,6 +852,7 @@ function play(round) {
         document.getElementById("GameStartButton").hidden = false;
         document.getElementById("GameBoard").hidden = true;
         document.getElementById("GameOK").hidden = true;
+        document.getElementById("Bubble").hidden = true;
     }
 }
 
@@ -859,6 +875,7 @@ function guess() {
 }
 
 function startTurn() {
+    document.getElementById("GameText").hidden = true;
     PUSH_TIME = getFormattedDate();
     PUSH_PAIR = {
         "PairName": STATE_PAIRS[STATE_MYPAIR].PairName,
@@ -879,7 +896,7 @@ function newWord(r) {
     if (STATE_GAME & GAME_ROUND1) round = 1;
     if (STATE_GAME & GAME_ROUND2) round = 2;
     if (STATE_GAME & GAME_ROUND3) round = 3;
-    if (total == 2 * round * STATE_USERS.length - 1) {
+    if (total == round * STATE_USERS.length * (STATE_USERS.length + 1) - 1) {
         PUSH_USERTURN = STATE_TURN + 1;
         PUSH_PAIR = {
             "PairName": STATE_PAIRS[STATE_MYPAIR].PairName,
@@ -897,6 +914,7 @@ function bubbleReset() {
 }
 
 function unfold() {
+    BUBBLE_RUNNING = true;
     var bubble = document.getElementById("Bubble");
     if (BUBBLE_UNFOLD == BUBBLE_PREVUNF) {
         if (BUBBLE_SIZEX < BUBBLE_MAXSIZE) {
@@ -918,6 +936,7 @@ function unfold() {
             text.hidden = false;
             text.innerHTML = STATE_ITEM.Item;
             document.getElementById("GameOK").hidden = false;
+            BUBBLE_RUNNING = false;
             return;
         }
         BUBBLE_POSX = (Math.random() * 500) | 0;

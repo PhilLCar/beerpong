@@ -50,6 +50,7 @@
       </div>
     </div>
     <div id="Help" onclick="window.location='help.php'">?</div>
+    <div id="Back" onclick="window.location='/'"><</div>
   </body>
 </html>
 

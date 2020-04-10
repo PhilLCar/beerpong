@@ -75,8 +75,8 @@
                     $sql = "UPDATE users SET LastUpdate=NOW(), UserStatus=0 WHERE LobbyID='" . $id . "' AND UserName='" . escape($usr) . "'";
                     $conn->query($sql);
                 } else {
-                    if (empty($_POST["LobbyID"])) header("Location: create.php?error=2");
-                    else                          header("Location: join.php?error=2");
+                    if (empty($_POST["LobbyID"])) header("Location: join.php?error=8");
+                    else                          header("Location: join.php?error=16");
                     $conn->close();
                     exit();
                 }
