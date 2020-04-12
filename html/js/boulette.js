@@ -114,36 +114,36 @@ function uState() {
             PUSH_SCORE    = null;
             PUSH_CLEAR    = null;
 
-            alert("Un utilisateur est parti, la partie est temporairement interrompue jusqu'à ce que les paires soient reformées!")
+            alert("La partie est temporairement interrompue!")
         }
     } else {
         BLOCKERS_PAUSED = false;
-    }
 
-    switch (STATE_GAME & ~GAME_TRIOS) {
-        case GAME_TIMEOUT:
-            alert("La partie n'a pas débutée avant le temps limite.");
-            window.location = "index.php";
-            return;
-        case GAME_CATCHOSE:
-            catChose();
-            break;
-        case GAME_WORDCHOSE:
-            wordChose();
-            break;
-        case GAME_ROUND1:
-            doRound(1);
-            break;
-        case GAME_ROUND2:
-            doRound(2);
-            break;
-        case GAME_ROUND3:
-            doRound(3);
-            break;
-        case GAME_FINISHED:
-            alert("La partie a pris fin.");
-            window.location = "index.php";
-            return;
+        switch (STATE_GAME & ~GAME_TRIOS) {
+            case GAME_TIMEOUT:
+                alert("La partie n'a pas débutée avant le temps limite.");
+                window.location = "index.php";
+                return;
+            case GAME_CATCHOSE:
+                catChose();
+                break;
+            case GAME_WORDCHOSE:
+                wordChose();
+                break;
+            case GAME_ROUND1:
+                doRound(1);
+                break;
+            case GAME_ROUND2:
+                doRound(2);
+                break;
+            case GAME_ROUND3:
+                doRound(3);
+                break;
+            case GAME_FINISHED:
+                alert("La partie a pris fin.");
+                window.location = "index.php";
+                return;
+        }
     }
 }
 
@@ -222,19 +222,21 @@ function uUsers() {
             if (STATE_GAME & 1) userHTML += "<div id=\"AllowTrios\" class=\"CButton Block\" onclick=\"allowTrios()\">Restreindre les trios</div>";
             else userHTML += "<div id=\"AllowTrios\" class=\"CButton Allow\" onclick=\"allowTrios()\">Permettre les trios</div>";
             userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"unpauseGame()\">Rependre la partie</div>";
+        } else if ((STATE_GAME & GAME_CATCHOSE) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
+            userHTML += "<div id=\"NextGame\" class=\"CButton\" onclick=\"choseWords()\">Choisir les mots</div>";
+            userHTML += "<div id=\"PauseGame\" class=\"CButton\" onclick=\"pauseGame()\">Pause</div>";
+        } else if ((STATE_GAME & GAME_WORDCHOSE) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
+            userHTML += "<div id=\"NextGame\" class=\"CButton\" onclick=\"round(1)\">Passer à la première ronde</div>";
+            userHTML += "<div id=\"PauseGame\" class=\"CButton\" onclick=\"pauseGame()\">Pause</div>";
+        } else if ((STATE_GAME & GAME_ROUND1) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
+            userHTML += "<div id=\"NextGame\" class=\"CButton\" onclick=\"round(2)\">Passer à la deuxième ronde</div>";
+            userHTML += "<div id=\"PauseGame\" class=\"CButton\" onclick=\"pauseGame()\">Pause</div>";
+        }else if ((STATE_GAME & GAME_ROUND2) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
+            userHTML += "<div id=\"NextGame\" class=\"CButton\" onclick=\"round(3)\">Passer à la ronde finale</div>";
+            userHTML += "<div id=\"PauseGame\" class=\"CButton\" onclick=\"pauseGame()\">Pause</div>";
+        } else {
+            userHTML += "<div id=\"PauseGame\" class=\"CButton\" onclick=\"pauseGame()\">Pause</div>";
         }
-    }
-    if (STATE_HOST && (STATE_GAME & GAME_CATCHOSE) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
-        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"choseWords()\">Choisir les mots</div>";
-    }
-    if (STATE_HOST && (STATE_GAME & GAME_WORDCHOSE) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
-        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"round(1)\">Passer à la première ronde</div>";
-    }
-    if (STATE_HOST && (STATE_GAME & GAME_ROUND1) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
-        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"round(2)\">Passer à la deuxième ronde</div>";
-    }
-    if (STATE_HOST && (STATE_GAME & GAME_ROUND2) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
-        userHTML += "<div id=\"StartGame\" class=\"CButton\" onclick=\"round(3)\">Passer à la ronde finale</div>";
     }
     userHTML += "<div id=\"QuitGame\" class=\"CButton\" onclick=\"quitGame()\">Quitter la partie</div>";
     if (paired.innerHTML != pairHTML) paired.innerHTML = pairHTML;
@@ -526,15 +528,17 @@ function getUser(username) {
 function getPairStatusClass(pair) {
     var usera = getUser(pair.UserA);
     var userb = getUser(pair.UserB);
+    var userc = getUser(pair.userC);
 
     if ((usera.UserStatus & STATUS_GUESSING) || 
         (usera.UserStatus & STATUS_ASKING)   ||
         (usera.UserStatus & STATUS_PLAYING)  || 
-        (userb.UserStatus & STATUS_PLAYING)) 
+        (userb.UserStatus & STATUS_PLAYING)  ||
+        (userc && (userc.UserStatus & STATUS_PLAYING))) 
         return "<div class=\"Status StatusPlaying\">J</div>";
-    else if ((usera.UserStatus & STATUS_TRYING))
+    else if ((usera.UserStatus & STATUS_TRYING) || (userc && (userc.UserStatus & STATUS_TRYING)))
         return "<div class=\"Status StatusTrying\">?</div>";
-    else if ((usera.UserStatus & STATUS_DONE) && (userb.UserStatus & STATUS_DONE))
+    else if ((usera.UserStatus & STATUS_DONE) && (userb.UserStatus & STATUS_DONE) && (!userc || (userc && (userc.UserStatus & STATUS_DONE))))
         return "<div class=\"Status StatusDone\">F</div>";
     else return "<div class=\"Status StatusWaiting\">A</div>";
 }
@@ -661,6 +665,10 @@ function unpauseGame() {
 
 function quitGame() {
     STATE_QUIT = true;
+}
+
+function pauseGame() {
+    STATE_LOCAL |= GAME_PAUSED;
 }
 
 function catChose() {
@@ -1020,7 +1028,7 @@ function update(n) {
     }
     post = buildpost(post, "UserName", USERNAME);
     post = buildpost(post, "UserStatus", STATE_SWITCH);
-    if (STATE_HOST && STATE_LOCAL != null && STATE_LOCAL != STATE_GAME && !(STATE_LOCAL & GAME_PAUSED)) {
+    if (STATE_HOST && STATE_LOCAL != null && STATE_LOCAL != STATE_GAME) {
         post = buildpost(post, "GameState", STATE_LOCAL);
     }
     if (STATE_HOST) {

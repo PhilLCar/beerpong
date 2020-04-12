@@ -1,0 +1,316 @@
+@import url(https://fonts.googleapis.com/css?family=Comic+Neue&display=swap);
+
+html {
+    font-family: 'Comic Neue', cursive;
+    height: 100%;
+}
+
+body {
+    height: 100%;
+    margin: 0px;
+    font-size: 30px;
+    background-color: rgb(0, 150, 150);
+    color: white;
+    position: relative;
+}
+
+input[type="button"], input[type="submit"] {
+    font-size: 30px;
+    color: white;
+    background-color: rgb(0, 150, 150);
+    border: 3px solid white;
+    border-radius: 10px;
+    padding: 5px;
+    padding-left: 20px;
+    padding-right: 20px;
+    margin: 10px;
+}
+
+input[type="button"]:hover, input[type="submit"]:hover {
+    cursor: pointer;
+    background-color: rgb(0, 100, 100);
+}
+
+input[type="text"] {
+    font-size: 30px;
+    color: white;
+    background-color: rgb(0, 150, 150);
+    border: 3px solid white;
+    border-radius: 10px;
+    padding: 5px;
+    padding-left: 20px;
+    padding-right: 20px;
+    margin: 10px;
+}
+
+#MainMenu {
+    width: 100%;
+    text-align: center;
+    margin-top: 20%;
+}
+
+#Help {
+    position: absolute;
+    right: 30px;
+    bottom: 30px;
+    width: 50px;
+    height: 50px;
+    border: 3px solid white;
+    border-radius: 50px;
+    text-align: center;
+    line-height: 50px;
+}
+
+#Help:hover {
+    cursor: pointer;
+    background-color: blue;
+}
+
+#Back {
+    position: absolute;
+    right: 90px;
+    bottom: 30px;
+    width: 50px;
+    height: 50px;
+    border: 3px solid white;
+    border-radius: 50px;
+    text-align: center;
+    line-height: 45px;
+}
+
+#Back:hover {
+    cursor: pointer;
+    background-color: blue;
+}
+
+#Lang {
+    position: absolute;
+    right: 150px;
+    bottom: 30px;
+    width: 50px;
+    height: 50px;
+    border: 3px solid white;
+    border-radius: 50px;
+    text-align: center;
+    line-height: 50px;
+}
+
+#Lang:hover {
+    cursor: pointer;
+    background-color: blue;
+}
+
+#Banner {
+    position: relative;
+    width: 100%;
+    box-shadow: 0px 5px 5px black;
+    text-align: center;
+    padding-bottom: 40px;
+    z-index: 20;
+}
+
+#BannerTitle {
+    font-size: 100px;
+    font-weight: 900;
+}
+
+#GameID {
+    float: left;
+    margin-left: 10px;
+}
+
+#Timer {
+    float: right;
+    margin-right: 10px;
+}
+
+#QuitGame {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    border: 3px solid white;
+    border-radius: 40px;
+    text-align: center;
+    line-height: 40px;
+}
+
+#QuitGame:hover {
+    background-color: red;
+    cursor: pointer;
+}
+
+#GameContainer {
+    width: 100%;
+    max-width: 900px;
+    margin: auto;
+    height: calc(100% - 155px);
+    display: flex;
+    flex: auto;
+    flex-direction: column;
+}
+
+#PlayerDisplay {
+    width: 100%;
+    background-color: #EEE;
+    text-align: center;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    flex-grow: 0;
+    z-index: 10;
+}
+
+#MessageDisplay {
+    flex-grow: 1;
+    margin-top: -10px;
+    overflow: auto;
+}
+
+#WriteBar {
+    display: flex;
+    flex: auto;
+    flex-direction: row;
+    flex-grow: 0;
+}
+
+#WriteInput {
+    flex-grow: 1;
+}
+
+#WriteSend {
+    flex-grow: 0;
+}
+
+input[type="button"].StartGame {
+    flex-grow: 0;
+    background-color: aquamarine;
+    color: rgb(0, 100, 100);
+    border-color: rgb(0, 100, 100);
+}
+
+input[type="button"].StartGame:hover {
+    background-color: lime;
+}
+
+input[type="button"].PauseGame {
+    flex-grow: 0;
+    background-color: pink;
+    color: purple;
+    border-color: purple;
+}
+
+input[type="button"].PauseGame:hover {
+    background-color: red;
+}
+
+.Player {
+    color: black;
+    width: 100%;
+    position: relative;
+    cursor: default;
+}
+
+.Player:hover {
+    color: white;
+    background-color: black;
+}
+
+.Playing {
+    font-size: 50px;
+    font-weight: 900;
+}
+
+.PlayerStatus {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+}
+
+.Playing .PlayerStatus {
+    margin-bottom: 12px;
+}
+
+.PlayerName {
+    display: inline-block;
+    padding-top: 5px;
+    padding-right: 10px;
+}
+
+.PlayerIdent {
+    display: inline-block;
+    color: #777;
+}
+
+.PlayerScore {
+    position: absolute;
+    font-size: 20px;
+    font-weight: 900;
+    color: #777;
+    right: 20px;
+    top: 8px;
+}
+
+.Playing .PlayerScore {
+    top: 20px;
+}
+
+.Online {
+    background-color: green;
+}
+
+.Offline {
+    background-color: orangered;
+}
+
+.Writing {
+    background-color: dodgerblue;
+}
+
+.Active {
+    background-color: yellow;
+}
+
+.Message {
+    float: right;
+    border: 3px solid white;
+    border-radius: 10px;
+    padding: 5px;
+    margin: 10px;
+    margin-top: 20px;
+    margin-bottom: 0px;
+    width: 80%;
+    max-width: 600px;
+    word-wrap: break-word;
+    background-color: white;
+    color: rgb(0, 150, 150);
+}
+
+.Mine {
+    border-color: rgb(0, 100, 100);
+    float: left;
+    color: white;
+    background-color: rgb(0, 100, 100);
+}
+
+.MessagePlayer {
+    float: left;
+    font-size: 20px;
+    color: black;
+}
+
+.MessageTime {
+    float: right;
+    font-size: 20px;
+    color: black;
+}
+
+.Mine .MessagePlayer {
+    color: rgb(0, 150, 150);
+}
+
+.Mine .MessageTime {
+    color: rgb(0, 150, 150);
+}

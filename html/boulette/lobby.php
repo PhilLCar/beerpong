@@ -44,17 +44,18 @@
 
                 $sql = "INSERT INTO lobbies(LobbyID) VALUES ('" . $id . "')";
             } while (!$conn->query($sql));
-        } else if (empty($_POST["UserName"])) {
-            header("Location: join.php?error=1");
         } else {
-            $id = strtoupper($_POST["LobbyID"]);
+            if (empty($_COOKIE["LobbyID"])) $id = strtoupper($_POST["LobbyID"]);
+            else $id = $_COOKIE["LobbyID"];
         }
-        if (empty($_COOKIE["LobbyID"]) && empty($_COOKIE["UserName"])) {
+        if (empty($_POST["UserName"])) {
+            header("Location: join.php?error=1");
+        } else if (empty($_COOKIE["UserName"])) {
             // Check validity of the game
             $sql = "SELECT * FROM lobbies WHERE LobbyID='" . $id . "'";
             if ($result = $conn->query($sql)) {
                 $state = $result->fetch_assoc()["GameState"];
-                if ($state > 1) {
+                if ($state > 1 && !($state & 64)) {
                     header("Location: join.php?error=4");
                     $conn->close();
                     exit();
@@ -84,7 +85,6 @@
             setcookie("LobbyID", $id, time() + 86400, "/boulette");
             setcookie("UserName", $usr, time() + 86400, "/boulette");
         } else {
-            $id  = $_COOKIE["LobbyID"];
             $usr = $_COOKIE["UserName"];
         }
         $conn->close();

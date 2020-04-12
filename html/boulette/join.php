@@ -7,7 +7,7 @@
   </head>
   <body>
     <div id="MainMenu">
-        <h1>Créer une partie</h1>
+        <h1>Rejoindre une partie</h1>
         <form method="POST" action="lobby.php">
         <?php
           if (!empty($_GET["error"])) {

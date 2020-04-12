@@ -261,6 +261,24 @@ a {
     background-color: #007;
 }
 
+#NextGame {
+    bottom: 90px;
+    background-color: blue;
+}
+
+#NextGame:hover {
+    background-color: #007;
+}
+
+#PauseGame {
+    bottom: 50px;
+    background-color: red;
+}
+
+#PauseGame:hover {
+    background-color: #300;
+}
+
 #QuitGame {
     bottom: 10px;
     background-color: orange;
