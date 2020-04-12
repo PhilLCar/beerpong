@@ -1,5 +1,6 @@
 PARAMETER_WAITTIME = 15 * 60;
 PARAMETER_GAMETIME = 15 * 60;
+PARAMETER_ENDTIME  =  5 * 60;
 
 GAME_WAITING  = 0;
 GAME_STARTED  = 1;
@@ -21,15 +22,22 @@ STATE_MEMPTY    = true;
 STATE_LASTMID   = 0;
 STATE_MESSAGES  = []
 STATE_CHOOSING  = false;
+STATE_GUESSING  = false;
 
-PUSH_MESSAGES = null;
-PUSH_STATUS   = 0;
-PUSH_PAUSE    = false;
-PUSH_UNPAUSE  = false;
-PUSH_START    = false;
-PUSH_QUIT     = false;
-PUSH_TIMEOUT  = false;
-PUSH_FINISH   = false;
+PUSH_MESSAGES  = null;
+PUSH_STATUS    = 0;
+PUSH_PAUSE     = false;
+PUSH_UNPAUSE   = false;
+PUSH_START     = false;
+PUSH_QUIT      = false;
+PUSH_TIMEOUT   = false;
+PUSH_FINISH    = false;
+PUSH_CHOOSING  = null;
+PUSH_GIVEN     = null;
+PUSH_SCORE     = null;
+PUSH_USERTURN  = null;
+PUSH_GAMETURN  = null;
+PUSH_OTHERUSER = null;
 
 BLOCKERS_WAIT  = false;
 BLOCKERS_PAUSE = false;
@@ -51,6 +59,7 @@ function uState() {
             play();
             break;
         case GAME_FINISHED:
+            time.innerHTML = secondsToTime(PARAMETER_ENDTIME - STATE_TIME);
             finish();
             break;
         case GAME_TIMEOUT:
@@ -174,6 +183,7 @@ function update(n) {
     post = buildpost(post, "LastMID", STATE_LASTMID);
     if (PUSH_STATUS) {
         post = buildpost(post, "UserStatus", PUSH_STATUS);
+        PUSH_STATUS = 0;
     }
     if (PUSH_MESSAGES) {
         post = buildpost(post, "Messages", PUSH_MESSAGES);
@@ -202,6 +212,30 @@ function update(n) {
     if (PUSH_FINISH) {
         post = buildpost(post, "Finish", PUSH_FINISH);
         PUSH_FINISH = false;
+    }
+    if (PUSH_CHOOSING) {
+        post = buildpost(post, "Choose", PUSH_CHOOSING);
+        PUSH_CHOOSING = null;
+    }
+    if (PUSH_SCORE) {
+        post = buildpost(post, "Score", PUSH_SCORE);
+        PUSH_SCORE = null;
+    }
+    if (PUSH_GIVEN) {
+        post = buildpost(post, "Given", PUSH_GIVEN);
+        PUSH_GIVEN = null;
+    }
+    if (PUSH_USERTURN) {
+        post = buildpost(post, "UserTurn", PUSH_USERTURN);
+        PUSH_USERTURN = null;
+    }
+    if (PUSH_GAMETURN) {
+        post = buildpost(post, "GameTurn", PUSH_GAMETURN);
+        PUSH_GAMETURN = null;
+    }
+    if (PUSH_OTHERUSER) {
+        post = buildpost(post, "OtherUser", PUSH_OTHERUSER);
+        PUSH_OTHERUSER = null;
     }
     if (STATE_ME && STATE_ME.Host) {
         post = buildpost(post, "Clear", true);
@@ -292,7 +326,7 @@ function setStatus(status, enabled) {
 function getStatus(user) {
     if (!user) return "Offline";
     if (user.UserStatus & STATUS_WRITING) return "Writing";
-    if (user.UserStatus & STATUS_PLAYING) return "Playing";
+    if (user.UserStatus & STATUS_PLAYING) return "Active";
     if (user.UserStatus & STATUS_ONLINE)  return "Online";
     return "Offline";
 }
@@ -337,18 +371,25 @@ function pause() {
         BLOCKERS_PAUSE = true;
         
         if (STATE_ME && STATE_ME.Host) {
-            var start = document.getElementById("StartButton");
-            var pause = document.getElementById("PauseButton");
+            var start   = document.getElementById("StartButton");
+            var pause   = document.getElementById("PauseButton");
             var unpause = document.getElementById("UnpauseButton");
+            var mask    = document.getElementById("Mask");
             start.hidden = true;
             unpause.hidden = false;
             pause.hidden = true;
+            mask.hidden = true;
         }
+
+        setStatus(STATUS_PLAYING, false);
     }
 }
 
 function play() {
     BLOCKERS_PAUSE = false;
+    STATE_CHOOSING = false;
+    STATE_GUESSING = false;
+
     if (STATE_ME && STATE_ME.Host) {
         if (PARAMETER_GAMETIME - STATE_TIME <= 0) finishGame();
         var start = document.getElementById("StartButton");
@@ -359,9 +400,66 @@ function play() {
         if (pause.hidden) pause.hidden = false;
     }
 
+    var turn = false;
     for (var i = 0; i < STATE_USERS.length; i++) {
-        if (STATE_USERS[i].UserChoosing)
+        if (STATE_USERS[i].UserStatus == STATUS_OFFLINE) continue;
+        if (STATE_ME && STATE_USERS[i].UserName == STATE_ME.UserName) {
+            if (STATE_ME.UserGiven == "") {
+                var user;
+                if (STATE_TURN % STATE_USERS.length != 0) user = STATE_USERS[(i + STATE_TURN) % STATE_USERS.length];
+                else                                      user = STATE_USERS[(i + STATE_TURN + 1) % STATE_USERS.length];
+                if (user.UserChoosing == "") PUSH_CHOOSING = user.UserName;
+            }
+        }
+        if (STATE_ME && STATE_ME.UserChoosing != "") {
+            STATE_CHOOSING = true;
+        } else if (STATE_ME && STATE_ME.Turn == STATE_TURN && STATE_ME.UserName == STATE_USERS[i].UserName) {
+            if (!turn) STATE_GUESSING = true;
+        } else if (STATE_USERS[i].Turn == STATE_TURN) {
+            turn = true;
+        }
     }
+    var mask  = document.getElementById("Mask");
+    var cmenu = document.getElementById("ChoosingMenu");
+    var gmenu = document.getElementById("GuessingMenu");
+    var name  = document.getElementById("ChooseUser");
+    if (STATE_CHOOSING) {
+        if (mask.hidden) mask.hidden = false;
+        if (cmenu.hidden) cmenu.hidden = false;
+        if (!gmenu.hidden) gmenu.hidden = true;
+        if (STATE_ME && name.innerHTML != STATE_ME.UserChoosing) name.innerHTML = STATE_ME.UserChoosing;
+        setStatus(STATUS_PLAYING, false);
+    } else if (STATE_GUESSING) {
+        if (mask.hidden) mask.hidden = false;
+        if (gmenu.hidden) gmenu.hidden = false;
+        if (!cmenu.hidden) cmenu.hidden = true;
+        setStatus(STATUS_PLAYING, true);
+    } else {
+        mask.hidden = true;
+        setStatus(STATUS_PLAYING, false);
+        if (!turn && STATE_ME && STATE_ME.Host) {
+            PUSH_GAMETURN = STATE_TURN + 1;
+        }
+    }
+    var score = document.getElementById("Score");
+    var scoreHTML = STATE_ME.Score + " pts";
+    if (score.innerHTML != scoreHTML) score.innerHTML = scoreHTML;
+}
+
+function choose() {
+    var input = document.getElementById("ChooseInput");
+    PUSH_OTHERUSER = STATE_ME.UserChoosing;
+    PUSH_GIVEN = input.value;
+    input.value = "";
+}
+
+function pass() {
+    PUSH_USERTURN = STATE_TURN + 1;
+}
+
+function success() {
+    PUSH_USERTURN = STATE_TURN + 1;
+    if (STATE_ME) PUSH_SCORE = STATE_ME.Score + 1;
 }
 
 function finish() {
@@ -370,14 +468,28 @@ function finish() {
         else                        alert("The game has ended");
         BLOCKERS_END = true;
 
-
-        var start = document.getElementById("StartButton");
-        var pause = document.getElementById("PauseButton");
+        var start   = document.getElementById("StartButton");
+        var pause   = document.getElementById("PauseButton");
         var unpause = document.getElementById("UnpauseButton");
+        var mask    = document.getElementById("Mask");
         start.hidden = true;
         unpause.hidden = true;
         pause.hidden = true;
+        mask.hidden = true;
+
+        setStatus(STATUS_PLAYING, false);
+
+        var max = 0;
+        for (var i = 0; i < STATE_USERS.length; i++) {
+            if (STATE_USERS[i].Score > max) max = STATE_USERS[i].Score;
+        }
+
+        if (STATE_ME && STATE_ME.Score == max) {
+            if (PARAMETER_LANG == "FR") alert("Vous avez gangé!!!");
+            else                        alert("You won!!!");
+        }
     }
+    if (PARAMETER_ENDTIME - STATE_TIME <= 0) window.location="index.php";
 }
 
 function timeout() {

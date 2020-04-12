@@ -27,6 +27,10 @@
       $start   = "Commencer!";
       $pause   = "Pause";
       $unpause = "Reprendre";
+      $choose  = "Choisissez un mot à assigner à ";
+      $guess   = "C'est votre tour de poser une question!";
+      $pass    = "Plus de questions";
+      $success = "J'ai trouvé!";
     } else {
       $title   = "Who am I?";
       $game    = "GAME";
@@ -34,6 +38,10 @@
       $start   = "Start!";
       $pause   = "Pause";
       $unpause = "Unpause";
+      $choose  = "Choose a word to assign to ";
+      $guess   = "It's your turn to guess!";
+      $pass    = "More questions";
+      $success = "I got it!";
     }
 
     $_POST["UserName"] = rmchars($_POST["UserName"], ";`");
@@ -126,8 +134,21 @@
     </script>
   </head>
   <body>
+    <div id="Mask" hidden="true">
+        <div id="ChoosingMenu" hidden="true">
+            <?php echo($choose); ?> <b id="ChooseUser"></b><br>
+            <input id="ChooseInput" type="text"/>
+            <input id="ChooseOK" type="button" value="OK!" onclick="choose()"/>
+        </div>
+        <div id="GuessingMenu" hidden="true">
+            <?php echo($guess); ?><br>
+            <input id="GuessPass" type="button" value="<?php echo($pass); ?>" onclick="pass()"/>
+            <input id="GuessOK" type="button" value="<?php echo($success); ?>" onclick="success()"/>
+        </div>
+    </div>
     <div id="Banner">
         <div id="BannerTitle"><?php echo($title); ?></div>
+        <div id="Score"></div>
         <div id="Timer">15:00</div>
         <div id="GameID"><?php echo("#" . $game . ": <b>" . $id . "</b>"); ?></div>
         <div id="QuitGame" onclick="quitGame()">X</div>

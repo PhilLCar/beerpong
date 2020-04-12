@@ -1,4 +1,15 @@
 <?php
+    function rmchars($string, $chars) {
+        $final = "";
+        foreach (str_split($string) as $charA) {
+            foreach (str_split($chars) as $charB) {
+                if ($charA == $charB) continue 2;
+            }
+            $final .= $charA;
+        }
+        return $final;
+    }
+
     function escape($string) {
         $final = "";
         foreach (str_split($string) as $charA) {
@@ -53,6 +64,18 @@
                     $sql = "UPDATE games SET Turn=" . $_POST["GameTurn"] . " WHERE GameID='" . $_POST["GameID"] . "'";
                     $conn->query($sql);
                 }
+                if (!empty($_POST["Choose"])) {
+                    $sql = "UPDATE users SET UserChoosing='" . escape($_POST["UserName"]) . "' WHERE GameID='" . $_POST["GameID"] . "' AND UserName='" .
+                            escape($_POST["Choose"]) . "'";
+                    $conn->query($sql);
+                }
+                if (!empty($_POST["Given"])) {
+                    $sql = "UPDATE users SET UserGiven='" . rmchars(escape($_POST["Given"]), ";") . "' WHERE GameID='" . $_POST["GameID"] . "' AND UserName='" .
+                            escape($_POST["OtherUser"]) . "'";
+                    $conn->query($sql);
+                    $sql = "UPDATE users SET UserChoosing=NULL WHERE GameID='" . $_POST["GameID"] . "' AND UserName='" . escape($_POST["UserName"]) . "'";
+                    $conn->query($sql);
+                }
                 if ($_POST["UserStatus"] !== NULL) {
                     $sql = "UPDATE users SET UserStatus=UserStatus^" . $_POST["UserStatus"] . " WHERE UserName='" . escape($_POST["UserName"]) . "' AND GameID='" . 
                                     $_POST["GameID"] . "'";
@@ -63,7 +86,7 @@
                     $conn->query($sql);
                 }
                 if (!empty($_POST["Score"])) {
-                    $sql = "UPDATE users SET Score=" . $_POST["Score"] . " WHERE UserName='" . escape($_POST["UserName"]) . "' AND GameID='" . $_POST["GameID"] . "'";
+                    $sql = "UPDATE users SET UserGiven=NULL, Score=" . $_POST["Score"] . " WHERE UserName='" . escape($_POST["UserName"]) . "' AND GameID='" . $_POST["GameID"] . "'";
                     $conn->query($sql);
                 }
                 if (!empty($_POST["Messages"])) {

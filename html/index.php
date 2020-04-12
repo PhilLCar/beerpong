@@ -9,5 +9,6 @@
     <h1>THE PARTY HUB</h1>
     <div id="Beerpong" onclick="window.location='beerpong'">BEERPONG TOURNAMENT</div>
     <div id="Boulette" onclick="window.location='boulette'">LA BOULETTE</div>
+    <div id="Whoami" onclick="window.location='whoami'">Who am I?</div>
   </body>
 </html>

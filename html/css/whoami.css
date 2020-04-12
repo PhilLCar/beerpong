@@ -124,6 +124,12 @@ input[type="text"] {
     margin-right: 10px;
 }
 
+#Score {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
 #QuitGame {
     position: absolute;
     top: 10px;
@@ -213,6 +219,26 @@ input[type="text"] {
 
 #UnpauseButton:hover {
     background-color: lime;
+}
+
+#Mask {
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    background-color: rgba(255,255,255, 0.8);
+    z-index: 100;
+    color: black;
+    text-align: center;
+}
+
+#ChoosingMenu {
+    margin-top: 250px;
+}
+
+#GuessingMenu {
+    margin-top: 250px;
 }
 
 .Player {
