@@ -374,12 +374,12 @@ function pause() {
             var start   = document.getElementById("StartButton");
             var pause   = document.getElementById("PauseButton");
             var unpause = document.getElementById("UnpauseButton");
-            var mask    = document.getElementById("Mask");
             start.hidden = true;
             unpause.hidden = false;
             pause.hidden = true;
-            mask.hidden = true;
         }
+        var mask    = document.getElementById("Mask");
+        mask.hidden = true;
 
         setStatus(STATUS_PLAYING, false);
     }

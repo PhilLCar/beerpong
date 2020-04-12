@@ -98,7 +98,7 @@
                     }
                 }
                 if (!empty($_POST["Clear"])) {
-                    $sql = "UPDATE users SET UserStatus=0 WHERE NOT user_active(GameID, UserName)";
+                    $sql = "UPDATE users SET UserStatus=0 WHERE TIMESTAMPDIFF(SECOND, LastUpdate, NOW())>30";
                     $conn->query($sql);
                 }
 
