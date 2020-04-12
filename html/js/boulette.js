@@ -1,7 +1,7 @@
-PARAMETER_GUESSTIME = 45;
+PARAMETER_GUESSTIME = 60;
 PARAMETER_GAMETIME  = 15 * 60;
 PARAMETER_ENDTIME   = 5 * 60;
-PARAMETER_NUNFOLDS  = 5;
+PARAMETER_NUNFOLDS  = 3;
 PARAMETER_ANIMRESMS = 100;
 PARAMETER_DFLTCAT   = "Libre";
 
@@ -290,8 +290,10 @@ function uMessages() {
                             message.Content +
                         "</div>";
     }
-    messages.innerHTML += messageHTML;
-    if (messageHTML != "")  messages.scrollTop = 100000;
+    if (messageHTML != "") {
+        messages.scrollTop = 100000;
+        messages.innerHTML += messageHTML;
+    }
     STATE_MESSAGES = [];
 }
 

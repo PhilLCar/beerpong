@@ -124,7 +124,7 @@ a {
 
 #SideBar {
     position: absolute;
-    width: 300px;
+    width: 400px;
     top: 140px;
     bottom: 0px;
     word-wrap: break-word;
@@ -166,7 +166,7 @@ a {
 #ChatWindow {
     position: absolute;
     top: 140px;
-    left: 310px;
+    left: 410px;
     right: 0px;
     bottom: 0px;
     margin: 5px;
@@ -476,17 +476,22 @@ a {
     background-color: blue;
 }
 
+.MessageContainer {
+    width: 100%;
+}
+
 .Message {
     width: 80%;
     float: right;
     border: 3px solid white;
     border-radius: 10px;
     margin: 10px;
+    clear: both;
     padding: 10px;
     background-color: #444;
     color: white;
     word-wrap: break-word;
-    max-width: 500px;
+    max-width: 800px;
 }
 
 .Mine {
