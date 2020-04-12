@@ -21,13 +21,19 @@
     }
 
     if ($_COOKIE["Language"] == "FR") {
-      $title  = "Qui suis-je?";
-      $send   = "Envoyer";
-      $start  = "Commencer!";
+      $title   = "Qui suis-je?";
+      $game    = "PARTIE";
+      $send    = "Envoyer";
+      $start   = "Commencer!";
+      $pause   = "Pause";
+      $unpause = "Reprendre";
     } else {
-      $title  = "Who am I?";
-      $send   = "Send";
-      $start  = "Start!";
+      $title   = "Who am I?";
+      $game    = "GAME";
+      $send    = "Send";
+      $start   = "Start!";
+      $pause   = "Pause";
+      $unpause = "Unpause";
     }
 
     $_POST["UserName"] = rmchars($_POST["UserName"], ";`");
@@ -65,10 +71,13 @@
             $sql = "SELECT * FROM games WHERE GameID='" . $id . "'";
             if ($result = $conn->query($sql)) {
                 $state = $result->fetch_assoc()["GameState"];
-                if ($state > 1 && !($state & 64)) { // CHANGE THE PAUSING LOGIC
+                if ($state > 1 && $state != 2) {
                     header("Location: join.php?error=4");
                     $conn->close();
                     exit();
+                } else if ($state == 2) {
+                    $sql = "CALL order_users('" . $id . "')";
+                    $conn->query($sql);
                 }
             } else {
                 header("Location: join.php?error=2");
@@ -110,78 +119,30 @@
     <link rel="stylesheet" type="text/css" href="/css/whoami.css"/>
     <script type="text/javascript" src="/js/whoami.js"></script>
     <script>
-        PARAMETER_LANG=<?php echo($_COOKIE["Language"]); ?>
-        STATE_GAMEID=<?php echo($id); ?>
-        STATE_USERID=<?php echo($usr); ?>
-        //update(1000);
+        PARAMETER_LANG="<?php echo($_COOKIE["Language"]); ?>";
+        STATE_GAMEID="<?php echo($id); ?>";
+        STATE_USERID="<?php echo($usr); ?>";
+        update(1000);
     </script>
   </head>
   <body>
     <div id="Banner">
         <div id="BannerTitle"><?php echo($title); ?></div>
         <div id="Timer">15:00</div>
-        <div id="GameID">#PARTIE: <b><?php echo($id); ?></b></div>
-        <div id="QuitGame" onclick="window.location='.'">X</div>
+        <div id="GameID"><?php echo("#" . $game . ": <b>" . $id . "</b>"); ?></div>
+        <div id="QuitGame" onclick="quitGame()">X</div>
     </div>
     <div id="GameContainer">
         <div id="PlayerDisplay">
-            <div class="Player">
-                <div class="PlayerStatus Online"></div>
-                <div class="PlayerName">Player 1</div>
-                <div class="PlayerIdent">(Einstein)</div>
-                <div class="PlayerScore">0 pts</div>
-            </div>
-            <div class="Player">
-                <div class="PlayerStatus Writing"></div>
-                <div class="PlayerName">Player 2</div>
-                <div class="PlayerIdent">(Einstein)</div>
-                <div class="PlayerScore">0 pts</div>
-            </div>
-            <div class="Player Playing">
-                <div class="PlayerStatus Active"></div>
-                <div class="PlayerName">Player 3</div>
-                <div class="PlayerIdent">(Einstein)</div>
-                <div class="PlayerScore">0 pts</div>
-            </div>
-            <div class="Player">
-                <div class="PlayerStatus Offline"></div>
-                <div class="PlayerName">Player 4</div>
-                <div class="PlayerIdent">(Einstein)</div>
-                <div class="PlayerScore">0 pts</div>
-            </div>
-            <div class="Player">
-                <div class="PlayerStatus Online"></div>
-                <div class="PlayerName">Player 5</div>
-                <div class="PlayerIdent">(Einstein)</div>
-                <div class="PlayerScore">0 pts</div>
-            </div>
         </div>
         <div id="MessageDisplay">
-            <div class="Message">
-                <div class="MessagePlayer">Player 1</div>
-                <div class="MessageTime">00:43</div>
-                Blablbalbalbalabalbabalbalbalablabalbaalblabalbabala
-            </div>
-            <div class="Message Mine">
-                <div class="MessagePlayer">Player 1</div>
-                <div class="MessageTime">00:43</div>
-                Blablbalbalbalabalbabalbalbalablabalbaalblabalbabala
-            </div>
-            <div class="Message">
-                <div class="MessagePlayer">Player 1</div>
-                <div class="MessageTime">00:43</div>
-                Blablbalbalbalabalbabalbalbalablabalbaalblabalbabala
-            </div>
-            <div class="Message Mine">
-                <div class="MessagePlayer">Player 1</div>
-                <div class="MessageTime">00:43</div>
-                Blablbalbalbalabalbabalbalbalablabalbaalblabalbabala
-            </div>
         </div>
         <div id="WriteBar">
-            <input id="WriteInput" type="text"/>
-            <input id="WriteSend" type="button" value="<?php echo($send); ?>"/>
-            <input id="GameButton" class="StartGame" hidden="true" type="button" value="<?php echo($start); ?>"/>
+            <input id="WriteInput" type="text" onkeypress="checkEnter(event)"/>
+            <input id="WriteSend" type="button" value="<?php echo($send); ?>" onclick="sendMessage()"/>
+            <input id="StartButton" hidden="true" type="button" value="<?php echo($start); ?>" onclick="startGame()"/>
+            <input id="PauseButton" hidden="true" type="button" value="<?php echo($pause); ?>" onclick="pauseGame()"/>
+            <input id="UnpauseButton" hidden="true" type="button" value="<?php echo($unpause); ?>" onclick="unpauseGame()"/>
         </div>
     </div>
   </body>

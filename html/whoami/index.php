@@ -11,6 +11,13 @@
     $lang = $_COOKIE["Language"];
   }
 
+  if (!empty($_COOKIE["GameID"])) {
+    setcookie("GameID", "", time() - 86400, "/whoami");
+  }
+  if (!empty($_COOKIE["UserName"])) {
+    setcookie("UserName", "", time() - 86400, "/whoami");
+  }
+
   if ($lang == "FR") {
     $title  = "Qui suis-je?";
     $create = "Nouvelle partie";

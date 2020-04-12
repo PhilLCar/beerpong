@@ -182,26 +182,37 @@ input[type="text"] {
     flex-grow: 0;
 }
 
-input[type="button"].StartGame {
+#StartButton {
     flex-grow: 0;
     background-color: aquamarine;
     color: rgb(0, 100, 100);
     border-color: rgb(0, 100, 100);
 }
 
-input[type="button"].StartGame:hover {
+#StartButton:hover {
     background-color: lime;
 }
 
-input[type="button"].PauseGame {
+#PauseButton {
     flex-grow: 0;
     background-color: pink;
-    color: purple;
-    border-color: purple;
+    color: brown;
+    border-color: brown;
 }
 
-input[type="button"].PauseGame:hover {
+#PauseButton:hover {
     background-color: red;
+}
+
+#UnpauseButton {
+    flex-grow: 0;
+    background-color: aquamarine;
+    color: rgb(0, 100, 100);
+    border-color: rgb(0, 100, 100);
+}
+
+#UnpauseButton:hover {
+    background-color: lime;
 }
 
 .Player {
@@ -214,6 +225,7 @@ input[type="button"].PauseGame:hover {
 .Player:hover {
     color: white;
     background-color: black;
+    border-radius: 10px;
 }
 
 .Playing {
@@ -227,6 +239,7 @@ input[type="button"].PauseGame:hover {
     height: 10px;
     border-radius: 10px;
     margin-bottom: 5px;
+    margin-right: 10px;
 }
 
 .Playing .PlayerStatus {
@@ -286,6 +299,10 @@ input[type="button"].PauseGame:hover {
     word-wrap: break-word;
     background-color: white;
     color: rgb(0, 150, 150);
+}
+
+.Message p {
+    margin-bottom: 0px;
 }
 
 .Mine {
