@@ -413,9 +413,9 @@ function play() {
         }
         if (STATE_ME && STATE_ME.UserChoosing != "") {
             STATE_CHOOSING = true;
-        } else if (STATE_ME && STATE_ME.Turn == STATE_TURN && STATE_ME.UserName == STATE_USERS[i].UserName) {
+        } else if (STATE_ME && STATE_ME.Turn <= STATE_TURN && STATE_ME.UserName == STATE_USERS[i].UserName) {
             if (!turn) STATE_GUESSING = true;
-        } else if (STATE_USERS[i].Turn == STATE_TURN) {
+        } else if (STATE_USERS[i].Turn <= STATE_TURN) {
             turn = true;
         }
     }

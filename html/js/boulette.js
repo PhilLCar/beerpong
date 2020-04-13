@@ -114,7 +114,7 @@ function uState() {
             PUSH_SCORE    = null;
             PUSH_CLEAR    = null;
 
-            alert("La partie est temporairement interrompue!")
+            alertDialog("La partie est temporairement interrompue!")
         }
     } else {
         BLOCKERS_PAUSED = false;
@@ -234,7 +234,7 @@ function uUsers() {
         }else if ((STATE_GAME & GAME_ROUND2) && !(STATE_GAME & GAME_PAUSED) && allDone()) {
             userHTML += "<div id=\"NextGame\" class=\"CButton\" onclick=\"round(3)\">Passer à la ronde finale</div>";
             userHTML += "<div id=\"PauseGame\" class=\"CButton\" onclick=\"pauseGame()\">Pause</div>";
-        } else {
+        } else if (!(STATE_GAME & GAME_FINISHED)) {
             userHTML += "<div id=\"PauseGame\" class=\"CButton\" onclick=\"pauseGame()\">Pause</div>";
         }
     }
@@ -427,10 +427,10 @@ function getMessages(vars) {
 
 function pair(n) {
     if (STATE_MYPAIR != null && !(STATE_GAME & 1)) {
-        alert("Vous faites déjà partie d'une paire!");
+        alertDialog("Vous faites déjà partie d'une paire!");
         return;
     } else if (STATE_USERS[n].UserStatus != 0) {
-        alert("Impossible de former une paire avec cet utilisateur pour l'instant!");
+        alertDialog("Impossible de former une paire avec cet utilisateur pour l'instant!");
         return;
     }
     var dialogHTML;
@@ -503,7 +503,7 @@ function pairConfirm(n) {
         input = document.getElementById("PairingDialogInput").value;
     }
     if (input.value == "") {
-        alert("Le nom de paire ne peut pas être vide!");
+        alertDialog("Le nom de paire ne peut pas être vide!");
     }
 
     PUSH_PAIR = {
@@ -642,7 +642,7 @@ function startGame() {
         break;
     }
     if (!ready) {
-        alert("Tous les utilisateurs ne sont pas en paire!");
+        alertDialog("Tous les utilisateurs ne sont pas en paire!");
         return;
     }
     STATE_LOCAL = GAME_CATCHOSE;
@@ -657,7 +657,7 @@ function unpauseGame() {
         break;
     }
     if (!ready) {
-        alert("Tous les utilisateurs ne sont pas en paire!");
+        alertDialog("Tous les utilisateurs ne sont pas en paire!");
         return;
     }
     STATE_LOCAL ^= GAME_PAUSED;
@@ -757,19 +757,19 @@ function doRound(r) {
         switch (r) {
             case 1:
                 if (!BLOCKERS_ROUND1) {
-                    alert("La première ronde est terminée!");
+                    alertDialog("La première ronde est terminée!");
                     BLOCKERS_ROUND1 = true;
                 }
                 break;
             case 2:
                 if (!BLOCKERS_ROUND2) {
-                    alert("La deuxième ronde est terminée!");
+                    alertDialog("La deuxième ronde est terminée!");
                     BLOCKERS_ROUND2 = true;
                 }
                 break;
             case 3:
                 if (!BLOCKERS_ROUND3) {
-                    alert("La partie est terminée!");
+                    alertDialog("La partie est terminée!");
                     if (STATE_HOST) PUSH_TIME = getFormattedDate();
                     BLOCKERS_ROUND3 = true;
                 }
@@ -850,6 +850,11 @@ function play(round) {
                 PUSH_REQITEM = true;
                 bubbleReset();
                 if (!BUBBLE_RUNNING) setTimeout(unfold, PARAMETER_ANIMRESMS);
+
+                if (window.innerHeight < 815) {
+                    document.getElementById("GameTimer").style.marginTop = "-20px";
+                    document.getElementById("GameDialogText").style.marginTop = "-20px";
+                }
             } else {
                 if (STATE_ITEMS.length > 0) STATE_ITEM = STATE_ITEMS[0];
             }
@@ -1153,4 +1158,13 @@ function secondsToTime(time) {
     minutes = minutes + "";
     seconds = seconds + "";
     return minutes + ":" + seconds.padStart(2, '0');
+}
+
+function alertDialog(message) {
+    document.getElementById("AlertDialogMask").hidden = false;
+    document.getElementById("AlertDialogText").innerHTML = message;
+}
+
+function closeAlertDialog() {
+    document.getElementById("AlertDialogMask").hidden = true;
 }

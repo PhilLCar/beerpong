@@ -106,6 +106,12 @@
     </script>
   </head>
   <body>
+    <div id="AlertDialogMask" hidden="true">
+        <div id="AlertDialog">
+            <div id="AlertDialogText"></div>
+            <input type="button" onclick="closeAlertDialog()" value="OK"/>
+        </div>
+    </div>
     <div id="Mask" class="Mask" hidden="true">
     </div>
     <div id="CatMask" class="Mask" hidden="true">

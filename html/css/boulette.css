@@ -12,6 +12,10 @@ body {
     height: 100%;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 input[type="text"] {
     width: 300px;
     color: #333;
@@ -47,6 +51,27 @@ p {
 
 a {
     color: orange;
+}
+
+#AlertDialogMask {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    z-index: 500;
+}
+
+#AlertDialog {
+    margin: auto;
+    padding: 20px;
+    background-color: rgba(0,0,0,0.8);
+    border: 3px solid white;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 30px;
 }
 
 #MainMenu {
