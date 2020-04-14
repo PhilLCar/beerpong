@@ -186,6 +186,7 @@ BEGIN
     REPEAT
         FETCH PCursor INTO PPairName, PUserA, PUserB, PUserC;
         IF NOT PDone THEN
+            UPDATE lobbies SET GameState=GameState|64 WHERE LobbyID=PLobbyID;
             IF user_active(PLobbyID, PUserA) THEN
                 IF user_active(PLobbyID, PUserB) THEN
                     CALL notc_pair(PLobbyID, PPairName);

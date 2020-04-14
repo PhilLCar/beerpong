@@ -168,7 +168,7 @@ function sendMessage() {
 function sendWriting() {
     try {
         setStatus(STATUS_WRITING, document.getElementById("WriteInput").value != "");
-    } catch {}
+    } catch (e) {}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

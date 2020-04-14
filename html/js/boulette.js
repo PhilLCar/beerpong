@@ -609,7 +609,7 @@ function allDone() {
 function sendWriting() {
     try {
         setStatus(STATUS_WRITING, document.getElementById("WriteBox").value != "");
-    } catch {}
+    } catch (e) {}
 }
 
 function sendCat() {
