@@ -8,7 +8,7 @@ DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
     UserName    VARCHAR(127)    NOT NULL    PRIMARY KEY,
-    LastUpdate  TIMESTAMP       NOT NULL,
+    LastUpdate  TIMESTAMP       NOT NULL    DEFAULT      NOW(),
     Wins        INT             NOT NULL,
     Loses       INT             NOT NULL
 );
