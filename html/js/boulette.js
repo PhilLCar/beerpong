@@ -114,7 +114,7 @@ function uState() {
             PUSH_SCORE    = null;
             PUSH_CLEAR    = null;
 
-            alertDialog("La partie est temporairement interrompue!")
+            alertDialog("La partie est temporairement interrompue!");
         }
     } else {
         BLOCKERS_PAUSED = false;
@@ -344,7 +344,7 @@ function getUsers(vars) {
 }
 
 function getPairs(vars) {
-    STATE_PAIRS = []
+    STATE_PAIRS = [];
     STATE_MYPAIR = null;
     var n = 0;
     for (var item of vars) {
