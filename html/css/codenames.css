@@ -1,0 +1,191 @@
+@import url(https://fonts.googleapis.com/css?family=Alata&display=swap);
+
+html {
+    height: 100%;
+    margin: 0px;
+    font-family: 'Alata', sans-serif;
+}
+
+body {
+    position: relative;
+    height: 100%;
+    margin: 0px;
+    background-color: black;
+    color: orange;
+    overflow: hidden;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+#Container {
+    bottom: 0px;
+    overflow: auto;
+}
+
+#TitleBar {
+    position: relative;
+    width: 100%;
+    background-color: #333;
+}
+
+#Title {
+    font-size: 500%;
+}
+
+#Timer {
+    position: absolute;
+    top: 0.5rem;
+    right: 1rem;
+    font-size: 175%;
+}
+
+#Game {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 1rem;
+    font-size: 175%;
+}
+
+#Container {
+    max-width: 60rem;
+    margin: auto;
+}
+
+#TeamList {
+    display: flex;
+    flex-direction: row;
+}
+
+#TeamRedTitle {
+    color: brown;
+}
+
+#TeamBlueTitle {
+    color: royalblue;
+}
+
+#TeamYellowTitle {
+    color: gold;
+}
+
+#GameBoard {
+    display: flex;
+    flex-direction: column;
+    height: 30rem;
+    padding: 0.5rem;
+}
+
+#StatusBar {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    height: 2em;
+    background-color: #333;
+}
+
+.Bar {
+    margin: 10px;
+    border: 0.2rem solid #333;
+    border-radius: 0.8rem;
+    text-align: center;
+    font-size: 100%;
+    overflow: hidden;
+}
+
+.TitleBar {
+    background-color: #333;
+    text-align: left;
+    font-size: 100%;
+}
+
+.ExpMin {
+    display: inline-flex;
+    position: relative;
+    height: 1.2rem;
+    width: 1.2rem;
+    border: 0.1rem solid orange;
+    border-radius: 1.2rem;
+    bottom: 0.18rem;
+    left: 0.12rem;
+    line-height: 0.85rem;
+    text-align: center;
+    justify-content: center;
+}
+
+.ExpMin:hover {
+    cursor: pointer;
+    color: black;
+    background-color: orange;
+}
+
+.Title {
+    display: inline-block;
+    position: relative;
+    bottom: 1px;
+    left: 10px
+}
+
+.User {
+    width: 100%;
+    color: #CCC;
+}
+
+.User:hover {
+    background-color: #CCC;
+    color: black;
+}
+
+.Status {
+    display: inline-block;
+    position: relative;
+    height: 0.4rem;
+    width: 0.4rem;
+    right: 0.5rem;
+    bottom: 0.2rem;
+    border-radius: 0.4rem;
+    background-color: #777;
+}
+
+.UserName {
+    display: inline-block;
+}
+
+.Team {
+    flex-grow: 1;
+}
+
+.StatusOffline {
+    background-color: #777;
+}
+
+.StatusOnline {
+    background-color: green;
+}
+
+.StatusWriting {
+    background-color: lightskyblue;
+}
+
+.Row {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.Cell {
+    flex-grow: 1;
+    margin: 0.1rem;
+    border: 0.2rem solid rgb(56, 28, 0);
+    border-radius: 1rem;
+    background-color: rgb(199, 189, 134);
+    color: black;
+}
+
+.Name {
+    margin-top: 18%;
+    text-align: center;
+    background-color: #CCC;
+}
