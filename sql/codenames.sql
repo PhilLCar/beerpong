@@ -37,9 +37,9 @@ CREATE TABLE users (
     UserName    VARCHAR(128)    NOT NULL,
     Host        BOOLEAN         NOT NULL            DEFAULT FALSE,
     UserStatus  INT             NOT NULL            DEFAULT 0,
-    SX          INT,
-    SY          INT,
-    ColorID     INT,
+    SX          INT                                 DEFAULT NULL,
+    SY          INT                                 DEFAULT NULL,
+    ColorID     INT                                 DEFAULT NULL,
     LastUpdate  TIMESTAMP       NOT NULL            DEFAULT NOW(),
     PRIMARY KEY (ID, UserName),
     FOREIGN KEY (ID, SX, SY)    REFERENCES          cells(ID, X, Y),
@@ -48,7 +48,7 @@ CREATE TABLE users (
 
 CREATE TABLE teams (
     ID          VARCHAR(4)      NOT NULL,
-    Captain     VARCHAR(128),
+    Captain     VARCHAR(128)                        DEFAULT NULL,
     Playing     BOOLEAN         NOT NULL            DEFAULT FALSE,
     Turn        INT             NOT NULL            DEFAULT 0,
     ColorID     INT             NOT NULL,
