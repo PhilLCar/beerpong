@@ -221,6 +221,111 @@ input[type="button"]:hover, input[type="submit"]:hover {
     background-color: orange;
 }
 
+#QuitButton {
+    background-color: crimson;
+}
+
+#QuitButton:hover {
+    background-color: darkred;
+}
+
+#Chat {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    left: 0rem;
+    bottom: 2rem;
+    width: 30rem;
+    height: 70%;
+    border: 0.1rem solid #777;
+    color: #EEE;
+    background-color: #333;
+}
+
+#MessageTitle {
+    flex-grow: 0;
+    padding: 0.5rem;
+    border-bottom: 0.1rem solid #777;
+    font-size: 1.5rem;
+}
+
+#Messages{
+    flex-grow: 1;
+    overflow: auto;
+    background-color: black;
+}
+
+#ChatBar {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 0;
+    border-top: 0.1rem solid #777;
+}
+
+#ChatInput {
+    flex-grow: 1;
+    height: 1.5rem;
+    margin: 0.5rem;
+    border: none;
+    font-family: 'Alata', sans-serif;
+    color: #EEE;
+    background-color: #333;
+}
+
+#ChatSend {
+    flex-grow: 0;
+    padding: 0.5rem;
+    padding-top: 0.2rem;
+    border: none;
+    border-radius: 0rem;
+    color: #EEE;
+    background-color: #777;
+}
+
+#ChatSend:hover {
+    cursor: pointer;
+    color: black;
+    background-color: orange;
+}
+
+.Message {
+    float: left;
+    margin: 0.5rem;
+    padding: 0.5rem;
+    max-width: 80%;
+    background-color: #333;
+    word-wrap: break-word;
+    font-weight: 100;
+}
+
+.MessageUser {
+    float: left;
+    font-weight: 400;
+    color: orange;
+}
+
+.MessageTime {
+    float: right;
+    color: orange
+}
+
+.Mine {
+    float: right;
+    background-color: #777;
+}
+
+.Mine .MessageUser {
+    color: #333;
+}
+
+.Mine .MessageTime {
+    color: #333;
+}
+
+.MessageContent {
+    margin-top: 1.5rem;
+}
+
 .BarButton {
     float: right;
     margin: 0.2rem;

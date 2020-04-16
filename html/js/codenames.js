@@ -16,6 +16,20 @@ function expMin(component) {
     }
 }
 
+function toggleChat() {
+    var chat = document.getElementById("Chat");
+    var button = document.getElementById("MessageButtonText");
+    if (chat.hidden) {
+        chat.hidden = false;
+        document.getElementById("MessageNotification").hidden = true;
+        if (PARAMETER_LANG == "FR") button.innerHTML = "Fermer";
+        else button.innerHTML = "Collapse";
+    } else {
+        chat.hidden = true;
+        button.innerHTML = "Messages";
+    }
+}
+
 function getNames() {
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = async function() {

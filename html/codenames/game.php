@@ -29,6 +29,8 @@
         $yellow = "Jaune";
         $start  = "DÉBUTER!";
         $teams3 = "3 ÉQUIPES";
+        $quit   = "QUITTER";
+        $send   = "Envoyer";
     } else {
         $game   = "Game";
         $lobby  = "Lobby";
@@ -38,6 +40,8 @@
         $yellow = "Yellow";
         $start  = "START!";
         $teams3 = "3 TEAMS";
+        $quit   = "QUIT";
+        $send   = "Send";
     }
 
     $_POST["UserName"] = rmchars($_POST["UserName"], ";`");
@@ -122,6 +126,12 @@
     <title>CODE NAMES</title>
     <link rel="stylesheet" type="text/css" href="/css/codenames.css"/>
     <script type="text/javascript" src="/js/codenames.js"></script>
+    <script>
+        PARAMETER_LANG="<?php echo($_COOKIE["Language"]); ?>";
+        STATE_GAMEID="<?php echo($id); ?>";
+        STATE_USERID="<?php echo($usr); ?>";
+        //update(1000);
+    </script>
   </head>
   <body>
   <div id="TitleBar">
@@ -304,13 +314,63 @@
         </div>
         </div>
   </div>
-  <div id="ChatMask">
+  <div id="Chat" hidden="true">
+      <div id="MessageTitle">Messages</div>
+      <div id="Messages">
+          <div class="Message">
+              <div class="MessageUser">Username</div>
+              <div class="MessageTime">23:00</div>
+              <div class="MessageContent">
+                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
+              </div>
+          </div>
+          <div class="Message Mine">
+              <div class="MessageUser">Username</div>
+              <div class="MessageTime">23:00</div>
+              <div class="MessageContent">
+                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
+              </div>
+          </div>
+          <div class="Message">
+              <div class="MessageUser">Username</div>
+              <div class="MessageTime">23:00</div>
+              <div class="MessageContent">
+                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
+              </div>
+          </div>
+          <div class="Message Mine">
+              <div class="MessageUser">Username</div>
+              <div class="MessageTime">23:00</div>
+              <div class="MessageContent">
+                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
+              </div>
+          </div>
+          <div class="Message">
+              <div class="MessageUser">Username</div>
+              <div class="MessageTime">23:00</div>
+              <div class="MessageContent">
+                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
+              </div>
+          </div>
+          <div class="Message">
+              <div class="MessageUser">Username</div>
+              <div class="MessageTime">23:00</div>
+              <div class="MessageContent">
+                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
+              </div>
+          </div>
+      </div>
+      <div id="ChatBar">
+          <textarea id="ChatInput" rows="1"></textarea>
+          <input id="ChatSend" type="button" value="<?php echo($send); ?>"/>
+      </div>
   </div>
   <div id="StatusBar">
-      <div id="MessageButton">
+      <div id="MessageButton" onclick="toggleChat()">
         <div id="MessageButtonText">Messages</div>
         <div id="MessageNotification">2</div>
       </div>
+      <div id="QuitButton"  class="BarButton"><?php echo($quit); ?></div>
       <div id="StartButton" class="BarButton"><?php echo($start); ?></div>
       <div id="ThreeButton" class="BarButton"><?php echo($teams3); ?></div>
   </div>
