@@ -278,6 +278,7 @@ function buildpost(post, variable, value) {
     if (post != "") post += "&";
     return post + variable + "=" + encodeURIComponent(value);
 }
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }

@@ -17,6 +17,10 @@ body {
     overflow: hidden;
 }
 
+h1 {
+    margin-top: -5rem;
+}
+
 [hidden] {
     display: none !important;
 }
@@ -218,7 +222,7 @@ input[type="button"]:hover, input[type="submit"]:hover {
 }
 
 #ThreeButton:hover {
-    background-color: orange;
+    background-color: peru;
 }
 
 #QuitButton {
@@ -290,9 +294,11 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 .Message {
     float: left;
+    clear: both;
     margin: 0.5rem;
     padding: 0.5rem;
     max-width: 80%;
+    min-width: 20%;
     background-color: #333;
     word-wrap: break-word;
     font-weight: 100;

@@ -52,6 +52,7 @@ CREATE TABLE teams (
     Playing     BOOLEAN         NOT NULL            DEFAULT FALSE,
     Turn        INT             NOT NULL            DEFAULT 0,
     ColorID     INT             NOT NULL,
+    TeamOrder   INT             NOT NULL            DEFAULT 0,
     PRIMARY KEY (ID, ColorID),
     FOREIGN KEY (ID)            REFERENCES          games(ID),
     FOREIGN KEY (ColorID)       REFERENCES          colors(ID),
@@ -95,3 +96,32 @@ RETURN EXISTS (
         WHERE ID=PID AND Host=TRUE
         AND   TIMESTAMPDIFF(SECOND, LastUpdate, NOW())<=30
 );
+
+DROP PROCEDURE IF EXISTS game_init;
+DROP PROCEDURE IF EXISTS clear_color;
+
+DELIMITER .
+CREATE PROCEDURE game_init (
+    PID     VARCHAR(4)
+)
+BEGIN
+    SELECT ID INTO @RID FROM colors WHERE Color='red';
+    SELECT ID INTO @BID FROM colors WHERE Color='blue';
+    SELECT ID INTO @YID FROM colors WHERE Color='yellow';
+    INSERT INTO teams(ID, ColorID) VALUES (PID, @RID);
+    INSERT INTO teams(ID, ColorID) VALUES (PID, @BID);
+    INSERT INTO teams(ID, ColorID) VALUES (PID, @YID);
+END.
+DELIMITER ;
+
+DELIMITER .
+CREATE PROCEDURE clear_color (
+    PID     VARCHAR(4),
+    PColor  VARCHAR(64)
+)
+BEGIN
+    SELECT ID INTO @CID FROM colors WHERE Color=PColor;
+    UPDATE teams SET Captain=NULL, Playing=FALSE, Turn=0 WHERE ID=PID AND ColorID=@CID;
+    UPDATE users SET ColorID=NULL WHERE ID=PID AND ColorID=@CID;
+END.
+DELIMITER ;

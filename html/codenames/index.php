@@ -11,8 +11,8 @@
     $lang = $_COOKIE["Language"];
   }
 
-  if (!empty($_COOKIE["GameID"])) {
-    setcookie("GameID", "", time() - 86400, "/codenames");
+  if (!empty($_COOKIE["ID"])) {
+    setcookie("ID", "", time() - 86400, "/codenames");
   }
   if (!empty($_COOKIE["UserName"])) {
     setcookie("UserName", "", time() - 86400, "/codenames");

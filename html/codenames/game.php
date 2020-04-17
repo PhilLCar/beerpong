@@ -21,27 +21,29 @@
     }
 
     if ($_COOKIE["Language"] == "FR") {
-        $game   = "Partie";
-        $lobby  = "Salon";
-        $teams  = "Équipes";
-        $red    = "Rouge";
-        $blue   = "Bleu";
-        $yellow = "Jaune";
-        $start  = "DÉBUTER!";
-        $teams3 = "3 ÉQUIPES";
-        $quit   = "QUITTER";
-        $send   = "Envoyer";
+        $game       = "Partie";
+        $lobby      = "Salon";
+        $teams      = "Équipes";
+        $red        = "Rouge";
+        $blue       = "Bleu";
+        $yellow     = "Jaune";
+        $start      = "DÉBUTER!";
+        $teams3     = "3 ÉQUIPES";
+        $quit       = "QUITTER";
+        $send       = "Envoyer";
+        $nomessages = "Aucun messages pour l'instant...";
     } else {
-        $game   = "Game";
-        $lobby  = "Lobby";
-        $teams  = "Teams";
-        $red    = "Red";
-        $blue   = "Blue";
-        $yellow = "Yellow";
-        $start  = "START!";
-        $teams3 = "3 TEAMS";
-        $quit   = "QUIT";
-        $send   = "Send";
+        $game       = "Game";
+        $lobby      = "Lobby";
+        $teams      = "Teams";
+        $red        = "Red";
+        $blue       = "Blue";
+        $yellow     = "Yellow";
+        $start      = "START!";
+        $teams3     = "3 TEAMS";
+        $quit       = "QUIT";
+        $send       = "Send";
+        $nomessages = "No messages for now...";
     }
 
     $_POST["UserName"] = rmchars($_POST["UserName"], ";`");
@@ -68,6 +70,8 @@
 
                 $sql = "INSERT INTO games(ID) VALUES ('" . $id . "')";
             } while (!$conn->query($sql));
+            $sql = "CALL game_init('" . $id . "')";
+            $conn->query($sql);
         } else {
             if (empty($_COOKIE["ID"])) $id = strtoupper($_POST["ID"]);
             else $id = $_COOKIE["ID"];
@@ -128,9 +132,9 @@
     <script type="text/javascript" src="/js/codenames.js"></script>
     <script>
         PARAMETER_LANG="<?php echo($_COOKIE["Language"]); ?>";
-        STATE_GAMEID="<?php echo($id); ?>";
-        STATE_USERID="<?php echo($usr); ?>";
-        //update(1000);
+        STATE_ID="<?php echo($id); ?>";
+        STATE_USERNAME="<?php echo($usr); ?>";
+        update(1000);
     </script>
   </head>
   <body>
@@ -317,58 +321,17 @@
   <div id="Chat" hidden="true">
       <div id="MessageTitle">Messages</div>
       <div id="Messages">
-          <div class="Message">
-              <div class="MessageUser">Username</div>
-              <div class="MessageTime">23:00</div>
-              <div class="MessageContent">
-                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
-              </div>
-          </div>
-          <div class="Message Mine">
-              <div class="MessageUser">Username</div>
-              <div class="MessageTime">23:00</div>
-              <div class="MessageContent">
-                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
-              </div>
-          </div>
-          <div class="Message">
-              <div class="MessageUser">Username</div>
-              <div class="MessageTime">23:00</div>
-              <div class="MessageContent">
-                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
-              </div>
-          </div>
-          <div class="Message Mine">
-              <div class="MessageUser">Username</div>
-              <div class="MessageTime">23:00</div>
-              <div class="MessageContent">
-                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
-              </div>
-          </div>
-          <div class="Message">
-              <div class="MessageUser">Username</div>
-              <div class="MessageTime">23:00</div>
-              <div class="MessageContent">
-                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
-              </div>
-          </div>
-          <div class="Message">
-              <div class="MessageUser">Username</div>
-              <div class="MessageTime">23:00</div>
-              <div class="MessageContent">
-                  Message content blbalbalbalbalablablabbalablabalbalablablablabalballbaa
-              </div>
-          </div>
+          <div style="padding: 1rem"><?php echo($nomessages); ?></div>
       </div>
       <div id="ChatBar">
-          <textarea id="ChatInput" rows="1"></textarea>
-          <input id="ChatSend" type="button" value="<?php echo($send); ?>"/>
+          <textarea id="ChatInput" rows="1" onkeypress="checkEnter(event)"></textarea>
+          <input id="ChatSend" type="button" value="<?php echo($send); ?>" onclick="sendMessage()"/>
       </div>
   </div>
   <div id="StatusBar">
       <div id="MessageButton" onclick="toggleChat()">
         <div id="MessageButtonText">Messages</div>
-        <div id="MessageNotification">2</div>
+        <div id="MessageNotification" hidden="true">0</div>
       </div>
       <div id="QuitButton"  class="BarButton"><?php echo($quit); ?></div>
       <div id="StartButton" class="BarButton"><?php echo($start); ?></div>
