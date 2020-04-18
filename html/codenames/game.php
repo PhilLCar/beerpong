@@ -32,6 +32,9 @@
         $quit       = "QUITTER";
         $send       = "Envoyer";
         $nomessages = "Aucun messages pour l'instant...";
+        $ask        = "POSER";
+        $nask       = "DEVINER";
+        $unpause    = "REPRENDRE";
     } else {
         $game       = "Game";
         $lobby      = "Lobby";
@@ -44,6 +47,9 @@
         $quit       = "QUIT";
         $send       = "Send";
         $nomessages = "No messages for now...";
+        $ask        = "ASK";
+        $nask       = "GUESS";
+        $unpause    = "PLAY";
     }
 
     $_POST["UserName"] = rmchars($_POST["UserName"], ";`");
@@ -150,18 +156,6 @@
             <div id="LobbyTitle" class="Title"><?php echo($lobby); ?></div>
         </div>
         <div id="LobbyList">
-            <div class="User">
-                <div class="Status StatusOffline"></div>
-                <div id="User0" class="UserName">UserName</div>
-            </div>
-            <div class="User">
-                <div class="Status StatusOnline"></div>
-                <div id="User1" class="UserName">UserName</div>
-            </div>
-            <div class="User Me">
-                <div class="Status StatusWriting"></div>
-                <div id="User2" class="UserName">UserName</div>
-            </div>
         </div>
         </div>
         <div id="TeamBar" class="Bar">
@@ -171,149 +165,131 @@
         </div>
         <div id="TeamList">
             <div id="TeamRed" class="Team">
-                <div id="TeamRedTitle" class="TeamTitle"><?php echo($red); ?></div>
-                <div class="User">
-                    <div class="Status StatusWriting"></div>
-                    <div id="User3" class="UserName">UserName (P)</div>
-                </div>
-                <div class="User">
-                    <div class="Status StatusWriting"></div>
-                    <div id="User4" class="UserName">UserName</div>
+                <div id="TeamRedTitle" class="TeamTitle" onclick="sendColor('red')"><?php echo($red); ?></div>
+                <div id="TeamRedList">
                 </div>
             </div>
             <div id="TeamBlue" class="Team">
-                <div id="TeamBlueTitle" class="TeamTitle"><?php echo($blue); ?></div>
-                <div class="User">
-                    <div class="Status StatusWriting"></div>
-                    <div id="User5" class="UserName">UserName (P)</div>
-                </div>
-                <div class="User">
-                    <div class="Status StatusWriting"></div>
-                    <div id="User6" class="UserName">UserName</div>
+                <div id="TeamBlueTitle" class="TeamTitle" onclick="sendColor('blue')"><?php echo($blue); ?></div>
+                <div id="TeamBlueList">
                 </div>
             </div>
-            <div id="TeamYellow" class="Team">
-                <div id="TeamYellowTitle" class="TeamTitle"><?php echo($yellow); ?></div>
-                <div class="User">
-                    <div class="Status StatusWriting"></div>
-                    <div id="User7" class="UserName">UserName (P)</div>
-                </div>
-                <div class="User">
-                    <div class="Status StatusWriting"></div>
-                    <div id="User8" class="UserName">UserName</div>
+            <div id="TeamYellow" class="Team" hidden="true">
+                <div id="TeamYellowTitle" class="TeamTitle" onclick="sendColor('yellow')"><?php echo($yellow); ?></div>
+                <div id="TeamYellowList">
                 </div>
             </div>
         </div>
         </div>
-        <div id="GameBoard">
+        <div id="GameBoard" hidden="true">
         <div id="R0" class="Row">
             <div id="C00" class="Cell" onclick="select(0,0)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C01" class="Cell" onclick="select(0,1)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C02" class="Cell" onclick="select(0,2)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C03" class="Cell" onclick="select(0,3)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C04" class="Cell" onclick="select(0,4)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
         </div>
         <div id="R1" class="Row">
             <div id="C10" class="Cell" onclick="select(1,0)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C11" class="Cell" onclick="select(1,1)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C12" class="Cell" onclick="select(1,2)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C13" class="Cell" onclick="select(1,3)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C14" class="Cell" onclick="select(1,4)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
         </div>
         <div id="R2" class="Row">
             <div id="C20" class="Cell" onclick="select(2,0)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C21" class="Cell" onclick="select(2,1)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C22" class="Cell" onclick="select(2,2)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C23" class="Cell" onclick="select(2,3)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C24" class="Cell" onclick="select(2,4)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
         </div>
         <div id="R3" class="Row">
             <div id="C30" class="Cell" onclick="select(3,0)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C31" class="Cell" onclick="select(3,1)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C32" class="Cell" onclick="select(3,2)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C33" class="Cell" onclick="select(3,3)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C34" class="Cell" onclick="select(3,4)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
         </div>
         <div id="R4" class="Row">
             <div id="C40" class="Cell" onclick="select(4,0)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C41" class="Cell" onclick="select(4,1)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C42" class="Cell" onclick="select(4,2)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C43" class="Cell" onclick="select(4,3)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
             <div id="C44" class="Cell" onclick="select(4,4)">
                 <div class="Selectors"></div>
-                <div class="Name">NOM COMMUN</div>
+                <div class="Name">CODE NAMES</div>
             </div>
         </div>
         </div>
@@ -333,9 +309,24 @@
         <div id="MessageButtonText">Messages</div>
         <div id="MessageNotification" hidden="true">0</div>
       </div>
-      <div id="QuitButton"  class="BarButton"><?php echo($quit); ?></div>
-      <div id="StartButton" class="BarButton"><?php echo($start); ?></div>
-      <div id="ThreeButton" class="BarButton"><?php echo($teams3); ?></div>
+      <div id="QuitButton"  class="BarButton" onclick="sendQuit()"><?php echo($quit); ?></div>
+      <div id="StartButton" class="BarButton" hidden="true" onclick="sendStart()"><?php echo($start); ?></div>
+      <div id="ThreeButton" class="BarButton" hidden="true" onclick="sendTeams3()"><?php echo($teams3); ?></div>
+      <div id="AskButton" class="BarButton" hidden="true" onclick="sendAsk()"><?php echo($ask); ?></div>
+      <div id="NaskButton" class="BarButton" hidden="true" onclick="sendNask()"><?php echo($nask); ?></div>
+      <div id="PauseButton" class="BarButton" hidden="true" onclick="sendPause()">PAUSE</div>
+      <div id="UnpauseButton" class="BarButton" hidden="true" onclick="sendUnpause()"><?php echo($unpause); ?></div>
+  </div>
+  <div id="Error" hidden="true">
+      <div id="InfoBubble">
+        <div id="InfoBubbleIcon">!</div>
+        <div id="InfoBubbleContent"></div>
+        <input id=InfoBubbleButton" type="button" value="OK" onclick="closeError()"/>
+      </div>
+  </div>
+  <div id="Mask">
+      <div id="Dialog">...</div>
+      <input id="DialogOK" type="button" onclick="closeDialog()" value="OK" hidden="true"/>
   </div>
   </body>
 </html>

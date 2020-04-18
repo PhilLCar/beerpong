@@ -12,6 +12,11 @@ STATUS_OFFLINE = 0;
 STATUS_ONLINE  = 1;
 STATUS_WRITING = 2;
 
+PLAY_NONE    = 0;
+PLAY_CAPTAIN = 1;
+PLAY_USER    = 2;
+
+STATE_TEAMS3    = false;
 STATE_TIME      = null;
 STATE_TIMEDIFF  = null;
 STATE_PAUSETIME = null;
@@ -26,7 +31,12 @@ STATE_MESSAGES  = [];
 STATE_NOTIF     = 0;
 STATE_NAMES     = null;
 STATE_COLORS    = [];
+STATE_CELLS     = [];
+STATE_LOADED    = false;
+STATE_CURRENT   = null;
 
+PUSH_TEAMS3    = null;
+PUSH_ASK       = null;
 PUSH_MESSAGES  = null;
 PUSH_STATUS    = 0;
 PUSH_PAUSE     = false;
@@ -37,9 +47,111 @@ PUSH_TIMEOUT   = false;
 PUSH_FINISH    = false;
 PUSH_TEAMTURN  = null;
 PUSH_GAMETURN  = null;
+PUSH_COLOR     = null;
+PUSH_NAMES     = null;
+PUSH_ORDER     = null;
+PUSH_REQCELLS  = false;
 
+BLOCKERS_CAP   = false;
+BLOCKERS_USER  = false;
 BLOCKERS_PAUSE = false;
 BLOCKERS_END   = false;
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function wait() {
+    if (STATE_ME && STATE_ME.Host) {
+        var start = document.getElementById("StartButton");
+        var three = document.getElementById("ThreeButton");
+        if (start.hidden) start.hidden = false;
+        if (three.hidden) three.hidden = false;
+        if (PARAMETER_WAITTIME - STATE_TIME <= 0) PUSH_TIMEOUT = true;
+    }
+    if (STATE_TEAMS3) {
+        var yellow = document.getElementById("TeamYellow");
+        var button = document.getElementById("ThreeButton");
+        var buttonHTML = (PARAMETER_LANG == "FR" ? "2 ÉQUIPES" : "2 TEAMS");
+        if (yellow.hidden) yellow.hidden = false;
+        if (button.innerHTML != buttonHTML) button.innerHTML = buttonHTML;
+    } else {
+        var yellow = document.getElementById("TeamYellow");
+        var button = document.getElementById("ThreeButton");
+        var buttonHTML = (PARAMETER_LANG == "FR" ? "3 ÉQUIPES" : "3 TEAMS");
+        if (!yellow.hidden) yellow.hidden = true;
+        if (button.innerHTML != buttonHTML) button.innerHTML = buttonHTML;
+    }
+    if (STATE_ME && !isNaN(STATE_ME.ColorID)) {
+        var ask  = document.getElementById("AskButton");
+        var nask = document.getElementById("NaskButton");
+        if (STATE_TEAMS[STATE_ME.ColorID].Captain == STATE_ME.UserName) {
+            if (nask.hidden) nask.hidden = false;
+            if (!ask.hidden) ask.hidden  = true;
+        } else if (STATE_TEAMS[STATE_ME.ColorID].Captain == "") {
+            if (!nask.hidden) nask.hidden = true;
+            if (ask.hidden) ask.hidden    = false;
+        } else {
+            if (!nask.hidden) nask.hidden = true;
+            if (!ask.hidden) ask.hidden   = true;
+        }
+    }
+}
+
+function play() {
+    PUSH_REQCELLS = true;
+    if (!STATE_LOADED) {
+        var gameboard = document.getElementById("GameBoard");
+        var mask      = document.getElementById("Mask");
+        if (gameboard.hidden) gameboard.hidden = false;
+        if (!mask.hidden)     mask.hidden      = true;
+        if (STATE_ME.Host) {
+            var pause = document.getElementById("PauseButton");
+            if (pause.hidden) pause.hidden = false;
+        }
+        STATE_LOADED = true;
+    }
+    STATE_CURRENT = PLAY_NONE;
+    for (var i = 1; i < STATE_TEAMS.length; i++) {
+        var team = STATE_TEAMS[i];
+        if (team) {
+            if (team.Turn <= STATE_TURN) {
+                if (STATE_USERNAME == team.Captain) {
+                    playCap();
+                }
+                break;
+            } else if (team.Turn <= STATE_TURN + 1) {
+                if (STATE_ME.ColorID == team.ColorID) {
+                    playUser();
+                }
+                break;
+            }
+        }
+    }
+}
+
+function playCap() {
+    STATE_CURRENT = PLAY_CAPTAIN;
+
+}
+
+function playUser() {
+    STATE_CURRENT = PLAY_USER;
+}
+
+function pause() {
+    var gameboard = document.getElementById("GameBoard");
+    var mask      = document.getElementById("Mask");
+    var pause     = document.getElementById("PauseButton");
+    var unpause   = document.getElementById("UnpauseButton");
+    if (!gameboard.hidden) gameboard.hidden = true;
+    if (!mask.hidden)      mask.hidden      = true;
+    if (!pause.hidden)     pause.hidden     = true;
+    if (unpause.hidden)    unpause.hidden   = false;
+}
+
+function timeout() {
+    if (PARAMETER_LANG == "FR") alert("La partie n'a pas commencé avant le temps aloué");
+    else                        alert("The game didn't start within the time limit");
+    PUSH_QUIT = true;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function uState() {
@@ -47,29 +159,79 @@ function uState() {
     switch (STATE_GAME) {
         case GAME_WAITING:
             time.innerHTML = secondsToTime(PARAMETER_WAITTIME - STATE_TIME);
-            //wait();
+            wait();
             break;
         case GAME_STARTED:
-            time.innerHTML = secondsToTime(PARAMETER_GAMETIME - STATE_TIME);
-            //play();
+            time.innerHTML = secondsToTime(PARAMETER_TURNTIME - STATE_TIME);
+            play();
             break;
         case GAME_PAUSED:
-            //pause();
+            pause();
             break;
         case GAME_FINISHED:
             time.innerHTML = secondsToTime(PARAMETER_ENDTIME - STATE_TIME);
             //finish();
             break;
         case GAME_TIMEOUT:
-            //timeout();
+            timeout();
             break;
     }
 }
 
-function uUsers() {
-    for (var user of STATE_USERS) {
-        
+function uCells() {
+    for (cell of STATE_CELLS) {
+        var cellElem = document.getElementById("C" + cell.X + "" + cell.Y);
+        cellElem.getElementsByClassName("Selectors").innerHTML = "";
+        if (cell.Discovered) {
+            cellElem.setAttribute("class", "Cell Disc" + STATE_COLORS[cell.ColorID]);
+            cellElem.setAttribute("onclick", "");
+        } else if (isCaptain(STATE_ME) && (STATE_COLORS[cell.ColorID] != "yellow" || STATE_TEAMS3)) {
+            cellElem.setAttribute("class", "Cell Capt" + STATE_COLORS[cell.ColorID]);
+            if (cell.Tentative) {
+                cellElem.getElementsByClassName("Selectors").innerHTML = "<div class=\"Selector\">?</div>";
+            }
+        } else {
+            cellElem.setAttribute("class", "Cell");
+        }
+        cellElem.getElementsByClassName("Name")[0].innerHTML = cell.Content.toUpperCase();
     }
+}
+
+function uUsers() {
+    var lobby  = document.getElementById("LobbyList");
+    var red    = document.getElementById("TeamRedList");
+    var blue   = document.getElementById("TeamBlueList");
+    var yellow = document.getElementById("TeamYellowList");
+    var lobbyHTML  = "";
+    var redHTML    = "";
+    var blueHTML   = "";
+    var yellowHTML = "";
+    var host = (PARAMETER_LANG == "FR" ? "Hôte" : "Host");
+    for (var user of STATE_USERS) {
+        var userHTML = "<div class=\"User" + (user.UserName == STATE_USERNAME ? " Me" : "") + "\"" +
+                        (user.UserName == STATE_USERNAME ? "" : " onclick=\"message('" + user.UserName + "')\"" ) + ">" +
+                        "<div class=\"Status " + getStatus(user) + "\"></div>" +
+                        "<div class=\"UserName\">" + user.UserName + (isCaptain(user) ? " (C)" : "") + (user.Host ? " (" + host + ")": "") + "</div>" +
+                        "</div>";
+        if (STATE_COLORS.length == 0 || isNaN(user.ColorID)) {
+            lobbyHTML += userHTML;
+        } else if (STATE_COLORS[user.ColorID] == "red") {
+            redHTML += userHTML;
+        } else if (STATE_COLORS[user.ColorID] == "blue") {
+            blueHTML += userHTML;
+        } else if (STATE_COLORS[user.ColorID] == "yellow") {
+            yellowHTML += userHTML;
+        }
+        if (!isNaN(user.SX) && !isNaN(user.SY)) {
+            var cell = document.getElementById("C" + user.SX + "" + user.SY);
+            cell.getElementsByClassName("Selectors")[0].innerHTML += "<div class=\"Selector\">" + (user.UserName == STATE_USERNAME ? "M" : "U") + "</div>";
+        }
+    }
+
+    if (lobby.innerHTML != lobbyHTML) lobby.innerHTML = lobbyHTML;
+    if (red.innerHTML != redHTML) red.innerHTML = redHTML;
+    if (blue.innerHTML != blueHTML) blue.innerHTML = blueHTML;
+    if (yellow.innerHTML != yellowHTML) yellow.innerHTML = yellowHTML;
 }
 
 function uMessages() {
@@ -110,6 +272,7 @@ function getState(vars) {
     STATE_TURN = parseInt(state[1]);
     if (STATE_TIMEDIFF == null) getTimeSync(vars);
     STATE_TIME = (new Date().getTime() - Date.parse(state[2])) / 1000 - STATE_TIMEDIFF;
+    STATE_TEAMS3 = state[3] == "1";
 }
 
 function getTimeSync(vars) {
@@ -131,6 +294,25 @@ function getColors(vars) {
     }
 }
 
+function getCells(vars) {
+    if (STATE_CELLS.length < 25) {
+        var n = 0;
+        for (item of vars) {
+            if (item[0] == 'X') {
+                var cell = item.split(';');
+                STATE_CELLS[n++] = {
+                    "X": cell[1],
+                    "Y": cell[2],
+                    "Content": cell[3],
+                    "ColorID": parseInt(cell[4]),
+                    "Discovered": cell[5] == "1",
+                    "Tentative": cell[6] == "1"
+                }
+            }
+        }
+    }
+}
+
 function getUsers(vars) {
     STATE_USERS = [];
     STATE_ME = null;
@@ -145,7 +327,8 @@ function getUsers(vars) {
                 "UserStatus": parseInt(user[3]),
                 "SX": parseInt(user[4]),
                 "SY": parseInt(user[5]),
-                "ColorID" : parseInt(user[6])
+                "ColorID" : parseInt(user[6]),
+                "Pass": user[7] == "1"
             };
             if (user[1] == STATE_USERNAME) {
                 STATE_ME = STATE_USERS[n];
@@ -162,7 +345,7 @@ function getTeams(vars) {
             var team = item.split(';');
             STATE_TEAMS[parseInt(team[1])] = {
                 "Captain": team[2],
-                "Playing": team[3] == "1",
+                "Playing": parseInt(team[3]),
                 "Turn": parseInt(team[4])
             };
         }
@@ -189,6 +372,149 @@ function getMessages(vars) {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function sendTeams3() {
+    var yellow = document.getElementById("TeamYellow");
+    var button = document.getElementById("ThreeButton");
+    PUSH_TEAMS3 = !STATE_TEAMS3;
+    if (PUSH_TEAMS3) {
+        yellow.hidden = false;
+        button.innerHTML = (PARAMETER_LANG == "FR" ? "2 ÉQUIPES" : "2 TEAMS");
+    }
+    else {
+        yellow.hidden = true;
+        button.innerHTML = (PARAMETER_LANG == "FR" ? "3 ÉQUIPES" : "3 TEAMS");
+    }
+}
+
+function sendAsk() {
+    PUSH_ASK = true;
+}
+
+function sendNask() {
+    PUSH_ASK = false;
+}
+
+async function sendStart() {
+    showError(PARAMETER_LANG == "FR" ? "La partie commence..." : "Game is starting...", false);
+    var red    = 0;
+    var blue   = 0;
+    var yellow = (STATE_TEAMS3 ? 0 : 3);
+    for (var user of STATE_USERS) {
+        if (!isNaN(user.ColorID)) {
+            switch (STATE_COLORS[user.ColorID]) {
+                case "red":
+                    if (STATE_TEAMS[user.ColorID].Captain == user.UserName) {
+                        red |= 1;
+                    } else {
+                        red |= 2;
+                    }
+                    break;
+                case "blue":
+                    if (STATE_TEAMS[user.ColorID].Captain == user.UserName) {
+                        blue |= 1;
+                    } else {
+                        blue |= 2;
+                    }
+                    break;
+                case "yellow":
+                    if (STATE_TEAMS[user.ColorID].Captain == user.UserName) {
+                        yellow |= 1;
+                    } else {
+                        yellow |= 2;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    if (red == 3 && blue == 3 && yellow == 3) {
+        getNames();
+        for (var i = 0; i < 200 && !STATE_NAMES; i++) await sleep(10);
+        if (!STATE_NAMES) {
+            var error = (PARAMETER_LANG == "FR" ? 
+                    "Impossible de récupérer la liste de mots!" :
+                    "Impossible to fetch word list!");
+            showError(error);
+            return;
+        }
+        PUSH_ORDER = "";
+        if (!STATE_TEAMS3){
+            if (Math.random() < 0.5) PUSH_ORDER = "0;1";
+            else                     PUSH_ORDER = "1;0";
+        } else {
+            var n = Math.random();
+            if (n < 1/3) {
+                if (Math.random() < 0.5) PUSH_ORDER = "0;1;2";
+                else                     PUSH_ORDER = "0;2;1";
+            } else if (n < 2/3) {
+                if (Math.random() < 0.5) PUSH_ORDER = "1;0;2";
+                else                     PUSH_ORDER = "1;2;0";
+            } else {
+                if (Math.random() < 0.5) PUSH_ORDER = "2;0;1";
+                else                     PUSH_ORDER = "2;1;0";
+            }
+        }
+        PUSH_NAMES = "";
+        var l = 0;
+        var r = 0;
+        var b = 0;
+        var y = 0;
+        var c = [];
+        for (var i = 0; i < 5; i++) {
+            for (var j = 0; j < 5; j++) {
+                var x = null;
+                while (x == null) {
+                    var n = Math.round(Math.random() * 25);
+                    if (n == 0 && l < 1) {
+                        x = colorID("black");
+                        l++;
+                    } else if (n < 9 && (r < 8 || (!STATE_TEAMS3 && PUSH_ORDER[0] == '0' && r < 9))) {
+                        x = colorID("red");
+                        r++;
+                    } else if (n < 17 && (b < 8 || (!STATE_TEAMS3 && PUSH_ORDER[0] == '1' && b < 9))) {
+                        x = colorID("blue");
+                        b++;
+                    } else if (y < 7 || (STATE_TEAMS3 && y < 8)) {
+                        x = colorID("yellow");
+                        y++;
+                    }
+                }
+                var name = STATE_NAMES[Math.round(Math.random() * STATE_NAMES.length)];
+                while (name in c) name = STATE_NAMES[Math.round(Math.random() * STATE_NAMES.length)];
+                c[c.length] = name;
+                if (PUSH_NAMES != "") PUSH_NAMES += "`";
+                PUSH_NAMES += i + ";" + j + ";" + x + ";" + name;
+            }
+        }
+        PUSH_START = true;
+    } else {
+        var error = (PARAMETER_LANG == "FR" ? 
+                    "La partie ne peut pas commencer, assurez-vous que les équipes sont bien formées!" :
+                    "The game can't start right now, make sure teams are well formed!");
+        showError(error);
+    }
+}
+
+function sendPause() {
+    showDialog(PARAMETER_LANG == "FR" ? "La partie entre en pause..." : "Pausing...", false);
+    PUSH_PAUSE = true;
+}
+
+function sendUnpause() {
+    STATE_LOADED = false;
+    showDialog(PARAMETER_LANG == "FR" ? "La partie reprend..." : "Unpausing...", false)
+    PUSH_UNPAUSE = true;
+}
+
+function sendQuit() {
+    PUSH_QUIT = true;
+}
+
+function sendColor(color) {
+    PUSH_COLOR = colorID(color);
+}
+
 function sendMessage() {
     var input = document.getElementById("ChatInput");
     if (PUSH_MESSAGES) PUSH_MESSAGES += "`";
@@ -213,6 +539,31 @@ function update(n) {
     post = buildpost(post, "ID", STATE_ID);
     post = buildpost(post, "UserName", STATE_USERNAME);
     post = buildpost(post, "LastMID", STATE_LASTMID);
+    if (PUSH_TEAMS3 != null) {
+        post = buildpost(post, "Teams3", PUSH_TEAMS3);
+        PUSH_TEAMS3 = null;
+    }
+    if (PUSH_ASK != null) {
+        post = buildpost(post, "Ask", PUSH_ASK);
+        post = buildpost(post, "AskColor", STATE_ME.ColorID);
+        PUSH_ASK = null;
+    }
+    if (PUSH_COLOR) {
+        post = buildpost(post, "Color", PUSH_COLOR);
+        PUSH_COLOR = null;
+    }
+    if (PUSH_NAMES) {
+        post = buildpost(post, "Names", PUSH_NAMES);
+        PUSH_NAMES = null;
+    }
+    if (PUSH_ORDER) {
+        post = buildpost(post, "Order", PUSH_ORDER);
+        PUSH_ORDER = null;
+    }
+    if (PUSH_REQCELLS) {
+        post = buildpost(post, "Cells", PUSH_REQCELLS);
+        PUSH_REQCELLS = false;
+    }
     if (PUSH_STATUS) {
         post = buildpost(post, "UserStatus", PUSH_STATUS);
         PUSH_STATUS = 0;
@@ -277,12 +628,14 @@ function update(n) {
         // get
         getState(vars);
         getColors(vars);
+        getCells(vars);
         getUsers(vars);
         getTeams(vars);
         getMessages(vars);
         
         // u
-        //uState();
+        uState();
+        uCells();
         uUsers();
         uMessages();
 
@@ -350,10 +703,20 @@ function setStatus(status, enabled) {
 }
 
 function getStatus(user) {
-    if (!user) return "Offline";
-    if (user.UserStatus & STATUS_WRITING) return "Writing";
-    if (user.UserStatus & STATUS_ONLINE)  return "Online";
-    return "Offline";
+    if (!user) return "StatusOffline";
+    if (user.UserStatus & STATUS_WRITING) return "StatusWriting";
+    if (user.UserStatus & STATUS_ONLINE)  return "StatusOnline";
+    return "StatusOffline";
+}
+
+function isCaptain(user) {
+    if (STATE_TEAMS.length == 0 || isNaN(user.ColorID)) return false;
+    return user.UserName == STATE_TEAMS[user.ColorID].Captain;
+}
+
+function message(username) {
+    if (document.getElementById("Chat").hidden) toggleChat();
+    document.getElementById("ChatInput").value += "@" + username;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -391,11 +754,36 @@ function toggleChat() {
 function getNames() {
     var xhttp = new XMLHttpRequest();
     var list  = (PARAMETER_LANG == "FR" ? "Francais.txt" : "English.txt");
-    xhttp.onreadystatechange = async function() {
+    xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         STATE_NAMES = this.responseText.split('\n');
       }
     };
     xhttp.open("GET", "wordlists/" + list, true);
     xhttp.send();
+}
+
+function colorID(color) {
+    for (var i = 1; i < STATE_COLORS.length; i++) {
+        if (color == STATE_COLORS[i]) return i;
+    }
+}
+
+function showError(message) {
+    document.getElementById("InfoBubbleContent").innerHTML = message;
+    document.getElementById("Error").hidden = false;
+}
+
+function closeError() {
+    document.getElementById("Error").hidden = true;
+}
+
+function showDialog(message, button = true) {
+    document.getElementById("Dialog").innerHTML = message;
+    document.getElementById("DialogOK").hidden = !button;
+    document.getElementById("Mask").hidden = false;
+}
+
+function closeDialog() {
+    document.getElementById("Mask").hidden = true;
 }

@@ -181,7 +181,8 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 #MessageButton {
     float: left;
-    height: 100%;
+    padding-top: 0.3rem;
+    height: calc(100% - 0.3rem);
     padding-left: 1rem;
     padding-right: 1rem;
 }
@@ -206,14 +207,14 @@ input[type="button"]:hover, input[type="submit"]:hover {
     color: white;
     background-color: red;
     text-align: center;
-    line-height: 1.2;
+    line-height: 1.1rem;
 }
 
-#StartButton {
+#StartButton, #UnpauseButton {
     background-color: mediumseagreen;
 }
 
-#StartButton:hover {
+#StartButton:hover, #UnpauseButton:hover {
     background-color: green;
 }
 
@@ -233,12 +234,28 @@ input[type="button"]:hover, input[type="submit"]:hover {
     background-color: darkred;
 }
 
+#AskButton, #NaskButton {
+    background-color: dodgerblue;
+}
+
+#AskButton:hover, #NaskButton:hover {
+    background-color: blue;
+}
+
+#PauseButton {
+    background-color: orangered;
+}
+
+#PauseButton:hover {
+    background-color: brown;
+}
+
 #Chat {
     display: flex;
     flex-direction: column;
     position: absolute;
     left: 0rem;
-    bottom: 2rem;
+    bottom: 2.4rem;
     width: 30rem;
     height: 70%;
     border: 0.1rem solid #777;
@@ -292,6 +309,54 @@ input[type="button"]:hover, input[type="submit"]:hover {
     background-color: orange;
 }
 
+#Error {
+    flex-grow: 0;
+}
+
+#InfoBubbleIcon {
+    display: inline-block;
+    height: 2rem;
+    width: 2rem;
+    margin-top: 0.3rem;
+    border-radius: 2rem;
+    font-size: 2rem;
+    color: black;
+    background-color: orange;
+    text-align: center;
+    line-height: 1.8rem;
+}
+
+#InfoBubbleContent {
+    display: inline-block;
+    line-height: 2.5rem;
+}
+
+#InfoBubble input {
+    float: right;
+    padding: 0.2rem;
+    margin-top: 0.3rem;
+    border-radius: 0.5rem;
+}
+
+#Mask {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 0rem;
+    bottom: 0rem;
+    left: 0rem;
+    right: 0rem;
+    justify-content: center;
+    text-align: center;
+    z-index: 100;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+}
+
+#Dialog {
+    flex-grow: 0;
+}
+
 .Message {
     float: left;
     clear: both;
@@ -334,8 +399,8 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 .BarButton {
     float: right;
-    margin: 0.2rem;
-    margin-right: 0.4rem;
+    margin: 0.4rem;
+    margin-left: 0rem;
     padding: 0.1rem;
     padding-left: 0.4rem;
     padding-right: 0.4rem;
@@ -392,6 +457,7 @@ input[type="button"]:hover, input[type="submit"]:hover {
 .User {
     width: 100%;
     color: #CCC;
+    margin-bottom: 0.2rem;
 }
 
 .User:hover {
@@ -417,6 +483,10 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 .Me {
     color: yellow;
+}
+
+.Me:hover {
+    cursor: default;
 }
 
 .Team {
@@ -448,6 +518,7 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 .Cell {
     flex-grow: 1;
+    flex-basis: 0rem;
     margin: 0.1rem;
     border: 0.2rem solid rgb(56, 28, 0);
     border-radius: 1rem;
@@ -464,4 +535,25 @@ input[type="button"]:hover, input[type="submit"]:hover {
     margin-top: 18%;
     text-align: center;
     background-color: #CCC;
+}
+
+
+.Captred {
+    color: brown;
+    border: 0.2rem solid brown;
+}
+
+.Captblue {
+    color: royalblue;
+    border: 0.2rem solid royalblue;
+}
+
+.Captblack {
+    background-color: black;
+    border: 0.2rem solid #333;
+}
+
+.Captyellow {
+    color: rgb(128, 98, 0);
+    border: 0.2rem solid goldenrod;
 }

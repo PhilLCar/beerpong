@@ -11,9 +11,11 @@ DROP TABLE IF EXISTS games;
 
 CREATE TABLE games (
     ID          VARCHAR(4)      NOT NULL            PRIMARY KEY,
+    Teams3      BOOLEAN         NOT NULL            DEFAULT FALSE,
     GameState   INT             NOT NULL            DEFAULT 0,
     Turn        INT             NOT NULL            DEFAULT 0,
-    Timer       TIMESTAMP       NOT NULL            DEFAULT NOW()
+    Timer       TIMESTAMP       NOT NULL            DEFAULT NOW(),
+    LastPause   TIMESTAMP       NOT NULL            DEFAULT NOW()
 );
 
 CREATE TABLE colors (
@@ -23,6 +25,8 @@ CREATE TABLE colors (
 
 CREATE TABLE cells (
     ID          VARCHAR(4)      NOT NULL,
+    Discovered  BOOLEAN         NOT NULL            DEFAULT FALSE,
+    Tentative   BOOLEAN         NOT NULL            DEFAULT FALSE,
     X           INT             NOT NULL,
     Y           INT             NOT NULL,
     Content     VARCHAR(128)    NOT NULL,
@@ -36,6 +40,7 @@ CREATE TABLE users (
     ID          VARCHAR(4)      NOT NULL,
     UserName    VARCHAR(128)    NOT NULL,
     Host        BOOLEAN         NOT NULL            DEFAULT FALSE,
+    Pass        BOOLEAN         NOT NULL            DEFAULT FALSE,
     UserStatus  INT             NOT NULL            DEFAULT 0,
     SX          INT                                 DEFAULT NULL,
     SY          INT                                 DEFAULT NULL,
@@ -49,7 +54,7 @@ CREATE TABLE users (
 CREATE TABLE teams (
     ID          VARCHAR(4)      NOT NULL,
     Captain     VARCHAR(128)                        DEFAULT NULL,
-    Playing     BOOLEAN         NOT NULL            DEFAULT FALSE,
+    Playing     INT             NOT NULL            DEFAULT 0,
     Turn        INT             NOT NULL            DEFAULT 0,
     ColorID     INT             NOT NULL,
     TeamOrder   INT             NOT NULL            DEFAULT 0,
@@ -77,6 +82,7 @@ INSERT INTO colors(Color) VALUES ('blue');
 
 DROP FUNCTION IF EXISTS user_active;
 DROP FUNCTION IF EXISTS game_active;
+DROP FUNCTION IF EXISTS colorID;
 
 CREATE FUNCTION user_active (
     PID         VARCHAR(4),
@@ -96,6 +102,16 @@ RETURN EXISTS (
         WHERE ID=PID AND Host=TRUE
         AND   TIMESTAMPDIFF(SECOND, LastUpdate, NOW())<=30
 );
+
+DELIMITER .
+CREATE FUNCTION colorID (
+    PColor  VARCHAR(64)
+) RETURNS INT 
+BEGIN
+    SELECT ID INTO @ID FROM colors WHERE Color=PColor;
+    RETURN ID;
+END.
+DELIMITER ;
 
 DROP PROCEDURE IF EXISTS game_init;
 DROP PROCEDURE IF EXISTS clear_color;

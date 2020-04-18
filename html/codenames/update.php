@@ -42,6 +42,44 @@
                 $sql = "UPDATE users SET LastUpdate=NOW(), UserStatus=UserStatus|1 WHERE ID='" . $_POST["ID"] . "' AND UserName='" . escape($_POST["UserName"]) . "'";
                 $conn->query($sql);
 
+                if ($_POST["Teams3"] !== NULL) {
+                    $sql = "UPDATE games SET Teams3=" . $_POST["Teams3"] . " WHERE ID='" . $_POST["ID"] ."'";
+                    $conn->query($sql);
+                    if ($_POST["Teams3"] != "0") {
+                        $sql = "CALL clear_color('" . $_POST["ID"] . "', 'yellow')";
+                        $conn->query($sql);
+                    }
+                }
+                if ($_POST["Ask"] !== NULL) {
+                    if ($_POST["Ask"] == "true") $sql = "UPDATE teams SET Captain='" . escape($_POST["UserName"]) . "' WHERE ID='" . $_POST["ID"] . "' AND ColorID=" . $_POST["AskColor"];
+                    else                         $sql = "UPDATE teams SET Captain=NULL WHERE ID='" . $_POST["ID"] . "' AND ColorID=" . $_POST["AskColor"];
+                    $conn->query($sql);
+                }
+                if (!empty($_POST["Color"])) {
+                    $sql = "UPDATE users SET ColorID=" . $_POST["Color"] . " WHERE ID='" . $_POST["ID"] . "' AND UserName='" . escape($_POST["UserName"]) . "'";
+                    $conn->query($sql);
+                }
+                if (!empty($_POST["Order"])) {
+                    $order = explode(";", $_POST["Order"]);
+                    $sql = "UPDATE teams SET TeamOrder=" . $order[0] . " WHERE ID='" . $_POST["ID"] . "' AND ColorID=colorID('red')";
+                    $conn->query($sql);
+                    $sql = "UPDATE teams SET TeamOrder=" . $order[1] . " WHERE ID='" . $_POST["ID"] . "' AND ColorID=colorID('blue')";
+                    $conn->query($sql);
+                    if (count($order) > 2) {
+                        $sql = "UPDATE teams SET TeamOrder=" . $order[2] . " WHERE ID='" . $_POST["ID"] . "' AND ColorID=colorID('yellow')";
+                        $conn->query($sql);
+                    }
+
+                }
+                if (!empty($_POST["Names"])) {
+                    $cells = explode("`", $_POST["Names"]);
+                    foreach ($cells as $cell) {
+                        $values = explode(";", $cell);
+                        $sql = "INSERT INTO cells(ID, X, Y, ColorID, Content) VALUES ('" . $_POST["ID"] . "', " . $values[0] . ", " . $values[1] .
+                                ", " . $values[2] . ", '" . $values[3] . "')";
+                        $conn->query($sql);
+                    }
+                }
                 if (!empty($_POST["Start"])) {
                     $sql = "UPDATE games SET Timer=NOW(), GameState=1 WHERE ID='" . $_POST["ID"] . "'";
                     $conn->query($sql);
@@ -87,9 +125,9 @@
                 }
 
                 // RECEIVE
-                $sql = "SELECT GameState, Turn, Timer FROM games WHERE ID='" . $_POST["ID"] . "'";
+                $sql = "SELECT GameState, Turn, Timer, Teams3 FROM games WHERE ID='" . $_POST["ID"] . "'";
                 $result = $conn->query($sql)->fetch_assoc();
-                echo($result["GameState"] . ";" . $result["Turn"] . ";" . $result["Timer"] . "`");
+                echo($result["GameState"] . ";" . $result["Turn"] . ";" . $result["Timer"] . ";" . $result["Teams3"] . "`");
 
                 if (!empty($_POST["TimeSync"])) {
                     $sql = "SELECT NOW() AS Time";
@@ -101,7 +139,7 @@
                 $query = $conn->query($sql);
                 while ($result = $query->fetch_assoc()) {
                     echo("U;" . $result["UserName"] . ";" . $result["Host"] . ";" . $result["UserStatus"] . ";" . $result["SX"] . ";" . $result["SY"] . ";" .
-                            $result["ColorID"] . "`");
+                            $result["ColorID"] . ";" . $result["Pass"] . "`");
                 }
 
                 $sql = "SELECT * FROM teams WHERE ID='" . $_POST["ID"] . "' ORDER BY TeamOrder";
@@ -115,6 +153,14 @@
                     $query = $conn->query($sql);
                     while ($result = $query->fetch_assoc()) {
                         echo("C;" . $result["ID"] . ";" . $result["Color"] . "`");
+                    }
+                }
+
+                if (!empty($_POST["Cells"])) {
+                    $sql = "SELECT * FROM cells WHERE ID='" . $_POST["ID"] . "'";
+                    $query = $conn->query($sql);
+                    while ($result = $query->fetch_assoc()) {
+                        echo ("X;" . $result["X"] . ";" . $result["Y"] . ";" . $result["Content"] . ";" . $result["ColorID"] . ";" . $result["Discovered"] . ";" . $result["Tentative"] . "`");
                     }
                 }
                 
