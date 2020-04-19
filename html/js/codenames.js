@@ -151,7 +151,18 @@ function play() {
                                 }
                             }
                         }
-                        if (x !== false && x !== null && y !== false && y !== null) PUSH_DISCOVER = x + ";" + y;
+                        if (x !== false && x !== null && y !== false && y !== null) {
+                            PUSH_DISCOVER = x + ";" + y;
+                            for (var cell of STATE_CELLS) {
+                                if (cell.X == x && cell.Y == y) {
+                                    if (cell.ColorID != team.ColorID) {
+                                        if (cell.ColorID == colorID("black")) sendFinish();
+                                        else pass = true;
+                                    }
+                                    break;
+                                }
+                            }
+                        } 
                         if (pass || PARAMETER_TURNTIME - STATE_TIME <= 0) sendTurn();
                     }
                     if (turn.hidden && !STATE_ME.Pass)      turn.hidden = false;
@@ -184,6 +195,15 @@ function pause() {
     STATE_LOADED = false;
 }
 
+function finish() {
+    var pause     = document.getElementById("PauseButton");
+    var turn      = document.getElementById("TurnButton");
+    if (!pause.hidden) pause.hidden = true;
+    if (!turn.hidden)  turn.hidden  = true;
+    
+    if (PARAMETER_ENDTIME - STATE_TIME <= 0) sendQuit();
+}
+
 function timeout() {
     if (PARAMETER_LANG == "FR") alert("La partie n'a pas commencé avant le temps aloué");
     else                        alert("The game didn't start within the time limit");
@@ -207,7 +227,7 @@ function uState() {
             break;
         case GAME_FINISHED:
             time.innerHTML = secondsToTime(PARAMETER_ENDTIME - STATE_TIME);
-            //finish();
+            finish();
             break;
         case GAME_TIMEOUT:
             timeout();
@@ -569,6 +589,10 @@ function sendTurn() {
             PUSH_PASS = true;
         }
     }
+}
+
+function sendFinish() {
+    PUSH_FINISH = true;
 }
 
 function sendQuit() {

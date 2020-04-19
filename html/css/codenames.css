@@ -385,6 +385,7 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 .MessageTime {
     float: right;
+    margin-left: 0.5rem;
     color: orange
 }
 
@@ -523,6 +524,7 @@ input[type="button"]:hover, input[type="submit"]:hover {
     display: flex;
     flex-direction: row;
     flex-grow: 1;
+    flex-basis: 0rem;
 }
 
 .Cell {

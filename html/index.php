@@ -10,5 +10,6 @@
     <div id="Beerpong" onclick="window.location='beerpong'">BEERPONG TOURNAMENT</div>
     <div id="Boulette" onclick="window.location='boulette'">LA BOULETTE</div>
     <div id="Whoami" onclick="window.location='whoami'">Who am I?</div>
+    <div id="Codenames" onclick="window.location='codenames'">CODE NAMES</div>
   </body>
 </html>

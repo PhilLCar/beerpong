@@ -2,9 +2,10 @@
 @import url(https://fonts.googleapis.com/css?family=Nunito&display=swap);
 @import url(https://fonts.googleapis.com/css?family=Oswald&display=swap);
 @import url(https://fonts.googleapis.com/css?family=Comic+Neue&display=swap);
+@import url(https://fonts.googleapis.com/css?family=Alata&display=swap);
 
 body {
-    background-color: #333;
+    background-color: #222;
     color: white;
     text-align: center;
     margin: 0px;
@@ -56,4 +57,18 @@ h1 {
 #Whoami:hover {
     cursor: pointer;
     background-color: rgb(0, 100, 100);
+}
+
+#Codenames {
+    font-size: 100px;
+    font-family: 'Alata', sans-serif;
+    width: 100%;
+    color: orange;
+    background-color: #333;
+}
+
+#Codenames:hover {
+    cursor: pointer;
+    color: orange;
+    background-color: black;
 }
