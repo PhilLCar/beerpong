@@ -98,6 +98,26 @@
                     $sql = "UPDATE games SET GameState=4 WHERE ID='" . $_POST["ID"] . "'";
                     $conn->query($sql);
                 }
+                if (!empty($_POST["Playing"])) {
+                    $sql = "UPDATE teams SET Playing=TRUE WHERE ID='" . $_POST["ID"] . "' AND ColorID=" . $_POST["ColorID"];
+                    $conn->query($sql);
+                    $sql = "UPDATE games SET Timer=NOW() WHERE ID='" . $_POST["ID"] . "'";
+                    $conn->query($sql);
+                }
+                if (!empty($_POST["Pass"])) {
+                    $sql = "UPDATE users SET Pass=TRUE WHERE ID='" . $_POST["ID"] . "' AND UserName='" . escape($_POST["UserName"]) . "'";
+                    $conn->query($sql);
+                }
+                if (!empty($_POST["Select"])) {
+                    $pos = explode(";", $_POST["Select"]);
+                    $sql = "UPDATE users SET SX=" . $pos[0] . ", SY=" . $pos[1] . " WHERE ID='" . $_POST["ID"] . "' AND UserName='" . escape($_POST["UserName"]) . "'";
+                    $conn->query($sql);
+                }
+                if (!empty($_POST["Tentative"])) {
+                    $pos = explode(";", $_POST["Tentative"]);
+                    $sql = "UPDATE cells SET Tentative=NOT Tentative WHERE ID='" . $_POST["ID"] . "' AND X=" . $pos[0] . " AND Y=" . $pos[1];
+                    $conn->query($sql);
+                }
                 if ($_POST["GameTurn"] !== NULL) {
                     $sql = "UPDATE games SET Turn=" . $_POST["GameTurn"] . " WHERE ID='" . $_POST["ID"] . "'";
                     $conn->query($sql);
@@ -107,8 +127,14 @@
                                     $_POST["ID"] . "'";
                     $conn->query($sql);
                 }
-                if (!empty($_POST["TeamTurn"])) {
-                    $sql = "UPDATE teams SET Turn=" . $_POST["TeamTurn"] . " WHERE ColorID='" . escape($_POST["ColorID"]) . "' AND ID='" .  $_POST["ID"] . "'";
+                if ($_POST["TeamTurn"] !== NULL) {
+                    $sql = "UPDATE teams SET Turn=" . $_POST["TeamTurn"] . ", Playing=FALSE WHERE ColorID=" . $_POST["ColorID"] . " AND ID='" .  $_POST["ID"] . "'";
+                    $conn->query($sql);
+                    $sql = "UPDATE users SET Pass=FALSE, SX=NULL, SY=NULL WHERE ColorID=" . $_POST["ColorID"] . " AND ID='" .  $_POST["ID"] . "'";
+                    $conn->query($sql);
+                    $sql = "UPDATE cells SET Tentative=FALSE WHERE ID='" . $_POST["ID"] . "'";
+                    $conn->query($sql);
+                    $sql = "UPDATE games SET Timer=NOW() WHERE ID='" . $_POST["ID"] . "'";
                     $conn->query($sql);
                 }
                 if (!empty($_POST["Messages"])) {
@@ -160,7 +186,8 @@
                     $sql = "SELECT * FROM cells WHERE ID='" . $_POST["ID"] . "'";
                     $query = $conn->query($sql);
                     while ($result = $query->fetch_assoc()) {
-                        echo ("X;" . $result["X"] . ";" . $result["Y"] . ";" . $result["Content"] . ";" . $result["ColorID"] . ";" . $result["Discovered"] . ";" . $result["Tentative"] . "`");
+                        echo ("X;" . $result["X"] . ";" . $result["Y"] . ";" . $result["Content"] . ";" . $result["ColorID"] . ";" . $result["Discovered"] . ";" .
+                             $result["Tentative"] . "`");
                     }
                 }
                 

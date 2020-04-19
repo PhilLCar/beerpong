@@ -54,7 +54,7 @@ CREATE TABLE users (
 CREATE TABLE teams (
     ID          VARCHAR(4)      NOT NULL,
     Captain     VARCHAR(128)                        DEFAULT NULL,
-    Playing     INT             NOT NULL            DEFAULT 0,
+    Playing     BOOLEAN         NOT NULL            DEFAULT FALSE,
     Turn        INT             NOT NULL            DEFAULT 0,
     ColorID     INT             NOT NULL,
     TeamOrder   INT             NOT NULL            DEFAULT 0,
@@ -109,7 +109,7 @@ CREATE FUNCTION colorID (
 ) RETURNS INT 
 BEGIN
     SELECT ID INTO @ID FROM colors WHERE Color=PColor;
-    RETURN ID;
+    RETURN @ID;
 END.
 DELIMITER ;
 

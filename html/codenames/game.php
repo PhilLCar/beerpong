@@ -35,6 +35,7 @@
         $ask        = "POSER";
         $nask       = "DEVINER";
         $unpause    = "REPRENDRE";
+        $turn       = "TERMINER";
     } else {
         $game       = "Game";
         $lobby      = "Lobby";
@@ -50,6 +51,7 @@
         $ask        = "ASK";
         $nask       = "GUESS";
         $unpause    = "PLAY";
+        $turn       = "END TURN";
     }
 
     $_POST["UserName"] = rmchars($_POST["UserName"], ";`");
@@ -309,13 +311,15 @@
         <div id="MessageButtonText">Messages</div>
         <div id="MessageNotification" hidden="true">0</div>
       </div>
-      <div id="QuitButton"  class="BarButton" onclick="sendQuit()"><?php echo($quit); ?></div>
-      <div id="StartButton" class="BarButton" hidden="true" onclick="sendStart()"><?php echo($start); ?></div>
-      <div id="ThreeButton" class="BarButton" hidden="true" onclick="sendTeams3()"><?php echo($teams3); ?></div>
-      <div id="AskButton" class="BarButton" hidden="true" onclick="sendAsk()"><?php echo($ask); ?></div>
+      <div id="Remaining"></div>
+      <div id="TurnButton" class="BarButton" hidden="true" onclick="sendTurn()"><?php echo($turn); ?></div>
       <div id="NaskButton" class="BarButton" hidden="true" onclick="sendNask()"><?php echo($nask); ?></div>
-      <div id="PauseButton" class="BarButton" hidden="true" onclick="sendPause()">PAUSE</div>
+      <div id="AskButton" class="BarButton" hidden="true" onclick="sendAsk()"><?php echo($ask); ?></div>
       <div id="UnpauseButton" class="BarButton" hidden="true" onclick="sendUnpause()"><?php echo($unpause); ?></div>
+      <div id="PauseButton" class="BarButton" hidden="true" onclick="sendPause()">PAUSE</div>
+      <div id="ThreeButton" class="BarButton" hidden="true" onclick="sendTeams3()"><?php echo($teams3); ?></div>
+      <div id="StartButton" class="BarButton" hidden="true" onclick="sendStart()"><?php echo($start); ?></div>
+      <div id="QuitButton"  class="BarButton" onclick="sendQuit()"><?php echo($quit); ?></div>
   </div>
   <div id="Error" hidden="true">
       <div id="InfoBubble">
@@ -324,7 +328,7 @@
         <input id=InfoBubbleButton" type="button" value="OK" onclick="closeError()"/>
       </div>
   </div>
-  <div id="Mask">
+  <div id="Mask" hidden="true">
       <div id="Dialog">...</div>
       <input id="DialogOK" type="button" onclick="closeDialog()" value="OK" hidden="true"/>
   </div>

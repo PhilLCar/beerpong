@@ -35,22 +35,27 @@ STATE_CELLS     = [];
 STATE_LOADED    = false;
 STATE_CURRENT   = null;
 
-PUSH_TEAMS3    = null;
-PUSH_ASK       = null;
-PUSH_MESSAGES  = null;
-PUSH_STATUS    = 0;
-PUSH_PAUSE     = false;
-PUSH_UNPAUSE   = false;
-PUSH_START     = false;
-PUSH_QUIT      = false;
-PUSH_TIMEOUT   = false;
-PUSH_FINISH    = false;
-PUSH_TEAMTURN  = null;
-PUSH_GAMETURN  = null;
-PUSH_COLOR     = null;
-PUSH_NAMES     = null;
-PUSH_ORDER     = null;
-PUSH_REQCELLS  = false;
+PUSH_TEAMS3      = null;
+PUSH_ASK         = null;
+PUSH_MESSAGES    = null;
+PUSH_STATUS      = 0;
+PUSH_PAUSE       = false;
+PUSH_UNPAUSE     = false;
+PUSH_START       = false;
+PUSH_QUIT        = false;
+PUSH_TIMEOUT     = false;
+PUSH_FINISH      = false;
+PUSH_TEAMTURN    = null;
+PUSH_GAMETURN    = null;
+PUSH_COLOR       = null;
+PUSH_NAMES       = null;
+PUSH_ORDER       = null;
+PUSH_REQCELLS    = false;
+PUSH_TEAMPLAYING = null;
+PUSH_PASS        = false;
+PUSH_DISCOVER    = null;
+PUSH_TENTATIVE   = null;
+PUSH_SELECT      = null;
 
 BLOCKERS_CAP   = false;
 BLOCKERS_USER  = false;
@@ -82,10 +87,10 @@ function wait() {
     if (STATE_ME && !isNaN(STATE_ME.ColorID)) {
         var ask  = document.getElementById("AskButton");
         var nask = document.getElementById("NaskButton");
-        if (STATE_TEAMS[STATE_ME.ColorID].Captain == STATE_ME.UserName) {
+        if (getTeam(STATE_ME.ColorID).Captain == STATE_ME.UserName) {
             if (nask.hidden) nask.hidden = false;
             if (!ask.hidden) ask.hidden  = true;
-        } else if (STATE_TEAMS[STATE_ME.ColorID].Captain == "") {
+        } else if (getTeam(STATE_ME.ColorID).Captain == "") {
             if (!nask.hidden) nask.hidden = true;
             if (ask.hidden) ask.hidden    = false;
         } else {
@@ -100,51 +105,77 @@ function play() {
     if (!STATE_LOADED) {
         var gameboard = document.getElementById("GameBoard");
         var mask      = document.getElementById("Mask");
+        var start     = document.getElementById("StartButton");
+        var three     = document.getElementById("ThreeButton");
+        var ask       = document.getElementById("AskButton");
+        var nask      = document.getElementById("NaskButton");
         if (gameboard.hidden) gameboard.hidden = false;
         if (!mask.hidden)     mask.hidden      = true;
+        if (!start.hidden)    start.hidden     = true;
+        if (!three.hidden)    three.hidden     = true;
+        if (!ask.hidden)      ask.hidden       = true;
+        if (!nask.hidden)     nask.hidden      = true;
         if (STATE_ME.Host) {
             var pause = document.getElementById("PauseButton");
-            if (pause.hidden) pause.hidden = false;
+            var unpause   = document.getElementById("UnpauseButton");
+            if (pause.hidden)    pause.hidden   = false;
+            if (!unpause.hidden) unpause.hidden = true;
         }
         STATE_LOADED = true;
     }
     STATE_CURRENT = PLAY_NONE;
+    var turn = document.getElementById("TurnButton");
+    var finished = true;
     for (var i = 1; i < STATE_TEAMS.length; i++) {
         var team = STATE_TEAMS[i];
+        if (team.ColorID == colorID("yellow") && !STATE_TEAMS3) continue;
         if (team) {
             if (team.Turn <= STATE_TURN) {
-                if (STATE_USERNAME == team.Captain) {
-                    playCap();
-                }
-                break;
-            } else if (team.Turn <= STATE_TURN + 1) {
-                if (STATE_ME.ColorID == team.ColorID) {
-                    playUser();
+                finished = false;
+                if (!team.Playing && STATE_USERNAME == team.Captain) {
+                    STATE_CURRENT = PLAY_CAPTAIN;
+                    if (PARAMETER_TURNTIME - STATE_TIME <= 0) sendTurn();
+                    if (turn.hidden) turn.hidden = false;
+                } else if (team.Playing && team.ColorID == STATE_ME.ColorID) {
+                    STATE_CURRENT = PLAY_USER;
+                    if (STATE_USERNAME == team.Captain) {
+                        var pass = true;
+                        for (var user of STATE_USERS) {
+                            if (user.ColorID == team.ColorID && !user.Pass) {
+                                pass = false;
+                                break;
+                            }
+                        }
+                        if (pass || PARAMETER_TURNTIME - STATE_TIME <= 0) sendTurn();
+                    }
+                    if (turn.hidden && !STATE_ME.Pass)      turn.hidden = false;
+                    else if (!turn.hidden && STATE_ME.Pass) turn.hidden = true;
+                } else {
+                    if (!turn.hidden) turn.hidden = true;
                 }
                 break;
             }
         }
     }
-}
-
-function playCap() {
-    STATE_CURRENT = PLAY_CAPTAIN;
-
-}
-
-function playUser() {
-    STATE_CURRENT = PLAY_USER;
+    if (STATE_ME.Host && finished) {
+        PUSH_GAMETURN = STATE_TURN + 1;
+    }
 }
 
 function pause() {
     var gameboard = document.getElementById("GameBoard");
     var mask      = document.getElementById("Mask");
-    var pause     = document.getElementById("PauseButton");
-    var unpause   = document.getElementById("UnpauseButton");
+    var turn      = document.getElementById("TurnButton");
     if (!gameboard.hidden) gameboard.hidden = true;
     if (!mask.hidden)      mask.hidden      = true;
-    if (!pause.hidden)     pause.hidden     = true;
-    if (unpause.hidden)    unpause.hidden   = false;
+    if (!turn.hidden)      turn.hidden      = true;
+    if (STATE_ME.Host) {
+        var pause     = document.getElementById("PauseButton");
+        var unpause   = document.getElementById("UnpauseButton");
+        if (!pause.hidden)     pause.hidden     = true;
+        if (unpause.hidden)    unpause.hidden   = false;
+    }
+    STATE_LOADED = false;
 }
 
 function timeout() {
@@ -179,22 +210,33 @@ function uState() {
 }
 
 function uCells() {
+    var remaining = document.getElementById("Remaining");
+    var rtext = (PARAMETER_LANG == "FR" ? "Mots restants: " : "Remaining words: ");
+    var r = 0;
     for (cell of STATE_CELLS) {
+        if (cell.ColorID == STATE_ME.ColorID && !cell.Discovered) r++;
         var cellElem = document.getElementById("C" + cell.X + "" + cell.Y);
         cellElem.getElementsByClassName("Selectors").innerHTML = "";
         if (cell.Discovered) {
-            cellElem.setAttribute("class", "Cell Disc" + STATE_COLORS[cell.ColorID]);
-            cellElem.setAttribute("onclick", "");
+            var attrclass = "Cell C" + STATE_COLORS[cell.ColorID];
+            if (cellElem.getAttribute("class") != attrclass) cellElem.setAttribute("class", attrclass);
         } else if (isCaptain(STATE_ME) && (STATE_COLORS[cell.ColorID] != "yellow" || STATE_TEAMS3)) {
-            cellElem.setAttribute("class", "Cell Capt" + STATE_COLORS[cell.ColorID]);
+            var attrclass = "Cell C" + STATE_COLORS[cell.ColorID];
+            if (cellElem.getAttribute("class") != attrclass) cellElem.setAttribute("class", attrclass);
             if (cell.Tentative) {
-                cellElem.getElementsByClassName("Selectors").innerHTML = "<div class=\"Selector\">?</div>";
+                var sel = "<div class=\"Selector\">?</div>";
+                var selectors = cellElem.getElementsByClassName("Selectors")[0];
+                if (selectors.innerHTML != sel) selectors.innerHTML = sel;
             }
         } else {
-            cellElem.setAttribute("class", "Cell");
+            var attrclass = "Cell";
+            if (cellElem.getAttribute("class") != attrclass) cellElem.setAttribute("class", attrclass);
         }
-        cellElem.getElementsByClassName("Name")[0].innerHTML = cell.Content.toUpperCase();
+        var elem = cellElem.getElementsByClassName("Name")[0];
+        if (elem.innerHTML != cell.Content) elem.innerHTML = cell.Content;
     }
+    rtext += r;
+    if (remaining.innerHTML != rtext) remaining.innerHTML = rtext;
 }
 
 function uUsers() {
@@ -207,6 +249,7 @@ function uUsers() {
     var blueHTML   = "";
     var yellowHTML = "";
     var host = (PARAMETER_LANG == "FR" ? "Hôte" : "Host");
+    for (var selector of document.getElementsByClassName("Selectors")) selector.innerHTML = "";
     for (var user of STATE_USERS) {
         var userHTML = "<div class=\"User" + (user.UserName == STATE_USERNAME ? " Me" : "") + "\"" +
                         (user.UserName == STATE_USERNAME ? "" : " onclick=\"message('" + user.UserName + "')\"" ) + ">" +
@@ -224,7 +267,7 @@ function uUsers() {
         }
         if (!isNaN(user.SX) && !isNaN(user.SY)) {
             var cell = document.getElementById("C" + user.SX + "" + user.SY);
-            cell.getElementsByClassName("Selectors")[0].innerHTML += "<div class=\"Selector\">" + (user.UserName == STATE_USERNAME ? "M" : "U") + "</div>";
+            cell.getElementsByClassName("Selectors")[0].innerHTML += "<div class=\"Selector\">" + (user.UserName == STATE_USERNAME ? "+" : "X") + "</div>";
         }
     }
 
@@ -307,7 +350,7 @@ function getCells(vars) {
                     "ColorID": parseInt(cell[4]),
                     "Discovered": cell[5] == "1",
                     "Tentative": cell[6] == "1"
-                }
+                };
             }
         }
     }
@@ -340,10 +383,12 @@ function getUsers(vars) {
 
 function getTeams(vars) {
     STATE_TEAMS = [];
+    var n = 0;
     for (var item of vars) {
         if (item[0] == 'T') {
             var team = item.split(';');
-            STATE_TEAMS[parseInt(team[1])] = {
+            STATE_TEAMS[n++] = {
+                "ColorID": parseInt(team[1]),
                 "Captain": team[2],
                 "Playing": parseInt(team[3]),
                 "Turn": parseInt(team[4])
@@ -395,7 +440,6 @@ function sendNask() {
 }
 
 async function sendStart() {
-    showError(PARAMETER_LANG == "FR" ? "La partie commence..." : "Game is starting...", false);
     var red    = 0;
     var blue   = 0;
     var yellow = (STATE_TEAMS3 ? 0 : 3);
@@ -403,21 +447,21 @@ async function sendStart() {
         if (!isNaN(user.ColorID)) {
             switch (STATE_COLORS[user.ColorID]) {
                 case "red":
-                    if (STATE_TEAMS[user.ColorID].Captain == user.UserName) {
+                    if (getTeam(user.ColorID).Captain == user.UserName) {
                         red |= 1;
                     } else {
                         red |= 2;
                     }
                     break;
                 case "blue":
-                    if (STATE_TEAMS[user.ColorID].Captain == user.UserName) {
+                    if (getTeam(user.ColorID).Captain == user.UserName) {
                         blue |= 1;
                     } else {
                         blue |= 2;
                     }
                     break;
                 case "yellow":
-                    if (STATE_TEAMS[user.ColorID].Captain == user.UserName) {
+                    if (getTeam(user.ColorID).Captain == user.UserName) {
                         yellow |= 1;
                     } else {
                         yellow |= 2;
@@ -429,6 +473,7 @@ async function sendStart() {
         }
     }
     if (red == 3 && blue == 3 && yellow == 3) {
+        showDialog(PARAMETER_LANG == "FR" ? "La partie commence..." : "Game is starting...", false);
         getNames();
         for (var i = 0; i < 200 && !STATE_NAMES; i++) await sleep(10);
         if (!STATE_NAMES) {
@@ -465,8 +510,8 @@ async function sendStart() {
             for (var j = 0; j < 5; j++) {
                 var x = null;
                 while (x == null) {
-                    var n = Math.round(Math.random() * 25);
-                    if (n == 0 && l < 1) {
+                    var n = Math.floor(Math.random() * 25);
+                    if (n < 1 && l < 1) {
                         x = colorID("black");
                         l++;
                     } else if (n < 9 && (r < 8 || (!STATE_TEAMS3 && PUSH_ORDER[0] == '0' && r < 9))) {
@@ -480,8 +525,8 @@ async function sendStart() {
                         y++;
                     }
                 }
-                var name = STATE_NAMES[Math.round(Math.random() * STATE_NAMES.length)];
-                while (name in c) name = STATE_NAMES[Math.round(Math.random() * STATE_NAMES.length)];
+                var name = STATE_NAMES[Math.round(Math.random() * STATE_NAMES.length)].toUpperCase();
+                while (c.includes(name)) name = STATE_NAMES[Math.round(Math.random() * STATE_NAMES.length)].toUpperCase();
                 c[c.length] = name;
                 if (PUSH_NAMES != "") PUSH_NAMES += "`";
                 PUSH_NAMES += i + ";" + j + ";" + x + ";" + name;
@@ -507,12 +552,26 @@ function sendUnpause() {
     PUSH_UNPAUSE = true;
 }
 
+function sendTurn() {
+    if (STATE_CURRENT == PLAY_CAPTAIN) {
+        PUSH_TEAMPLAYING = true;
+        PUSH_PASS        = true;
+    } else if (STATE_CURRENT == PLAY_USER) {
+        if (isCaptain(STATE_ME)) {
+            PUSH_TEAMPLAYING = false;
+            PUSH_TEAMTURN = STATE_TURN + 1;
+        } else {
+            PUSH_PASS = true;
+        }
+    }
+}
+
 function sendQuit() {
     PUSH_QUIT = true;
 }
 
 function sendColor(color) {
-    PUSH_COLOR = colorID(color);
+    if (STATE_GAME == GAME_WAITING) PUSH_COLOR = colorID(color);
 }
 
 function sendMessage() {
@@ -527,6 +586,38 @@ function sendWriting() {
     try {
         setStatus(STATUS_WRITING, document.getElementById("ChatInput").value != "");
     } catch (e) {}
+}
+
+function select(x, y) {
+    if (STATE_CURRENT == PLAY_CAPTAIN) {
+        var cell;
+        for (c of STATE_CELLS) {
+            if (c.X == x && c.Y == y) {
+                cell = c;
+                break;
+            }
+        }
+        if (STATE_ME.ColorID == cell.ColorID) {
+            PUSH_TENTATIVE = x + ";" + y;
+        } else {
+            showError(PARAMETER_LANG == "FR" ? "Ce mot n'est pas à vous!" : "This word isn't yours!");
+        }
+    } else if (STATE_CURRENT == PLAY_USER) {
+        var cell;
+        for (c of STATE_CELLS) {
+            if (c.X == x && c.Y == y) {
+                cell = c;
+                break;
+            }
+        }
+        if (!cell.Discovered) {
+            PUSH_SELECT = x + ";" + y;
+        } else {
+            showError(PARAMETER_LANG == "FR" ? "Ce mot est déjà découvert!" : "This word is already discovered!");
+        }
+    } else {
+        showError(PARAMETER_LANG == "FR" ? "Ce n'est pas votre tour!" : "It's not your turn!");
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -564,6 +655,23 @@ function update(n) {
         post = buildpost(post, "Cells", PUSH_REQCELLS);
         PUSH_REQCELLS = false;
     }
+    if (PUSH_TEAMPLAYING) {
+        post = buildpost(post, "Playing", PUSH_TEAMPLAYING);
+        post = buildpost(post, "ColorID", STATE_ME.ColorID);
+        PUSH_TEAMPLAYING = null;
+    }
+    if (PUSH_PASS) {
+        post = buildpost(post, "Pass", PUSH_PASS);
+        PUSH_PASS = false;
+    }
+    if (PUSH_SELECT) {
+        post = buildpost(post, "Select", PUSH_SELECT);
+        PUSH_SELECT = null;
+    }
+    if (PUSH_TENTATIVE) {
+        post = buildpost(post, "Tentative", PUSH_TENTATIVE);
+        PUSH_TENTATIVE = null;
+    }
     if (PUSH_STATUS) {
         post = buildpost(post, "UserStatus", PUSH_STATUS);
         PUSH_STATUS = 0;
@@ -597,8 +705,9 @@ function update(n) {
         PUSH_FINISH = false;
     }
     if (PUSH_TEAMTURN) {
-        post = buildpost(post, "TeamTurn", PUSH_USERTURN);
-        PUSH_USERTURN = null;
+        post = buildpost(post, "TeamTurn", PUSH_TEAMTURN);
+        post = buildpost(post, "ColorID", STATE_ME.ColorID);
+        PUSH_TEAMTURN = null;
     }
     if (PUSH_GAMETURN) {
         post = buildpost(post, "GameTurn", PUSH_GAMETURN);
@@ -711,7 +820,13 @@ function getStatus(user) {
 
 function isCaptain(user) {
     if (STATE_TEAMS.length == 0 || isNaN(user.ColorID)) return false;
-    return user.UserName == STATE_TEAMS[user.ColorID].Captain;
+    return user.UserName == getTeam(user.ColorID).Captain;
+}
+
+function getTeam(colorID) {
+    for (team of STATE_TEAMS) {
+        if (team.ColorID == colorID) return team;
+    }
 }
 
 function message(username) {
