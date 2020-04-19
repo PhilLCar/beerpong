@@ -118,6 +118,11 @@
                     $sql = "UPDATE cells SET Tentative=NOT Tentative WHERE ID='" . $_POST["ID"] . "' AND X=" . $pos[0] . " AND Y=" . $pos[1];
                     $conn->query($sql);
                 }
+                if (!empty($_POST["Discover"])) {
+                    $pos = explode(";", $_POST["Discover"]);
+                    $sql = "UPDATE cells SET Discovered=TRUE WHERE ID='" . $_POST["ID"] . "' AND X=" . $pos[0] . " AND Y=" . $pos[1];
+                    $conn->query($sql);
+                }
                 if ($_POST["GameTurn"] !== NULL) {
                     $sql = "UPDATE games SET Turn=" . $_POST["GameTurn"] . " WHERE ID='" . $_POST["ID"] . "'";
                     $conn->query($sql);
@@ -182,13 +187,11 @@
                     }
                 }
 
-                if (!empty($_POST["Cells"])) {
-                    $sql = "SELECT * FROM cells WHERE ID='" . $_POST["ID"] . "'";
-                    $query = $conn->query($sql);
-                    while ($result = $query->fetch_assoc()) {
-                        echo ("X;" . $result["X"] . ";" . $result["Y"] . ";" . $result["Content"] . ";" . $result["ColorID"] . ";" . $result["Discovered"] . ";" .
-                             $result["Tentative"] . "`");
-                    }
+                $sql = "SELECT * FROM cells WHERE ID='" . $_POST["ID"] . "'";
+                $query = $conn->query($sql);
+                while ($result = $query->fetch_assoc()) {
+                    echo ("X;" . $result["X"] . ";" . $result["Y"] . ";" . $result["Content"] . ";" . $result["ColorID"] . ";" . $result["Discovered"] . ";" .
+                            $result["Tentative"] . "`");
                 }
                 
                 $sql = "SELECT MessageID, UserName, Content, TimeSent FROM messages WHERE MessageID>" . $_POST["LastMID"] . " AND ID='" . $_POST["ID"] . 

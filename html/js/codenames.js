@@ -50,7 +50,6 @@ PUSH_GAMETURN    = null;
 PUSH_COLOR       = null;
 PUSH_NAMES       = null;
 PUSH_ORDER       = null;
-PUSH_REQCELLS    = false;
 PUSH_TEAMPLAYING = null;
 PUSH_PASS        = false;
 PUSH_DISCOVER    = null;
@@ -101,7 +100,6 @@ function wait() {
 }
 
 function play() {
-    PUSH_REQCELLS = true;
     if (!STATE_LOADED) {
         var gameboard = document.getElementById("GameBoard");
         var mask      = document.getElementById("Mask");
@@ -140,12 +138,20 @@ function play() {
                     STATE_CURRENT = PLAY_USER;
                     if (STATE_USERNAME == team.Captain) {
                         var pass = true;
+                        var x = null;
+                        var y = null;
                         for (var user of STATE_USERS) {
-                            if (user.ColorID == team.ColorID && !user.Pass) {
-                                pass = false;
-                                break;
+                            if (user.ColorID == team.ColorID) {
+                                if (!user.Pass) pass = false;
+                                if (STATE_USERNAME != user.UserName) {
+                                    if (x == null) x = user.SX;
+                                    else if (x != user.SX) x = false;
+                                    if (y == null) y = user.SY;
+                                    else if (y != user.SY) y = false;
+                                }
                             }
                         }
+                        if (x !== false && x !== null && y !== false && y !== null) PUSH_DISCOVER = x + ";" + y;
                         if (pass || PARAMETER_TURNTIME - STATE_TIME <= 0) sendTurn();
                     }
                     if (turn.hidden && !STATE_ME.Pass)      turn.hidden = false;
@@ -213,20 +219,21 @@ function uCells() {
     var remaining = document.getElementById("Remaining");
     var rtext = (PARAMETER_LANG == "FR" ? "Mots restants: " : "Remaining words: ");
     var r = 0;
+    for (var selector of document.getElementsByClassName("Selectors")) selector.innerHTML = "";
     for (cell of STATE_CELLS) {
         if (cell.ColorID == STATE_ME.ColorID && !cell.Discovered) r++;
         var cellElem = document.getElementById("C" + cell.X + "" + cell.Y);
         cellElem.getElementsByClassName("Selectors").innerHTML = "";
         if (cell.Discovered) {
-            var attrclass = "Cell C" + STATE_COLORS[cell.ColorID];
+            var attrclass = "Cell Disc" + STATE_COLORS[cell.ColorID];
+            var name = cellElem.getElementsByClassName("Name")[0];
             if (cellElem.getAttribute("class") != attrclass) cellElem.setAttribute("class", attrclass);
+            if (!name.hidden) name.hidden = true;
         } else if (isCaptain(STATE_ME) && (STATE_COLORS[cell.ColorID] != "yellow" || STATE_TEAMS3)) {
-            var attrclass = "Cell C" + STATE_COLORS[cell.ColorID];
+            var attrclass = "Cell Capt" + STATE_COLORS[cell.ColorID];
             if (cellElem.getAttribute("class") != attrclass) cellElem.setAttribute("class", attrclass);
-            if (cell.Tentative) {
-                var sel = "<div class=\"Selector\">?</div>";
-                var selectors = cellElem.getElementsByClassName("Selectors")[0];
-                if (selectors.innerHTML != sel) selectors.innerHTML = sel;
+            if (cell.Tentative && cell.ColorID == STATE_ME.ColorID) {
+                cellElem.getElementsByClassName("Selectors")[0].innerHTML = "<div class=\"Selector\">?</div>";
             }
         } else {
             var attrclass = "Cell";
@@ -249,7 +256,6 @@ function uUsers() {
     var blueHTML   = "";
     var yellowHTML = "";
     var host = (PARAMETER_LANG == "FR" ? "Hôte" : "Host");
-    for (var selector of document.getElementsByClassName("Selectors")) selector.innerHTML = "";
     for (var user of STATE_USERS) {
         var userHTML = "<div class=\"User" + (user.UserName == STATE_USERNAME ? " Me" : "") + "\"" +
                         (user.UserName == STATE_USERNAME ? "" : " onclick=\"message('" + user.UserName + "')\"" ) + ">" +
@@ -265,7 +271,7 @@ function uUsers() {
         } else if (STATE_COLORS[user.ColorID] == "yellow") {
             yellowHTML += userHTML;
         }
-        if (!isNaN(user.SX) && !isNaN(user.SY)) {
+        if (!isNaN(user.SX) && !isNaN(user.SY) && user.ColorID == STATE_ME.ColorID) {
             var cell = document.getElementById("C" + user.SX + "" + user.SY);
             cell.getElementsByClassName("Selectors")[0].innerHTML += "<div class=\"Selector\">" + (user.UserName == STATE_USERNAME ? "+" : "X") + "</div>";
         }
@@ -338,20 +344,19 @@ function getColors(vars) {
 }
 
 function getCells(vars) {
-    if (STATE_CELLS.length < 25) {
-        var n = 0;
-        for (item of vars) {
-            if (item[0] == 'X') {
-                var cell = item.split(';');
-                STATE_CELLS[n++] = {
-                    "X": cell[1],
-                    "Y": cell[2],
-                    "Content": cell[3],
-                    "ColorID": parseInt(cell[4]),
-                    "Discovered": cell[5] == "1",
-                    "Tentative": cell[6] == "1"
-                };
-            }
+    STATE_CELLS = []
+    var n = 0;
+    for (item of vars) {
+        if (item[0] == 'X') {
+            var cell = item.split(';');
+            STATE_CELLS[n++] = {
+                "X": cell[1],
+                "Y": cell[2],
+                "Content": cell[3],
+                "ColorID": parseInt(cell[4]),
+                "Discovered": cell[5] == "1",
+                "Tentative": cell[6] == "1"
+            };
         }
     }
 }
@@ -610,7 +615,9 @@ function select(x, y) {
                 break;
             }
         }
-        if (!cell.Discovered) {
+        if (isCaptain(STATE_ME)) {
+            showError(PARAMETER_LANG == "FR" ? "Vous ne pouvez pas sélectionner de mot!" : "You can't select words!");
+        } else if (!cell.Discovered) {
             PUSH_SELECT = x + ";" + y;
         } else {
             showError(PARAMETER_LANG == "FR" ? "Ce mot est déjà découvert!" : "This word is already discovered!");
@@ -651,10 +658,6 @@ function update(n) {
         post = buildpost(post, "Order", PUSH_ORDER);
         PUSH_ORDER = null;
     }
-    if (PUSH_REQCELLS) {
-        post = buildpost(post, "Cells", PUSH_REQCELLS);
-        PUSH_REQCELLS = false;
-    }
     if (PUSH_TEAMPLAYING) {
         post = buildpost(post, "Playing", PUSH_TEAMPLAYING);
         post = buildpost(post, "ColorID", STATE_ME.ColorID);
@@ -671,6 +674,10 @@ function update(n) {
     if (PUSH_TENTATIVE) {
         post = buildpost(post, "Tentative", PUSH_TENTATIVE);
         PUSH_TENTATIVE = null;
+    }
+    if (PUSH_DISCOVER) {
+        post = buildpost(post, "Discover", PUSH_DISCOVER);
+        PUSH_DISCOVER = null;
     }
     if (PUSH_STATUS) {
         post = buildpost(post, "UserStatus", PUSH_STATUS);

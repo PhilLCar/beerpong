@@ -546,25 +546,46 @@ input[type="button"]:hover, input[type="submit"]:hover {
     background-color: #CCC;
 }
 
-
-.Cred {
+.Captred {
     color: brown;
     border: 0.2rem solid brown;
 }
 
-.Cblue {
+.Captblue {
     color: royalblue;
     border: 0.2rem solid royalblue;
 }
 
-.Cblack {
+.Captblack {
     background-color: black;
     border: 0.2rem solid #333;
 }
 
-.Cyellow {
+.Captyellow {
     color: rgb(128, 98, 0);
     border: 0.2rem solid goldenrod;
+}
+.Discred {
+    color: brown;
+    background-color: brown;
+    border: 0.2rem solid rgb(56, 28, 0);
+}
+
+.Discblue {
+    color: royalblue;
+    background-color: royalblue;
+    border: 0.2rem solid rgb(56, 28, 0);
+}
+
+.Discblack {
+    background-color: black;
+    border: 0.2rem solid #333;
+}
+
+.Discyellow {
+    color: goldenrod;
+    background-color: goldenrod;
+    border: 0.2rem solid rgb(56, 28, 0);
 }
 
 .Selector {
