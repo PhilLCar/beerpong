@@ -57,7 +57,7 @@
                     $conn->query($sql);
                 }
                 if (!empty($_POST["PairName"])) {
-                    if(!empty($_POST["UserB"]) && $_POST["PairStatus"] == "New") {
+                    if(!empty($_POST["UserB"]) && $_POST["PairStatus"] == "New" && $_POST["UserB"] != $_POST["UserName"]) {
                         $sql = "SELECT create_pair('" . $_POST["LobbyID"] . "', '" . escape($_POST["PairName"]) . "', '" . escape($_POST["UserName"]) . 
                                 "', '" . escape($_POST["UserB"]) . "')";
                         $conn->query($sql);
