@@ -1,0 +1,219 @@
+@import url(https://fonts.googleapis.com/css?family=Roboto&display=swap);
+
+html {
+    height: 100%;
+    margin: 0px;
+    font-family: 'Roboto', sans-serif;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    height: 100%;
+    margin: 0px;
+    background-color: blue;
+    color: white;
+    overflow: hidden;
+}
+
+h1 {
+    margin-top: -5rem;
+}
+
+form {
+  text-align: center;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+input[type="button"], input[type="submit"], input[type="text"] {
+    border: 0.2em solid white;
+    border-radius: 1.2rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.8rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    font-size: 1.2rem;
+    font-family: 'Roboto', sans-serif;
+    color: white;
+    background-color: #007;
+}
+
+input[type="button"]:hover, input[type="submit"]:hover {
+    cursor: pointer;
+    color: blue;
+    background-color: #0F7;
+}
+
+#MainMenuContainer {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    justify-content: center;
+    background-color: blue;
+}
+
+#MainMenu {
+    font-size: 3rem;
+    text-align: center;
+}
+
+#Help {
+    position: absolute;
+    width: 1.5rem;
+    height: 1.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    border: 0.2rem solid white;
+    border-radius: 1.5rem;
+    text-align: center;
+    background-color: #007;
+}
+
+#Help:hover{
+    cursor: pointer;
+    color: blue;
+    background-color: #0F7;
+}
+
+#Back {
+    position: absolute;
+    width: 1.5rem;
+    height: 1.5rem;
+    right: 2.5rem;
+    bottom: 0.5rem;
+    border: 0.2rem solid white;
+    border-radius: 1.5rem;
+    text-align: center;
+    line-height: 1.35rem;
+    background-color: #007;
+}
+
+#Back:hover{
+    cursor: pointer;
+    color: blue;
+    background-color: #0F7;
+}
+
+#Lang {
+    position: absolute;
+    width: 1.5rem;
+    height: 1.5rem;
+    right: 4.5rem;
+    bottom: 0.5rem;
+    border: 0.2rem solid white;
+    border-radius: 1.5rem;
+    text-align: center;
+    background-color: #007;
+}
+
+#Lang:hover{
+    cursor: pointer;
+    color: blue;
+    background-color: #0F7;
+}
+
+#NewGame {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  justify-content: center;
+  background-color: blue;
+}
+
+#NewGame h1 {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.label {
+  font-size: 1.2rem;
+}
+
+.error {
+  margin-left: auto;
+  margin-right: auto;
+  background-color: yellow;
+  color: red;
+  border-radius: 0.2rem;
+  padding: 0.2rem;
+}
+
+#Presentations {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  padding: 10rem;
+}
+
+#PresTableContainer {
+  max-height: 100%;
+  overflow: auto;
+  margin-bottom: 2rem;
+}
+
+#PresTable {
+  border: 0.2rem solid white;
+  border-radius: 0.5rem;
+  background-color: #007;
+  width: 100%;
+}
+
+#PresHeader {
+  color: #007;
+  background-color: white;
+}
+
+#PresTable td {
+  text-align: center;
+  width: 33%;
+}
+
+#PresTable tr:hover:not(#PresHeader) {
+  color: #007;
+  background-color: #0F7;
+  cursor: pointer;
+}
+
+#PresTable tr[selected="1"] {
+  color: #0F7;
+  font-weight: bold;
+}
+
+#Join {
+  background-color: #070;
+}
+
+#Join:hover {
+  background-color: #0F0;
+}
+
+#Present {
+  background-color: #770;
+}
+
+#Present:hover {
+  background-color: #FF0;
+}
+
+#Edit {
+  background-color: #700;
+}
+
+#Edit:hover {
+  background-color: #F00;
+  color: white;
+}
