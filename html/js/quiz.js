@@ -159,15 +159,37 @@ function selectSlide(position) {
 function doNothing(slideInfo) { }
 
 function updateSlide(slideInfo) {
-  document.getElementById("SlideCommentText").value = decodeURIComponent(slideInfo);
+  var slide    = document.getElementById("Slide");
+  var elements = slideInfo.split(';');
+
+  document.getElementById("SlideCommentText").value = decodeURIComponent(elements[0]);
+  slide.innerHTML = "";
+
+  for (var i = 1; i < elements.length; i++) {
+    var element = elements[i].split(':');
+    if (element[0] == "L") {
+      slide.innerHTML += `<textarea id="Label${element[1]}" onfocusout="updateLabel(${element[1]})">${element[2]}</textarea>`
+    }
+  }
+}
+
+function deleteSlide() {
+  var lang = getCookie("Language");
+  if (confirm(lang == "FR" ? "Êtes-vous certain?" : "Are you sure?")) {
+    sendCommand('DEL_SLIDE', { SlidePosition: _SLIDE_NUM }, updateSlides);
+    selectSlide(-1);
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // https://www.w3schools.com/howto/howto_js_draggable.asp
 function makeDraggableSlide(elmnt) {
   elmnt.onmousedown = dragMouseDown;
-  var slide1 = -1;
-  var slide2 = -1;
+  var slide1   = -1;
+  var slide2   = -1;
+  var disabled = false;
+
+  var x1, y1;
 
   function dragMouseDown(e) {
     e = e || window.event;
@@ -176,11 +198,17 @@ function makeDraggableSlide(elmnt) {
     // call a function whenever the cursor moves:
     document.onmousemove = elementDrag;
 
+    // reset values
+    slide1   = -1;
+    slide2   = -1;
+    disabled = false;
+    x1       = e.clientX;
+    y1       = e.clientY;
+
     var slides = document.getElementsByClassName("slide");
     var i = 0;
     for (slide of slides) {
       if (slide == elmnt) slide1 = i;
-      slide.setAttribute("class", "slide disabled");
       i++;
     }
   }
@@ -200,6 +228,13 @@ function makeDraggableSlide(elmnt) {
       } else {
         separator.setAttribute("expanded", "0");
       }
+    }
+    if (!disabled && (((x1-x)*(x1-x) + (y1-y)*(y1-y)) > 50)) {
+      var slides = document.getElementsByClassName("slide");
+      for (slide of slides) {
+        slide.setAttribute("class", "slide disabled");
+      }
+      disabled = true;
     }
   }
 
@@ -221,7 +256,7 @@ function makeDraggableSlide(elmnt) {
     }
     if (slide2 > slide1) slide2--;
     if (slide1 >= 0 && slide2 >= 0 && slide1 != slide2) {
-      sendCommand("SWAP", { Slide1: slide1, Slide2: slide2 }, doNothing);
+      sendCommand("MOVE_SLIDE", { Slide1: slide1, Slide2: slide2 }, doNothing);
       selectSlide(slide2);
     }
   }

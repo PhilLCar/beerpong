@@ -73,13 +73,13 @@
           <div class="plus">+</div>
           <div><?php echo($news); ?></div>
         </div>
-        <div id="DelButton" class="newbutton" onclick="sendCommand('DEL_SLIDE', { SlidePosition: _SLIDE_NUM }, updateSlides);selectSlide(-1)" hidden="true">
+        <div id="DelButton" class="newbutton" onclick="deleteSlide()" hidden="true">
           <div class="plus">-</div>
           <div><?php echo($dels); ?></div>
         </div>
         <div id="LabelTools" hidden="true">
           <div class="title"><?php echo($labels); ?></div>
-          <div class="newbutton">
+          <div class="newbutton" onclick="sendCommand('NEW_LABEL', { SlidePosition: _SLIDE_NUM }, updateSlide)">
             <div class="plus">+</div>
             <div><?php echo($new); ?></div>
           </div>

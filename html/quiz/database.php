@@ -1,4 +1,17 @@
 <?php
+  function updateSlide($conn) {
+    $query = $conn->query("SELECT * FROM slides WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlidePosition=" . $_POST["SlidePosition"]);
+    if ($query->num_rows) {
+      $result = $query->fetch_assoc();
+      echo($result["Comments"]);
+      $slideid = $result["SlideID"];
+      $query = $conn->query("SELECT * FROM labels WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlideID=" . $slideid);
+      while ($result = $query->fetch_assoc()) {
+        echo(";L:" . $result["LabelID"] . ":" . $result["Content"] . ":" . $result["Color"] . ":" . $result["FontSize"] . ":" . $result["X"] . ":" . $result["Y"]);
+      }
+    }
+  }
+
   // DATABASE CONNECTION
 	$servername = "localhost";
 	$username   = "webserver";
@@ -30,11 +43,7 @@
                      $_POST["PresentationID"] . " AND SlidePosition=" . $_POST["SlidePosition"]);
         break;
       case "UP_SLIDE":
-        $query = $conn->query("SELECT * FROM slides WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlidePosition=" . $_POST["SlidePosition"]);
-        if ($query->num_rows) {
-          $result = $query->fetch_assoc();
-          echo($result["Comments"]);
-        }
+        updateSlide($conn);
         break;
       case "DEL_SLIDE":
         $query = $conn->query("SELECT * FROM slides WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlidePosition=" . $_POST["SlidePosition"]);
@@ -44,20 +53,32 @@
           $conn->query("DELETE FROM images  WHERE SlideID=" . $result["SlideID"]);
           $conn->query("DELETE FROM labels  WHERE SlideID=" . $result["SlideID"]);
           $conn->query("DELETE FROM slides  WHERE SlideID=" . $result["SlideID"]);
-          $conn->query("UPDATE slides SET SlidePosition=SlidePosition-1 WHERE SlidePosition>" . $result["SlidePosition"]);
+          $conn->query("UPDATE slides SET SlidePosition=SlidePosition-1 WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlidePosition>" . $result["SlidePosition"]);
         }
         $query = $conn->query("SELECT * FROM slides WHERE PresentationID=" . $_POST["PresentationID"]);
         echo($query->num_rows);
         break;
-      case "SWAP":
-        $query = $conn->query("SELECT * FROM slides WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlidePosition=" . $_POST["Slide1"]);
+      case "MOVE_SLIDE":
+        $query1 = $conn->query("SELECT * FROM slides WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlidePosition=" . $_POST["Slide1"]);
+        $query2 = $conn->query("SELECT * FROM slides WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlidePosition=" . $_POST["Slide2"]);
+        if ($query1->num_rows && $query2->num_rows) {
+          $result1 = $query1->fetch_assoc();
+          $result2 = $query2->fetch_assoc();
+          if ($_POST["Slide1"] < $_POST["Slide2"]) {
+            $conn->query("UPDATE slides SET SlidePosition=SlidePosition-1 WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlidePosition>" . $result1["SlidePosition"] . " AND SlidePosition<=" . $result2["SlidePosition"]);
+            $conn->query("UPDATE slides SET SlidePosition=" . $result2["SlidePosition"] . " WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlideID=" . $result1["SlideID"]);
+          } else {
+            $conn->query("UPDATE slides SET SlidePosition=SlidePosition+1 WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlidePosition>=" . $result2["SlidePosition"] . " AND SlidePosition<" . $result1["SlidePosition"]);
+            $conn->query("UPDATE slides SET SlidePosition=" . $result2["SlidePosition"] . " WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlideID=" . $result1["SlideID"]);
+          }
+        }
+        break;
+      case "NEW_LABEL":
+        $query = $conn->query("SELECT * FROM slides WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlidePosition=" . $_POST["SlidePosition"]);
         if ($query->num_rows) {
           $result = $query->fetch_assoc();
-          if ($_POST["Slide1"] < $_POST["Slide2"]) {
-
-          } else {
-            $conn->query("UPDATE slides ")
-          }
+          $conn->query("INSERT INTO labels (PresentationID, SlideID) VALUES (" . $_POST["PresentationID"] . ", " . $result["SlideID"] . ")");
+          updateSlide($conn);
         }
         break;
       case "":
