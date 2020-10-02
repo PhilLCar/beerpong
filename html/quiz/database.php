@@ -81,6 +81,21 @@
           updateSlide($conn);
         }
         break;
+      case "DEL_LABEL":
+        $conn->query("DELETE FROM labels WHERE LabelID=" . $_POST["LabelID"]);
+        break;
+      case "UP_LCOL":
+        $conn->query("UPDATE labels SET Color='" . $_POST["Color"] . "' WHERE LabelID=" . $_POST["LabelID"]);
+        break;
+      case "UP_LSIZE":
+        $conn->query("UPDATE labels SET FontSize=" . $_POST["FontSize"] . " WHERE LabelID=" . $_POST["LabelID"]);
+        break;
+      case "UP_LTEXT":
+        $conn->query("UPDATE labels SET Content='" . rawurlencode($_POST["Content"]) . "' WHERE LabelID=" . $_POST["LabelID"]);
+        break;
+      case "UP_LPOS":
+        $conn->query("UPDATE labels SET X=" . $_POST["X"] . ", Y=" . $_POST["Y"] . " WHERE LabelID=" . $_POST["LabelID"]);
+        break;
       case "":
       default:
         break;

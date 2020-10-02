@@ -137,7 +137,7 @@ input[type="button"]:hover, input[type="submit"]:hover {
   margin-right: auto;
 }
 
-.label {
+.info {
   font-size: 1.2rem;
 }
 
@@ -277,7 +277,24 @@ input[type="button"]:hover, input[type="submit"]:hover {
   cursor: pointer;
 }
 
+.delbutton {
+  margin: 0.5rem;
+  text-align: center;
+  border: 1px solid white;
+  background-color: red;
+}
+
+.delbutton:hover {
+  color: white;
+  background-color: #700;
+  cursor: pointer;
+}
+
 .newbutton div {
+  display: inline-block;
+}
+
+.delbutton div {
   display: inline-block;
 }
 
@@ -372,4 +389,78 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 .disabled {
   pointer-events: none;
+}
+
+.label {
+  min-width: 5px;
+  z-index: 3;
+}
+
+.label:hover {
+  cursor: text;
+}
+
+.labelContainer {
+  position: absolute;
+  display: inline-block;
+  padding: 1px;
+  border: 1px dashed black;
+  z-index: 3;
+}
+
+.labelContainer:hover {
+  cursor: move;
+}
+
+#ColorPalette {
+  margin: 0.5rem;
+  border: 1px solid white;
+}
+
+#ColorTitle {
+  background-color: white;
+  color: #007;
+  font-weight: bold;
+  padding-left: 0.2rem;
+}
+
+#ColorContainer {
+  padding: 0.2rem;
+  padding-bottom: 0px;
+}
+
+.color {
+  display: inline-block;
+  height: 1.14rem;
+  width: 1.14rem;
+  margin: 0.1rem;
+  border: 1px solid white;
+}
+
+.color:hover {
+  border: 1px solid yellow;
+  cursor: pointer;
+}
+
+#FontSize {
+  margin: 0.5rem;
+  display: table;
+}
+
+#FontSize div, input {
+  display: table-cell;
+  color: #007;
+  background-color: white;
+  font-weight: bold;
+}
+
+#FontSize div {
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
+
+#FontSize input {
+  border: 1px solid white;
+  overflow: hidden;
+  width: calc(100% - 0.28rem);
 }

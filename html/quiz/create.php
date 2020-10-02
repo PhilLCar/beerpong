@@ -37,10 +37,10 @@
       ?>
       <form action="newgame.php" method="POST">
         <p>
-          <div class="label"><?php echo($title); ?></div>
+          <div class="info"><?php echo($title); ?></div>
           <input name="title" type="text"/>
         </p><p>
-          <div class="label"><?php echo($password); ?></div>
+          <div class="info"><?php echo($password); ?></div>
           <input name="password" type="text"/>
         </p>
         <input type="submit" value="<?php echo($submit); ?>"/>

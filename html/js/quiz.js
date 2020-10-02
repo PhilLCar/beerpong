@@ -2,6 +2,7 @@ _PRESID      = 0;
 _PASSHASH    = 0;
 _SLIDE_RATIO = 4/3;
 _SLIDE_NUM   = -1;
+_LABEL_NUM   = -1;
 
 // https://www.w3schools.com/js/js_cookies.asp
 function getCookie(cname) {
@@ -132,6 +133,7 @@ function displaySlide() {
 
 function selectSlide(position) {
   _SLIDE_NUM = position;
+  deselect();
   if (position >=0) {
     document.getElementById("Slide").hidden         = false;
     document.getElementById("SlideComments").hidden = false;
@@ -168,7 +170,12 @@ function updateSlide(slideInfo) {
   for (var i = 1; i < elements.length; i++) {
     var element = elements[i].split(':');
     if (element[0] == "L") {
-      slide.innerHTML += `<textarea id="Label${element[1]}" onfocusout="updateLabel(${element[1]})">${element[2]}</textarea>`
+      var fontSize = document.getElementById("Slide").clientWidth * element[4] / 1000.0 + "px";
+      slide.innerHTML += `<div id="LabelContainer${element[1]}" class="labelContainer" onfocusin="deselect();showLabelOptions(${element[1]})" ` +
+                         `style="left:${element[5]}%;top:${element[6]}%">\n<div id="Label${element[1]}" class="label" onfocusout="sendText()"` +
+                         `style="color:${element[3]};font-size:${fontSize}" fontsize="${element[4]}" posx="${element[5]}" posy="${element[6]}" contenteditable="true" ` +
+                         `onmousedown="event.stopPropagation()">${decodeURIComponent(element[2])}</div>\n</div>`;
+      makeDraggableLabel(document.getElementById(`LabelContainer${element[1]}`));
     }
   }
 }
@@ -179,6 +186,63 @@ function deleteSlide() {
     sendCommand('DEL_SLIDE', { SlidePosition: _SLIDE_NUM }, updateSlides);
     selectSlide(-1);
   }
+}
+
+function deselect() {
+  if (_LABEL_NUM != -1) {
+    document.getElementById("LabelContainer" + _LABEL_NUM).style.borderColor = "black";
+    hideLabelOptions();
+  }
+}
+
+function showLabelOptions(labelid) {
+  _LABEL_NUM = labelid;
+  document.getElementById("DelLabel").hidden     = false;
+  document.getElementById("ColorPalette").hidden = false;
+  document.getElementById("FontSize").hidden     = false;
+  document.getElementById("FontSizeInput").value = document.getElementById("Label" + labelid).getAttribute("fontsize");
+  document.getElementById("LabelContainer" + labelid).style.borderColor = "red";
+}
+
+function deleteLabel() {
+  var lang = getCookie("Language");
+  if (confirm(lang == "FR" ? "Êtes-vous certain?" : "Are you sure?")) {
+    sendCommand('DEL_LABEL', { LabelID: _LABEL_NUM }, updateSlide);
+    hideLabelOptions();
+  }
+}
+
+function updateLabels() {
+  var labels = document.getElementsByClassName("label");
+  for (var label of labels) {
+    var size = label.getAttribute("fontsize");
+    var fontSize = document.getElementById("Slide").clientWidth * size / 1000.0 + "px";
+    label.style.fontSize = fontSize;
+  }
+}
+
+function hideLabelOptions() {
+  _LABEL_NUM = -1;
+  document.getElementById("DelLabel").hidden     = true;
+  document.getElementById("ColorPalette").hidden = true;
+  document.getElementById("FontSize").hidden     = true;
+}
+
+function sendColor(color) {
+  document.getElementById("Label" + _LABEL_NUM).style.color = color;
+  sendCommand('UP_LCOL', { LabelID: _LABEL_NUM, Color: color }, doNothing);
+}
+
+function sendFontSize() {
+  var size     = document.getElementById("FontSizeInput").value;
+  var fontSize = document.getElementById("Slide").clientWidth * size / 1000.0 + "px";
+  document.getElementById("Label" + _LABEL_NUM).style.fontSize = fontSize;
+  sendCommand('UP_LSIZE', { LabelID: _LABEL_NUM, FontSize: size }, doNothing );
+}
+
+function sendText() {
+  var text = document.getElementById("Label" + _LABEL_NUM).innerHTML;
+  sendCommand('UP_LTEXT', { LabelID: _LABEL_NUM, Content: encodeURIComponent(text) }, doNothing);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -259,5 +323,62 @@ function makeDraggableSlide(elmnt) {
       sendCommand("MOVE_SLIDE", { Slide1: slide1, Slide2: slide2 }, doNothing);
       selectSlide(slide2);
     }
+  }
+}
+
+function makeDraggableLabel(elmnt) {
+  elmnt.onmousedown = dragMouseDown;
+  var x1, y1, x2, y2;
+  var slide, label;
+
+  function dragMouseDown(e) {
+    e = e || window.event;
+    e.preventDefault();
+    document.onmouseup = closeDragElement;
+    // call a function whenever the cursor moves:
+    document.onmousemove = elementDrag;
+
+    slide = document.getElementById("Slide").getBoundingClientRect();
+    label = elmnt.getBoundingClientRect();
+    x1    = e.clientX;
+    y1    = e.clientY;
+  }
+
+  function elementDrag(e) {
+    e = e || window.event;
+    e.preventDefault();
+    
+    x2 = e.clientX;
+    y2 = e.clientY;
+
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+
+    var x = label.left + dx;
+    var y = label.top  + dy;
+
+    if (x < slide.left)                   x = slide.left;
+    if (x + label.width >= slide.right)   x = slide.right  - label.width;
+    if (y < slide.top)                    y = slide.top;
+    if (y + label.height >= slide.bottom) y = slide.bottom - label.height;
+
+    elmnt.style.left = x - slide.left + "px";
+    elmnt.style.top  = y - slide.top  + "px";
+  }
+
+  function closeDragElement() {
+    // stop moving when mouse button is released:
+    document.onmouseup = null;
+    document.onmousemove = null;
+
+    label = elmnt.getBoundingClientRect();
+
+    var px = (label.left - slide.left) / slide.width  * 100.0;
+    var py = (label.top  - slide.top ) / slide.height * 100.0;
+
+    elmnt.style.left = px + "%";
+    elmnt.style.top  = py + "%";
+
+    sendCommand('UP_LPOS', { LabelID: elmnt.id.substring(14), X: px, Y: py }, doNothing);
   }
 }

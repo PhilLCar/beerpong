@@ -5,10 +5,13 @@
     $labels   = "Texte";
     $images   = "Images";
     $samples  = "Extraits";
-    $new      = "Nouveau";
-    $news     = "Nouvelle diapo";
+    $new      = "Créer";
+    $del      = "Supprimer";
+    $news     = "Créer diapo";
     $dels     = "Supprimer diapo";
     $comments = "Commentaires";
+    $colors   = "Couleurs";
+    $fontsize = "Taille";
   } else {
     $slides   = "Slides";
     $tools    = "Tools";
@@ -16,9 +19,12 @@
     $images   = "Images";
     $samples  = "Samples";
     $new      = "New";
+    $del      = "Delete";
     $news     = "New slide";
     $dels     = "Delete slide";
     $comments = "Comments";
+    $colors   = "Colours";
+    $fontsize = "Size";
   }
 
   // DATABASE CONNECTION
@@ -52,7 +58,7 @@
       sendCommand('UP_SLIDES', null, updateSlides);
     </script>
   </head>
-  <body onresize="displaySlide()">
+  <body onresize="displaySlide(); updateLabels()">
     <div id="Editor">
       <div id="Slides">
         <div class="title"><?php echo($slides); ?></div>
@@ -70,31 +76,54 @@
       <div id="Tools">
         <div class="title"><?php echo($tools); ?></div>
         <div class="newbutton" onclick="sendCommand('NEW_SLIDE', null, updateSlides)">
-          <div class="plus">+</div>
+          <div>+</div>
           <div><?php echo($news); ?></div>
         </div>
-        <div id="DelButton" class="newbutton" onclick="deleteSlide()" hidden="true">
-          <div class="plus">-</div>
+        <div id="DelButton" class="delbutton" onclick="deleteSlide()" hidden="true">
+          <div>-</div>
           <div><?php echo($dels); ?></div>
         </div>
         <div id="LabelTools" hidden="true">
           <div class="title"><?php echo($labels); ?></div>
           <div class="newbutton" onclick="sendCommand('NEW_LABEL', { SlidePosition: _SLIDE_NUM }, updateSlide)">
-            <div class="plus">+</div>
+            <div>+</div>
             <div><?php echo($new); ?></div>
+          </div>
+          <div id="DelLabel" class="delbutton" hidden="true" onclick="deleteLabel()">
+            <div>-</div>
+            <div><?php echo($del); ?></div>
+          </div>
+          <div id="ColorPalette" hidden="true">
+            <div id="ColorTitle"><?php echo($colors); ?>:</div>
+            <div id="ColorContainer">
+              <div class="color" onclick="sendColor('black')"   style="background-color: black"></div>
+              <div class="color" onclick="sendColor('grey')"    style="background-color: grey"></div>
+              <div class="color" onclick="sendColor('white')"   style="background-color: white"></div>
+              <div class="color" onclick="sendColor('red')"     style="background-color: red"></div>
+              <div class="color" onclick="sendColor('green')"   style="background-color: green"></div>
+              <div class="color" onclick="sendColor('blue')"    style="background-color: blue"></div>
+              <div class="color" onclick="sendColor('yellow')"  style="background-color: yellow"></div>
+              <div class="color" onclick="sendColor('cyan')"    style="background-color: cyan"></div>
+              <div class="color" onclick="sendColor('magenta')" style="background-color: magenta"></div>
+              <div class="color" onclick="sendColor('orange')"  style="background-color: orange"></div>
+            </div>
+          </div>
+          <div id="FontSize" hidden="true">
+            <div><?php echo($fontsize); ?>:</div>
+            <input id="FontSizeInput" type="number" onchange="sendFontSize()"/>
           </div>
         </div>
         <div id="ImageTools" hidden="true">
           <div class="title"><?php echo($images); ?></div>
           <div class="newbutton">
-            <div class="plus">+</div>
+            <div>+</div>
             <div><?php echo($new); ?></div>
           </div>
         </div>
         <div id="SampleTools" hidden="true">
           <div class="title"><?php echo($samples); ?></div>
           <div class="newbutton">
-            <div class="plus">+</div>
+            <div>+</div>
             <div><?php echo($new); ?></div>
           </div>
         </div>
