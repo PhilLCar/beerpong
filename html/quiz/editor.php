@@ -12,6 +12,8 @@
     $comments = "Commentaires";
     $colors   = "Couleurs";
     $fontsize = "Taille";
+    $retry    = "Réessayer";
+    $cancel   = "Annuler";
   } else {
     $slides   = "Slides";
     $tools    = "Tools";
@@ -25,6 +27,8 @@
     $comments = "Comments";
     $colors   = "Colours";
     $fontsize = "Size";
+    $retry    = "Retry";
+    $cancel   = "Cancel";
   }
 
   // DATABASE CONNECTION
@@ -115,10 +119,14 @@
         </div>
         <div id="ImageTools" hidden="true">
           <div class="title"><?php echo($images); ?></div>
-          <div class="newbutton">
+          <div class="newbutton" onclick="newImage()">
             <div>+</div>
             <div><?php echo($new); ?></div>
           </div>
+          <form id="ImageForm" action="image.php" method="POST" target="ImagePromptFrame" hidden="true">
+            <input id="ImagePID" type="hidden" name="PresentationID"/>
+            <input id="ImageSID" type="hidden" name="SlidePosition"/>
+          </form>
         </div>
         <div id="SampleTools" hidden="true">
           <div class="title"><?php echo($samples); ?></div>
@@ -128,6 +136,14 @@
           </div>
         </div>
       </div>
+    </div>
+    <div id="ImagePrompt" hidden="true">
+      <iframe name="ImagePromptFrame" src="image.php" onload="checkImage()">
+      </iframe>
+      <div id="ImageButtons">
+        <input id="RetryButton"  type="button" hidden="true" value="<?php echo($retry); ?>"  onclick="newImage()"/>
+        <input id="CancelButton" type="button"               value="<?php echo($cancel); ?>" onclick="document.getElementById('ImagePrompt').hidden=true"/>
+      <div>
     </div>
   </body>
 </html>

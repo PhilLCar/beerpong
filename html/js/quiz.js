@@ -3,6 +3,7 @@ _PASSHASH    = 0;
 _SLIDE_RATIO = 4/3;
 _SLIDE_NUM   = -1;
 _LABEL_NUM   = -1;
+_IMAGE_NUM   = -1;
 
 // https://www.w3schools.com/js/js_cookies.asp
 function getCookie(cname) {
@@ -243,6 +244,27 @@ function sendFontSize() {
 function sendText() {
   var text = document.getElementById("Label" + _LABEL_NUM).innerHTML;
   sendCommand('UP_LTEXT', { LabelID: _LABEL_NUM, Content: encodeURIComponent(text) }, doNothing);
+}
+
+function newImage() {
+  document.getElementById("ImagePrompt").hidden = false;
+  document.getElementById("ImagePID").value = _PRESID;
+  document.getElementById("ImageSID").value = _SLIDE_NUM;
+  document.getElementById("ImageForm").submit();
+  document.getElementById("RetryButton").hidden = true;
+}
+
+function checkImage() {
+  var iframe = document.getElementById("ImagePrompt").getElementsByTagName("iframe")[0];
+  var result = iframe.contentWindow.document.getElementById("Result");
+  if (iframe.contentWindow.document.getElementsByClassName("error").length) {
+    document.getElementById("RetryButton").hidden = false;
+  } else if (result) {
+    if (result.value != "") {
+      document.getElementById("ImagePrompt").hidden = true;
+      sendCommand("UP_SLIDE", { SlidePosition: _SLIDE_NUM }, updateSlide);
+    }
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
