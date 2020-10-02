@@ -72,10 +72,10 @@
       if ($query->num_rows) {
         $result = $query->fetch_assoc();
         $conn->query("INSERT INTO images (PresentationID, SlideID, Content, SizeX, SizeY) VALUES (" . $_POST["PresentationID"] . ", " . $result["SlideID"] . ", '" .
-                     rawurlencode($url) . "', " . $width . ", 50");
+                     rawurlencode($url) . "', " . $width . ", 50.0)");
       }
       $conn->close();
     }
-    //header("Location: image.php?Success=1");
+    header("Location: image.php?Success=1");
   }
 ?>

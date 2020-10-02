@@ -59,7 +59,6 @@ CREATE TABLE images (
   SlideID               INT               NOT NULL,
   ImageID               INT               NOT NULL  AUTO_INCREMENT,
   Content               VARCHAR(1024)     NOT NULL                  DEFAULT "",
-  FontSize              INT               NOT NULL                  DEFAULT 20,
   X                     FLOAT(5,2)        NOT NULL                  DEFAULT 000.00,
   Y                     FLOAT(5,2)        NOT NULL                  DEFAULT 000.00,
   SizeX                 FLOAT(5,2)        NOT NULL                  DEFAULT 000.00,
