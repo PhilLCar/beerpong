@@ -1,4 +1,26 @@
 <?php
+  if ($_COOKIE["Language"] == "FR") {
+    $slides   = "Diapositives";
+    $tools    = "Outils";
+    $labels   = "Texte";
+    $images   = "Images";
+    $samples  = "Extraits";
+    $new      = "Nouveau";
+    $news     = "Nouvelle diapo";
+    $dels     = "Supprimer diapo";
+    $comments = "Commentaires";
+  } else {
+    $slides   = "Slides";
+    $tools    = "Tools";
+    $labels   = "Labels";
+    $images   = "Images";
+    $samples  = "Samples";
+    $new      = "New";
+    $news     = "New slide";
+    $dels     = "Delete slide";
+    $comments = "Comments";
+  }
+
   // DATABASE CONNECTION
 	$servername = "localhost";
 	$username   = "webserver";
@@ -21,26 +43,60 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title><?php echo(urldecode($presentation["Title"])); ?></title>
+    <title><?php echo(rawurldecode($presentation["Title"])); ?></title>
     <link rel="stylesheet" type="text/css" href="/css/quiz.css"/> 
     <script type="text/javascript" src="/js/quiz.js"></script>
     <script>
       _PRESID   = <?php echo($presentation["PresentationID"]); ?>;
       _PASSHASH = "<?php echo($presentation["PassHash"]); ?>";
+      sendCommand('UP_SLIDES', null, updateSlides);
     </script>
   </head>
-  <body>
+  <body onresize="displaySlide()">
     <div id="Editor">
       <div id="Slides">
+        <div class="title"><?php echo($slides); ?></div>
+        <div id="SlidesContainer"></div>
       </div>
       <div id="SlideViewer">
+        <div id="SlideContainer">
+          <div id="Slide" hidden="true"></div>
+        </div>
+        <div id="SlideComments" hidden="true">
+          <div><?php echo($comments); ?>:</div>
+          <textarea id="SlideCommentText" onfocusout="sendCommand('COMMENT', { SlidePosition: _SLIDE_NUM, Comment : encodeURIComponent(document.getElementById('SlideCommentText').value) }, doNothing)"></textarea>
+        </div>
       </div>
       <div id="Tools">
-        <div id="LabelTools">
+        <div class="title"><?php echo($tools); ?></div>
+        <div class="newbutton" onclick="sendCommand('NEW_SLIDE', null, updateSlides)">
+          <div class="plus">+</div>
+          <div><?php echo($news); ?></div>
         </div>
-        <div id="ImageTools">
+        <div id="DelButton" class="newbutton" onclick="sendCommand('DEL_SLIDE', { SlidePosition: _SLIDE_NUM }, updateSlides);selectSlide(-1)" hidden="true">
+          <div class="plus">-</div>
+          <div><?php echo($dels); ?></div>
         </div>
-        <div id="SampleTools">
+        <div id="LabelTools" hidden="true">
+          <div class="title"><?php echo($labels); ?></div>
+          <div class="newbutton">
+            <div class="plus">+</div>
+            <div><?php echo($new); ?></div>
+          </div>
+        </div>
+        <div id="ImageTools" hidden="true">
+          <div class="title"><?php echo($images); ?></div>
+          <div class="newbutton">
+            <div class="plus">+</div>
+            <div><?php echo($new); ?></div>
+          </div>
+        </div>
+        <div id="SampleTools" hidden="true">
+          <div class="title"><?php echo($samples); ?></div>
+          <div class="newbutton">
+            <div class="plus">+</div>
+            <div><?php echo($new); ?></div>
+          </div>
         </div>
       </div>
     </div>

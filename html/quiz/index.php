@@ -39,8 +39,8 @@
     <div id="MainMenuContainer">
         <div id="MainMenu">
         <h1 id="MainMenuTitle">QUIZ</h1>
-        <input id="Create" type="button" value="<?php echo($create); ?>"  onclick="window.location='create.php'"/>
-        <input id="Join"   type="button" value="<?php echo($join); ?>"    onclick="window.location='presentations.php'"/>
+        <input type="button" value="<?php echo($create); ?>"  onclick="window.location='create.php'"/>
+        <input type="button" value="<?php echo($join); ?>"    onclick="window.location='presentations.php'"/>
         </div>
         <div id="Help" onclick="window.location='help.php'">?</div>
         <div id="Back" onclick="window.location='/'"><</div>

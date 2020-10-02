@@ -15,7 +15,7 @@
 
 	$conn = mysqli_connect($servername, $username, $password, $database);
   if ($conn) {
-    $sql = "INSERT INTO presentations(Title, PassHash) VALUES ('" . urlencode($_POST["title"]) . "', '" . md5($_POST["password"]) . "')";
+    $sql = "INSERT INTO presentations(Title, PassHash) VALUES ('" . rawurlencode($_POST["title"]) . "', '" . md5($_POST["password"]) . "')";
     if ($conn->query($sql)) {
       header("Location: presentations.php");
     } else {
