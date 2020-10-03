@@ -13,6 +13,10 @@
       while ($result = $query->fetch_assoc()) {
         echo(";I:" . $result["ImageID"] . ":" . $result["Content"] . ":" . $result["X"] . ":" . $result["Y"] . ":" . $result["SizeX"] . ":" . $result["SizeY"]);
       }
+      $query = $conn->query("SELECT * FROM samples WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlideID=" . $slideid);
+      while ($result = $query->fetch_assoc()) {
+        echo(";S:" . $result["SampleID"] . ":" . $result["Content"] . ":" . $result["SampleStart"] . ":" . $result["SampleEnd"] . ":" . $result["X"] . ":" . $result["Y"]);
+      }
     }
   }
 
@@ -110,6 +114,15 @@
         break;
       case "UP_IPOS":
         $conn->query("UPDATE images SET X=" . $_POST["X"] . ", Y=" . $_POST["Y"] . " WHERE ImageID=" . $_POST["ImageID"]);
+        break;
+      case "UP_SPOS":
+        $conn->query("UPDATE samples SET X=" . $_POST["X"] . ", Y=" . $_POST["Y"] . " WHERE SampleID=" . $_POST["SampleID"]);
+        break;
+      case "UP_SSTART":
+        $conn->query("UPDATE samples SET SampleStart=" . $_POST["Start"] . " WHERE SampleID=" . $_POST["SampleID"]);
+        break;
+      case "UP_SEND":
+        $conn->query("UPDATE samples SET SampleEnd=" . $_POST["End"] . " WHERE SampleID=" . $_POST["SampleID"]);
         break;
       case "":
       default:

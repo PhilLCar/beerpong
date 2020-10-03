@@ -444,24 +444,24 @@ input[type="button"]:hover, input[type="submit"]:hover {
   cursor: pointer;
 }
 
-#FontSize {
+.numericInput {
   margin: 0.5rem;
   display: table;
 }
 
-#FontSize div, input {
+.numericInput div, input {
   display: table-cell;
   color: #007;
   background-color: white;
   font-weight: bold;
 }
 
-#FontSize div {
+.numericInput div {
   padding-left: 0.4rem;
   padding-right: 0.4rem;
 }
 
-#FontSize input {
+.numericInput input {
   border: 1px solid white;
   overflow: hidden;
   width: calc(100% - 0.28rem);
@@ -523,4 +523,61 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 .resizer:hover {
   cursor: nwse-resize;
+}
+
+#SamplePrompt {
+  position: absolute;
+  top: 0rem;
+  bottom: 0rem;
+  left: 0rem;
+  right: 0rem;
+  padding: 10%;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 10;
+}
+
+#SamplePrompt iframe {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+
+#SampleUpload {
+  padding-top: 5%;
+}
+
+#SampleUpload h1 {
+  margin: auto;
+  text-align: center;
+}
+
+#SampleButtons {
+  margin: auto;
+  text-align: center;
+}
+
+#SampleButtons input {
+  margin: 1rem;
+}
+
+#Mp3Link {
+  display: inline-block;
+  color: yellow;
+  width: 100%;
+  text-align: center;
+}
+
+.sampleContainer {
+  position: absolute;
+  display: inline-block;
+  z-index: 1;
+  height: 10%;
+  width: 7.5%;
+  background-image: url(/resources/play.svg);
+  background-size: contain;
+}
+
+.sampleContainer:hover {
+  cursor: pointer;
 }

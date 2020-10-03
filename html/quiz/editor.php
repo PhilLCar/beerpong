@@ -14,6 +14,8 @@
     $fontsize = "Taille";
     $retry    = "Réessayer";
     $cancel   = "Annuler";
+    $start    = "Début";
+    $end      = "Fin";
   } else {
     $slides   = "Slides";
     $tools    = "Tools";
@@ -29,6 +31,8 @@
     $fontsize = "Size";
     $retry    = "Retry";
     $cancel   = "Cancel";
+    $start    = "Start";
+    $end      = "End";
   }
 
   // DATABASE CONNECTION
@@ -112,7 +116,7 @@
               <div class="color" onclick="sendColor('orange')"  style="background-color: orange"></div>
             </div>
           </div>
-          <div id="FontSize" hidden="true">
+          <div id="FontSize" class="numericInput" hidden="true">
             <div><?php echo($fontsize); ?>:</div>
             <input id="FontSizeInput" type="number" onchange="sendFontSize()"/>
           </div>
@@ -134,10 +138,26 @@
         </div>
         <div id="SampleTools" hidden="true">
           <div class="title"><?php echo($samples); ?></div>
-          <div class="newbutton">
+          <div class="newbutton" onclick="newSample()">
             <div>+</div>
             <div><?php echo($new); ?></div>
           </div>
+          <div id="DelSample" class="delbutton" hidden="true" onclick="deleteSample()">
+            <div>-</div>
+            <div><?php echo($del); ?></div>
+          </div>
+          <div id="SampleStart" class="numericInput" hidden="true">
+            <div><?php echo($start); ?>:</div>
+            <input id="SampleStartInput" type="number" onchange="sendSampleStart()"/>
+          </div>
+          <div id="SampleEnd" class="numericInput" hidden="true">
+            <div><?php echo($end); ?>:</div>
+            <input id="SampleEndInput" type="number" onchange="sendSampleEnd()"/>
+          </div>
+          <form id="SampleForm" action="sample.php" method="POST" target="SamplePromptFrame" hidden="true">
+            <input id="SamplePID" type="hidden" name="PresentationID"/>
+            <input id="SampleSID" type="hidden" name="SlidePosition"/>
+          </form>
         </div>
       </div>
     </div>
@@ -145,9 +165,17 @@
       <iframe name="ImagePromptFrame" src="image.php" onload="checkImage()">
       </iframe>
       <div id="ImageButtons">
-        <input id="RetryButton"  type="button" hidden="true" value="<?php echo($retry); ?>"  onclick="newImage()"/>
-        <input id="CancelButton" type="button"               value="<?php echo($cancel); ?>" onclick="document.getElementById('ImagePrompt').hidden=true"/>
-      <div>
+        <input id="IRetryButton"  type="button" hidden="true" value="<?php echo($retry); ?>"  onclick="newImage()"/>
+        <input id="ICancelButton" type="button"               value="<?php echo($cancel); ?>" onclick="document.getElementById('ImagePrompt').hidden=true"/>
+      </div>
+    </div>
+    <div id="SamplePrompt" hidden="true">
+      <iframe name="SamplePromptFrame" src="sample.php" onload="checkSample()">
+      </iframe>
+      <div id="SampleButtons">
+        <input id="SRetryButton"  type="button" hidden="true" value="<?php echo($retry); ?>"  onclick="newSample()"/>
+        <input id="SCancelButton" type="button"               value="<?php echo($cancel); ?>" onclick="document.getElementById('SamplePrompt').hidden=true"/>
+      </div>
     </div>
   </body>
 </html>

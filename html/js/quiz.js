@@ -4,6 +4,8 @@ _SLIDE_RATIO = 4/3;
 _SLIDE_NUM   = -1;
 _LABEL_NUM   = -1;
 _IMAGE_NUM   = -1;
+_SAMPLE_NUM  = -1;
+_AUDIO_STOP  = null;
 
 // https://www.w3schools.com/js/js_cookies.asp
 function getCookie(cname) {
@@ -181,13 +183,24 @@ function updateSlide(slideInfo) {
                          `style="left:${element[3]}%;top:${element[4]}%;width:${element[5]}%;height:${element[6]}%">` +
                          `<img imageid="${element[1]}" style="width:100%;height:100%" src="${decodeURIComponent(element[2])}"></img>` +
                          `<div imageid="${element[1]}" class="resizer"></div></div>`;
+    } else if (element[0] == "S") {
+      slide.innerHTML += `<div id="SampleContainer${element[1]}" class="sampleContainer" onfocusin="deselect();showSampleOptions(${element[1]})" ` +
+                         `style="left:${element[5]}%;top:${element[6]}%">` +
+                         `<audio sampleid="${element[1]}" preload="auto" src="${decodeURIComponent(element[2])}" ` +
+                         ` start="${element[3]}" end="${element[4]}"></audio>` +
+                         "</div>";
     }
   }
   for (var labelContainer of document.getElementsByClassName("labelContainer")) {
+    var label = labelContainer.getElementsByClassName("label")[0];
+    if (label.innerHTML == "") labelContainer.style.border = "2px dashed blue";
     makeDraggableLabel(labelContainer);
   }
   for (var imageContainer of document.getElementsByClassName("imageContainer")) {
     makeDraggableImage(imageContainer);
+  }
+  for (var sampleContainer of document.getElementsByClassName("sampleContainer")) {
+    makeDraggableSample(sampleContainer);
   }
 }
 
@@ -201,12 +214,21 @@ function deleteSlide() {
 
 function deselect() {
   if (_LABEL_NUM != -1) {
-    document.getElementById("LabelContainer" + _LABEL_NUM).style.border = null;
+    var labelContainer = document.getElementById("LabelContainer" + _LABEL_NUM);
+    var label = labelContainer.getElementsByClassName("label")[0];
+    // leftover <br> sometimes
+    if (label.innerHTML == "" || label.innerHTML == "<br>") labelContainer.style.border = "2px dashed blue";
+    else                       labelContainer.style.border = null;
+    label.blur();
     hideLabelOptions();
   }
   if (_IMAGE_NUM != -1) {
     document.getElementById("ImageContainer" + _IMAGE_NUM).style.border = "none";
     hideImageOptions();
+  }
+  if (_SAMPLE_NUM != -1) {
+    document.getElementById("SampleContainer" + _SAMPLE_NUM).style.border = "none";
+    hideSampleOptions();
   }
 }
 
@@ -225,6 +247,18 @@ function showImageOptions(imageid) {
   document.getElementById("ImageContainer" + imageid).style.border = "1px solid red";
 }
 
+function showSampleOptions(sampleid) {
+  var sample      = document.getElementById("SampleContainer" + sampleid);
+  var audio       = sample.getElementsByTagName("audio")[0];
+  _SAMPLE_NUM = sampleid;
+  document.getElementById("DelSample").hidden = false;
+  sample.style.border = "1px solid red";
+  document.getElementById("SampleStart").hidden     = false
+  document.getElementById("SampleStartInput").value = audio.getAttribute("start");
+  document.getElementById("SampleEnd").hidden       = false;
+  document.getElementById("SampleEndInput").value   = audio.getAttribute("end");
+}
+
 function deleteLabel() {
   var lang = getCookie("Language");
   if (confirm(lang == "FR" ? "Êtes-vous certain?" : "Are you sure?")) {
@@ -238,6 +272,14 @@ function deleteImage() {
   if (confirm(lang == "FR" ? "Êtes-vous certain?" : "Are you sure?")) {
     sendCommand('DEL_IMAGE', { ImageID: _IMAGE_NUM, SlidePosition: _SLIDE_NUM }, updateSlide);
     hideImageOptions();
+  }
+}
+
+function deleteSample() {
+  var lang = getCookie("Language");
+  if (confirm(lang == "FR" ? "Êtes-vous certain?" : "Are you sure?")) {
+    sendCommand('DEL_SAMPLE', { SampleID: _SAMPLE_NUM, SlidePosition: _SLIDE_NUM }, updateSlide);
+    hideSampleOptions();
   }
 }
 
@@ -262,6 +304,13 @@ function hideImageOptions() {
   document.getElementById("DelImage").hidden = true;
 }
 
+function hideSampleOptions() {
+  _SAMPLE_NUM = -1;
+  document.getElementById("DelSample").hidden   = true;
+  document.getElementById("SampleStart").hidden = true;
+  document.getElementById("SampleEnd").hidden   = true;
+}
+
 function sendColor(color) {
   document.getElementById("Label" + _LABEL_NUM).style.color = color;
   sendCommand('UP_LCOL', { LabelID: _LABEL_NUM, Color: color }, doNothing);
@@ -279,22 +328,65 @@ function sendText() {
   sendCommand('UP_LTEXT', { LabelID: _LABEL_NUM, Content: encodeURIComponent(text) }, doNothing);
 }
 
+function sendSampleStart() {
+  var container = document.getElementById("SampleContainer" + _SAMPLE_NUM);
+  var audio     = container.getElementsByTagName("audio")[0];
+  var start     = document.getElementById("SampleStartInput").value;
+
+  audio.pause();
+  audio.setAttribute("start", start);
+  clearTimeout(_AUDIO_STOP);
+  sendCommand('UP_SSTART', { SampleID: _SAMPLE_NUM, Start: start }, doNothing);
+}
+
+function sendSampleEnd() {
+  var container = document.getElementById("SampleContainer" + _SAMPLE_NUM);
+  var audio     = container.getElementsByTagName("audio")[0];
+  var end       = document.getElementById("SampleEndInput").value;
+
+  audio.pause();
+  audio.setAttribute("end", end);
+  clearTimeout(_AUDIO_STOP);
+  sendCommand('UP_SEND', { SampleID: _SAMPLE_NUM, End: end }, doNothing);
+}
+
 function newImage() {
   document.getElementById("ImagePrompt").hidden = false;
   document.getElementById("ImagePID").value = _PRESID;
   document.getElementById("ImageSID").value = _SLIDE_NUM;
   document.getElementById("ImageForm").submit();
-  document.getElementById("RetryButton").hidden = true;
+  document.getElementById("IRetryButton").hidden = true;
+}
+
+function newSample() {
+  document.getElementById("SamplePrompt").hidden = false;
+  document.getElementById("SamplePID").value = _PRESID;
+  document.getElementById("SampleSID").value = _SLIDE_NUM;
+  document.getElementById("SampleForm").submit();
+  document.getElementById("SRetryButton").hidden = true;
 }
 
 function checkImage() {
   var iframe = document.getElementById("ImagePrompt").getElementsByTagName("iframe")[0];
   var result = iframe.contentWindow.document.getElementById("Result");
   if (iframe.contentWindow.document.getElementsByClassName("error").length) {
-    document.getElementById("RetryButton").hidden = false;
+    document.getElementById("IRetryButton").hidden = false;
   } else if (result) {
     if (result.value != "") {
       document.getElementById("ImagePrompt").hidden = true;
+      sendCommand("UP_SLIDE", { SlidePosition: _SLIDE_NUM }, updateSlide);
+    }
+  }
+}
+
+function checkSample() {
+  var iframe = document.getElementById("SamplePrompt").getElementsByTagName("iframe")[0];
+  var result = iframe.contentWindow.document.getElementById("Result");
+  if (iframe.contentWindow.document.getElementsByClassName("error").length) {
+    document.getElementById("SRetryButton").hidden = false;
+  } else if (result) {
+    if (result.value != "") {
+      document.getElementById("SamplePrompt").hidden = true;
       sendCommand("UP_SLIDE", { SlidePosition: _SLIDE_NUM }, updateSlide);
     }
   }
@@ -530,6 +622,80 @@ function makeDraggableImage(elmnt) {
       elmnt.style.top  = py + "%";
 
       sendCommand('UP_IPOS', { ImageID: id, X: px, Y: py }, doNothing);
+    }
+  }
+}
+
+function makeDraggableSample(elmnt) {
+  elmnt.onmousedown = dragMouseDown;
+  var x1, y1, x2 = -1, y2 = -1;
+  var slide, sample;
+  var id = elmnt.id.substring(15);
+
+  function dragMouseDown(e) {
+    e = e || window.event;
+    e.preventDefault();
+    document.onmouseup = closeDragElement;
+    // call a function whenever the cursor moves:
+    document.onmousemove = elementDrag;
+
+    deselect();
+    showSampleOptions(id);
+    slide = document.getElementById("Slide").getBoundingClientRect();
+    sample = elmnt.getBoundingClientRect();
+    x1    = e.clientX;
+    y1    = e.clientY;
+    x2    = -1;
+    y2    = -1;
+  }
+
+  function elementDrag(e) {
+    e = e || window.event;
+    e.preventDefault();
+    
+    x2 = e.clientX;
+    y2 = e.clientY;
+
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+
+    var x = sample.left + dx;
+    var y = sample.top  + dy;
+
+    if (x < slide.left)                    x = slide.left;
+    if (x + sample.width >= slide.right)   x = slide.right  - sample.width;
+    if (y < slide.top)                     y = slide.top;
+    if (y + sample.height >= slide.bottom) y = slide.bottom - sample.height;
+
+    elmnt.style.left = x - slide.left + "px";
+    elmnt.style.top  = y - slide.top  + "px";
+  }
+
+  function closeDragElement() {
+    // stop moving when mouse button is released:
+    document.onmouseup   = null;
+    document.onmousemove = null;
+
+    if (x2 == -1 && y2 == -1) {
+      var audio = elmnt.getElementsByTagName("audio")[0];
+      if (audio.paused) {
+        var duration = audio.getAttribute("end") - audio.getAttribute("start");
+        audio.currentTime = audio.getAttribute("start");
+        audio.play();
+        if (duration > 0) {
+          _AUDIO_STOP = setTimeout(function() { audio.pause(); }, duration * 1000);
+        }
+      }
+    } else {
+      sample = elmnt.getBoundingClientRect();
+
+      var px = (sample.left - slide.left) / slide.width  * 100.0;
+      var py = (sample.top  - slide.top ) / slide.height * 100.0;
+
+      elmnt.style.left = px + "%";
+      elmnt.style.top  = py + "%";
+
+      sendCommand('UP_SPOS', { SampleID: id, X: px, Y: py }, doNothing);
     }
   }
 }

@@ -5,7 +5,7 @@
     $url = $_POST["URL"];
   } else {
     //https://www.w3schools.com/php/php_file_upload.asp
-    $target_dir = $_SERVER[DOCUMENT_ROOT] . "/images/";
+    $target_dir = $_SERVER["DOCUMENT_ROOT"] . "/images/";
     $uploadOk = true;
     $imageFileType = strtolower(pathinfo($_FILES["File"]["name"], PATHINFO_EXTENSION));
 
