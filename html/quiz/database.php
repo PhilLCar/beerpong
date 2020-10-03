@@ -9,6 +9,10 @@
       while ($result = $query->fetch_assoc()) {
         echo(";L:" . $result["LabelID"] . ":" . $result["Content"] . ":" . $result["Color"] . ":" . $result["FontSize"] . ":" . $result["X"] . ":" . $result["Y"]);
       }
+      $query = $conn->query("SELECT * FROM images WHERE PresentationID=" . $_POST["PresentationID"] . " AND SlideID=" . $slideid);
+      while ($result = $query->fetch_assoc()) {
+        echo(";I:" . $result["ImageID"] . ":" . $result["Content"] . ":" . $result["X"] . ":" . $result["Y"] . ":" . $result["SizeX"] . ":" . $result["SizeY"]);
+      }
     }
   }
 
@@ -83,6 +87,11 @@
         break;
       case "DEL_LABEL":
         $conn->query("DELETE FROM labels WHERE LabelID=" . $_POST["LabelID"]);
+        updateSlide($conn);
+        break;
+      case "DEL_IMAGE":
+        $conn->query("DELETE FROM images WHERE ImageID=" . $_POST["ImageID"]);
+        updateSlide($conn);
         break;
       case "UP_LCOL":
         $conn->query("UPDATE labels SET Color='" . $_POST["Color"] . "' WHERE LabelID=" . $_POST["LabelID"]);
@@ -90,11 +99,17 @@
       case "UP_LSIZE":
         $conn->query("UPDATE labels SET FontSize=" . $_POST["FontSize"] . " WHERE LabelID=" . $_POST["LabelID"]);
         break;
+      case "UP_ISIZE":
+        $conn->query("UPDATE images SET SizeX=" . $_POST["SizeX"] . ", SizeY=" . $_POST["SizeY"] . " WHERE ImageID=" . $_POST["ImageID"]);
+        break;
       case "UP_LTEXT":
         $conn->query("UPDATE labels SET Content='" . rawurlencode($_POST["Content"]) . "' WHERE LabelID=" . $_POST["LabelID"]);
         break;
       case "UP_LPOS":
         $conn->query("UPDATE labels SET X=" . $_POST["X"] . ", Y=" . $_POST["Y"] . " WHERE LabelID=" . $_POST["LabelID"]);
+        break;
+      case "UP_IPOS":
+        $conn->query("UPDATE images SET X=" . $_POST["X"] . ", Y=" . $_POST["Y"] . " WHERE ImageID=" . $_POST["ImageID"]);
         break;
       case "":
       default:

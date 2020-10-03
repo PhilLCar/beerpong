@@ -123,6 +123,10 @@
             <div>+</div>
             <div><?php echo($new); ?></div>
           </div>
+          <div id="DelImage" class="delbutton" hidden="true" onclick="deleteImage()">
+            <div>-</div>
+            <div><?php echo($del); ?></div>
+          </div>
           <form id="ImageForm" action="image.php" method="POST" target="ImagePromptFrame" hidden="true">
             <input id="ImagePID" type="hidden" name="PresentationID"/>
             <input id="ImageSID" type="hidden" name="SlidePosition"/>

@@ -377,6 +377,7 @@ input[type="button"]:hover, input[type="submit"]:hover {
   right: 0rem;
   margin: auto;
   background-color: white;
+  overflow: hidden;
 }
 
 #DelButton {
@@ -405,12 +406,12 @@ input[type="button"]:hover, input[type="submit"]:hover {
   position: absolute;
   display: inline-block;
   padding: 1px;
-  border: 1px dashed black;
   z-index: 3;
 }
 
 .labelContainer:hover {
   cursor: move;
+  border: 1px dashed black;
 }
 
 #ColorPalette {
@@ -500,4 +501,26 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 #ImageButtons input {
   margin: 1rem;
+}
+
+.imageContainer {
+  position: absolute;
+  display: inline-block;
+  z-index: 2;
+}
+
+.imageContainer:hover {
+  cursor: move;
+}
+
+.resizer {
+  margin-top: -10px;
+  margin-right: -10px;
+  height: 20px;
+  width: 20px;
+  float: right;
+}
+
+.resizer:hover {
+  cursor: nwse-resize;
 }

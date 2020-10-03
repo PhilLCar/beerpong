@@ -176,8 +176,18 @@ function updateSlide(slideInfo) {
                          `style="left:${element[5]}%;top:${element[6]}%">\n<div id="Label${element[1]}" class="label" onfocusout="sendText()"` +
                          `style="color:${element[3]};font-size:${fontSize}" fontsize="${element[4]}" posx="${element[5]}" posy="${element[6]}" contenteditable="true" ` +
                          `onmousedown="event.stopPropagation()">${decodeURIComponent(element[2])}</div>\n</div>`;
-      makeDraggableLabel(document.getElementById(`LabelContainer${element[1]}`));
+    } else if (element[0] == "I") {
+      slide.innerHTML += `<div id="ImageContainer${element[1]}" class="imageContainer" onfocusin="deselect();showImageOptions(${element[1]})" ` +
+                         `style="left:${element[3]}%;top:${element[4]}%;width:${element[5]}%;height:${element[6]}%">` +
+                         `<img imageid="${element[1]}" style="width:100%;height:100%" src="${decodeURIComponent(element[2])}"></img>` +
+                         `<div imageid="${element[1]}" class="resizer"></div></div>`;
     }
+  }
+  for (var labelContainer of document.getElementsByClassName("labelContainer")) {
+    makeDraggableLabel(labelContainer);
+  }
+  for (var imageContainer of document.getElementsByClassName("imageContainer")) {
+    makeDraggableImage(imageContainer);
   }
 }
 
@@ -191,8 +201,12 @@ function deleteSlide() {
 
 function deselect() {
   if (_LABEL_NUM != -1) {
-    document.getElementById("LabelContainer" + _LABEL_NUM).style.borderColor = "black";
+    document.getElementById("LabelContainer" + _LABEL_NUM).style.border = null;
     hideLabelOptions();
+  }
+  if (_IMAGE_NUM != -1) {
+    document.getElementById("ImageContainer" + _IMAGE_NUM).style.border = "none";
+    hideImageOptions();
   }
 }
 
@@ -202,14 +216,28 @@ function showLabelOptions(labelid) {
   document.getElementById("ColorPalette").hidden = false;
   document.getElementById("FontSize").hidden     = false;
   document.getElementById("FontSizeInput").value = document.getElementById("Label" + labelid).getAttribute("fontsize");
-  document.getElementById("LabelContainer" + labelid).style.borderColor = "red";
+  document.getElementById("LabelContainer" + labelid).style.border = "1px dashed red";
+}
+
+function showImageOptions(imageid) {
+  _IMAGE_NUM = imageid;
+  document.getElementById("DelImage").hidden = false;
+  document.getElementById("ImageContainer" + imageid).style.border = "1px solid red";
 }
 
 function deleteLabel() {
   var lang = getCookie("Language");
   if (confirm(lang == "FR" ? "Êtes-vous certain?" : "Are you sure?")) {
-    sendCommand('DEL_LABEL', { LabelID: _LABEL_NUM }, updateSlide);
+    sendCommand('DEL_LABEL', { LabelID: _LABEL_NUM, SlidePosition: _SLIDE_NUM }, updateSlide);
     hideLabelOptions();
+  }
+}
+
+function deleteImage() {
+  var lang = getCookie("Language");
+  if (confirm(lang == "FR" ? "Êtes-vous certain?" : "Are you sure?")) {
+    sendCommand('DEL_IMAGE', { ImageID: _IMAGE_NUM, SlidePosition: _SLIDE_NUM }, updateSlide);
+    hideImageOptions();
   }
 }
 
@@ -227,6 +255,11 @@ function hideLabelOptions() {
   document.getElementById("DelLabel").hidden     = true;
   document.getElementById("ColorPalette").hidden = true;
   document.getElementById("FontSize").hidden     = true;
+}
+
+function hideImageOptions() {
+  _IMAGE_NUM = -1;
+  document.getElementById("DelImage").hidden = true;
 }
 
 function sendColor(color) {
@@ -308,6 +341,7 @@ function makeDraggableSlide(elmnt) {
 
     var separators = document.getElementsByClassName("separator");
     for (var separator of separators) {
+      if (separator.id == "Separator" + slide1) continue;
       var pos = separator.getBoundingClientRect();
       if (x > pos.left && x < pos.right && y > pos.bottom - 50 && y < pos.top + 50) {
         separator.setAttribute("expanded", "1");
@@ -320,15 +354,17 @@ function makeDraggableSlide(elmnt) {
       for (slide of slides) {
         slide.setAttribute("class", "slide disabled");
       }
+      elmnt.hidden = true;
       disabled = true;
     }
   }
 
   function closeDragElement() {
     // stop moving when mouse button is released:
-    document.onmouseup = null;
+    document.onmouseup   = null;
     document.onmousemove = null;
 
+    elmnt.hidden = false;
     var separators = document.getElementsByClassName("separator");
     var i = 0;
     for (var separator of separators) {
@@ -342,8 +378,7 @@ function makeDraggableSlide(elmnt) {
     }
     if (slide2 > slide1) slide2--;
     if (slide1 >= 0 && slide2 >= 0 && slide1 != slide2) {
-      sendCommand("MOVE_SLIDE", { Slide1: slide1, Slide2: slide2 }, doNothing);
-      selectSlide(slide2);
+      sendCommand("MOVE_SLIDE", { Slide1: slide1, Slide2: slide2 }, param => selectSlide(slide2)); 
     }
   }
 }
@@ -352,6 +387,7 @@ function makeDraggableLabel(elmnt) {
   elmnt.onmousedown = dragMouseDown;
   var x1, y1, x2, y2;
   var slide, label;
+  var id = elmnt.id.substring(14);
 
   function dragMouseDown(e) {
     e = e || window.event;
@@ -360,6 +396,8 @@ function makeDraggableLabel(elmnt) {
     // call a function whenever the cursor moves:
     document.onmousemove = elementDrag;
 
+    deselect();
+    showLabelOptions(id);
     slide = document.getElementById("Slide").getBoundingClientRect();
     label = elmnt.getBoundingClientRect();
     x1    = e.clientX;
@@ -390,7 +428,7 @@ function makeDraggableLabel(elmnt) {
 
   function closeDragElement() {
     // stop moving when mouse button is released:
-    document.onmouseup = null;
+    document.onmouseup   = null;
     document.onmousemove = null;
 
     label = elmnt.getBoundingClientRect();
@@ -401,6 +439,97 @@ function makeDraggableLabel(elmnt) {
     elmnt.style.left = px + "%";
     elmnt.style.top  = py + "%";
 
-    sendCommand('UP_LPOS', { LabelID: elmnt.id.substring(14), X: px, Y: py }, doNothing);
+    sendCommand('UP_LPOS', { LabelID: id, X: px, Y: py }, doNothing);
+  }
+}
+
+function makeDraggableImage(elmnt) {
+  elmnt.onmousedown = dragMouseDown;
+  var x1, y1, x2, y2, ratio;
+  var slide, image;
+  var id = elmnt.id.substring(14);
+  var resize = false;
+
+  function dragMouseDown(e) {
+    e = e || window.event;
+    e.preventDefault();
+    document.onmouseup = closeDragElement;
+    // call a function whenever the cursor moves:
+    document.onmousemove = elementDrag;
+
+    deselect();
+    showImageOptions(id);
+    slide  = document.getElementById("Slide").getBoundingClientRect();
+    image  = elmnt.getBoundingClientRect();
+    x1     = e.clientX;
+    y1     = e.clientY;
+    resize = false;
+
+    if (x1 - 10 < image.right && x1 + 10 > image.right && y1 - 10 < image.bottom && y1 + 10 > image.bottom) {
+      resize = true;
+      ratio = image.width / image.height;
+    }
+  }
+
+  function elementDrag(e) {
+    e = e || window.event;
+    e.preventDefault();
+    
+    x2 = e.clientX;
+    y2 = e.clientY;
+
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+
+    if (resize) {
+      var x = image.width  + dx;
+      var y = image.height + dy;
+      var d = x > y * ratio ? x : y * ratio;
+      x = d;
+      y = d / ratio;
+
+      if (image.left + x >= slide.right)  { x = slide.right  - image.left; d = x;                            }
+      if (image.top  + y >= slide.bottom) { y = slide.bottom - image.top;  if (y * ratio < d) d = y * ratio; }
+  
+      elmnt.style.width  = d         + "px";
+      elmnt.style.height = d / ratio + "px";
+    } else {
+      var x = image.left + dx;
+      var y = image.top  + dy;
+
+      if (x < slide.left)                   x = slide.left;
+      if (x + image.width >= slide.right)   x = slide.right  - image.width;
+      if (y < slide.top)                    y = slide.top;
+      if (y + image.height >= slide.bottom) y = slide.bottom - image.height;
+
+      elmnt.style.left = x - slide.left + "px";
+      elmnt.style.top  = y - slide.top  + "px";
+    }
+  }
+
+  function closeDragElement() {
+    // stop moving when mouse button is released:
+    document.onmouseup   = null;
+    document.onmousemove = null;
+
+    image = elmnt.getBoundingClientRect();
+
+    if (resize) {
+      var px = image.width  / slide.width  * 100.0;
+      var py = image.height / slide.height * 100.0;
+  
+      elmnt.style.width   = px + "%";
+      elmnt.style.height  = py + "%";
+  
+      sendCommand('UP_ISIZE', { ImageID: id, SizeX: px, SizeY: py }, doNothing);
+    } else {
+      var px = (image.left - slide.left) / slide.width  * 100.0;
+      var py = (image.top  - slide.top ) / slide.height * 100.0;
+
+      elmnt.style.left = px + "%";
+      elmnt.style.top  = py + "%";
+
+      sendCommand('UP_IPOS', { ImageID: id, X: px, Y: py }, doNothing);
+    }
   }
 }
