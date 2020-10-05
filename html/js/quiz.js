@@ -1,6 +1,7 @@
 _PRESID      = 0;
 _PASSHASH    = 0;
 _SLIDE_RATIO = 4/3;
+_TOTAL       = 0;
 _SLIDE_NUM   = -1;
 _LABEL_NUM   = -1;
 _IMAGE_NUM   = -1;
@@ -36,7 +37,7 @@ function select(id) {
   if (tr_sel) {
     tr_sel.setAttribute("selected", "1");
   }
-  options(tr);
+  options(tr_sel);
 }
 
 function options(tr) {
@@ -44,7 +45,7 @@ function options(tr) {
   var present = document.getElementById("Present");
   var edit    = document.getElementById("Edit");
   if (tr) {
-    var presenting = tr.getElementsByTagName("td")[1].getAttribute("value") == "1";
+    var presenting = tr.getAttribute("value") == "1";
     join.hidden    = !presenting;
     present.hidden = presenting;
     edit.hidden    = presenting;
@@ -63,9 +64,14 @@ function join() {
 }
 
 function present() {
-  var form = document.getElementById("NextPage");
+  var lang   = getCookie("Language");
+  var pass   = prompt(lang == "FR" ? "Entrez le mot de passe de la présentation:" : "Enter the password for this presentation", "");
+  var form   = document.getElementById("NextPage");
+  var inputs = form.getElementsByTagName("input");
+  if (pass == "") return;
   form.setAttribute("action", "present.php");
-  form.getElementsByTagName("input")[0].value = _PRESID;
+  inputs[0].value = _PRESID;
+  inputs[1].value = pass;
   form.submit();
 }
 
@@ -90,7 +96,8 @@ function sendCommand(command, args, callback) {
       post += `&${arg}=${args[arg]}`;
     }
   }
-
+  
+  if (_PASSHASH == "NO_EDIT") xhttp.timeout = 60000;
   xhttp.onreadystatechange = async function() {
     if (this.readyState == 4 && this.status == 200) {
       // good answer
@@ -115,6 +122,28 @@ function updateSlides(numslides) {
   var slides = document.getElementsByClassName("slide");
   for (slide of slides) {
     makeDraggableSlide(slide);
+  }
+}
+
+function updateSlidesNoEdit(numslides) {
+  var sc = document.getElementById("SlidesContainer");
+
+  for (var i = 0; i < numslides; i++) {
+    sc.innerHTML += `<div class="slide" onclick="selectSlideNoEdit(${i})">${i}</div>`;
+  }
+  if (_SLIDE_NUM == -1) selectSlideNoEdit(0);
+  _TOTAL = numslides;
+}
+
+function selectPrev() {
+  if (_SLIDE_NUM > 0) {
+    selectSlideNoEdit(_SLIDE_NUM - 1);
+  }
+}
+
+function selectNext() {
+  if (_SLIDE_NUM + 1 < _TOTAL) {
+    selectSlideNoEdit(_SLIDE_NUM + 1);
   }
 }
 
@@ -161,6 +190,24 @@ function selectSlide(position) {
   }
 }
 
+function selectSlideNoEdit(position) {
+  _SLIDE_NUM = position;
+  if (position >=0) {
+    var slides = document.getElementsByClassName("slide");
+    for (var slide of slides) {
+      if (slide.innerHTML == position) slide.setAttribute("selected", "1");
+      else slide.setAttribute("selected", "0");
+    }
+    sendCommand("UP_SLIDE_NE", { SlidePosition: position }, updateSlideNoEdit)
+    displaySlide();
+  }
+}
+
+function continuousUpdate(slideInfo) {
+  if (slideInfo) updateSlideNoEdit(slideInfo);
+  sendCommand("UP_CUR_SLIDE", null, continuousUpdate);
+}
+
 function doNothing(slideInfo) { }
 
 function updateSlide(slideInfo) {
@@ -201,6 +248,36 @@ function updateSlide(slideInfo) {
   }
   for (var sampleContainer of document.getElementsByClassName("sampleContainer")) {
     makeDraggableSample(sampleContainer);
+  }
+}
+
+function updateSlideNoEdit(slideInfo) {
+  var slide    = document.getElementById("Slide");
+  var elements = slideInfo.split(';');
+
+  if (_PASSHASH != "NO_EDIT") document.getElementById("SlideCommentText").value = decodeURIComponent(elements[0]);
+  slide.innerHTML = "";
+
+  for (var i = 1; i < elements.length; i++) {
+    var element = elements[i].split(':');
+    if (element[0] == "L") {
+      var fontSize = document.getElementById("Slide").clientWidth * element[4] / 1000.0 + "px";
+      slide.innerHTML += `<div id="LabelContainer${element[1]}" class="labelContainerNoEdit" ` +
+                         `style="left:${element[5]}%;top:${element[6]}%">\n<div id="Label${element[1]}" class="labelNoEdit" ` +
+                         `style="color:${element[3]};font-size:${fontSize}" fontsize="${element[4]}" posx="${element[5]}" posy="${element[6]}" ` +
+                         `>${decodeURIComponent(element[2])}</div>\n</div>`;
+    } else if (element[0] == "I") {
+      slide.innerHTML += `<div id="ImageContainer${element[1]}" class="imageContainerNoEdit" ` +
+                         `style="left:${element[3]}%;top:${element[4]}%;width:${element[5]}%;height:${element[6]}%">` +
+                         `<img imageid="${element[1]}" style="width:100%;height:100%" src="${decodeURIComponent(element[2])}"></img>` +
+                         `</div>`;
+    } else if (element[0] == "S") {
+      slide.innerHTML += `<div id="SampleContainer${element[1]}" class="sampleContainer" ` +
+                         `style="left:${element[5]}%;top:${element[6]}%" onclick="playSample(this)">` +
+                         `<audio sampleid="${element[1]}" preload="auto" src="${decodeURIComponent(element[2])}" ` +
+                         ` start="${element[3]}" end="${element[4]}"></audio>` +
+                         "</div>";
+    }
   }
 }
 
@@ -413,6 +490,18 @@ function checkSample() {
     if (result.value != "") {
       document.getElementById("SamplePrompt").hidden = true;
       sendCommand("UP_SLIDE", { SlidePosition: _SLIDE_NUM }, updateSlide);
+    }
+  }
+}
+
+function playSample(sample) {
+  var audio = sample.getElementsByTagName("audio")[0];
+  if (audio.paused) {
+    var duration = audio.getAttribute("end") - audio.getAttribute("start");
+    audio.currentTime = audio.getAttribute("start");
+    audio.play();
+    if (duration > 0) {
+      setTimeout(function() { audio.pause(); }, duration * 1000);
     }
   }
 }

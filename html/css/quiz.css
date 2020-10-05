@@ -227,6 +227,14 @@ input[type="button"]:hover, input[type="submit"]:hover {
   right: 0px;
 }
 
+#Presentator {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+}
+
 #Slides {
   position: absolute;
   top: 0px;
@@ -257,6 +265,16 @@ input[type="button"]:hover, input[type="submit"]:hover {
 }
 
 #Tools {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  right: 0px;
+  overflow: auto;
+  width: 10rem;
+  background-color: #007;
+}
+
+#Controls {
   position: absolute;
   top: 0px;
   bottom: 0px;
@@ -369,6 +387,10 @@ input[type="button"]:hover, input[type="submit"]:hover {
   padding: 1rem;
 }
 
+#SlideContainer[edit="false"] {
+  bottom: 0rem;
+}
+
 #Slide {
   position: absolute;
   top: 0rem;
@@ -412,6 +434,13 @@ input[type="button"]:hover, input[type="submit"]:hover {
 .labelContainer:hover {
   cursor: move;
   border: 1px dashed black;
+}
+
+.labelContainerNoEdit {
+  position: absolute;
+  display: inline-block;
+  padding: 1px;
+  z-index: 3;
 }
 
 #ColorPalette {
@@ -515,6 +544,12 @@ input[type="button"]:hover, input[type="submit"]:hover {
   cursor: move;
 }
 
+.imageContainerNoEdit {
+  position: absolute;
+  display: inline-block;
+  z-index: 2;
+}
+
 .resizer {
   margin-top: -10px;
   margin-right: -10px;
@@ -582,4 +617,16 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 .sampleContainer:hover {
   cursor: pointer;
+}
+
+#Prev {
+  position: absolute;
+  top: 1rem;
+  left: 0.5rem;
+}
+
+#Next {
+  position: absolute;
+  top: 1rem;
+  left: 4.5rem;
 }

@@ -59,9 +59,9 @@
           <?php
             if ($query) {
               while ($row = $query->fetch_assoc()) {
-                echo("<tr presid=\"" . $row["PresentationID"] . "\" selected=\"0\" onclick=\"select(" . $row["PresentationID"] . ")\">\n" . 
+                echo("<tr presid=\"" . $row["PresentationID"] . "\" selected=\"0\" value=\"" . $row["Presenting"] . "\" onclick=\"select(" . $row["PresentationID"] . ")\">\n" . 
                   "<td>" . urldecode($row["Title"]) . "</td>\n" .
-                  "<td value=\"" . $row["Presenting"] . "\">" . ($row["Presenting"] == 1 ? $yes : $no) . "</td>\n" .
+                  "<td>" . ($row["Presenting"] == 1 ? $yes : $no) . "</td>\n" .
                   "<td>" . $row["LastUpdate"] . "</td>\n" .
                 "</tr>\n");
               }
