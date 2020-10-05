@@ -74,7 +74,7 @@
       </div>
       <div id="SlideViewer">
         <div id="SlideContainer">
-          <div id="Slide" hidden="true"></div>
+          <div id="Slide" hidden="true" onclick="deselect()"></div>
         </div>
         <div id="SlideComments" hidden="true">
           <div><?php echo($comments); ?>:</div>

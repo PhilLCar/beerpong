@@ -457,11 +457,13 @@ input[type="button"]:hover, input[type="submit"]:hover {
 }
 
 .numericInput div {
+  height: 24px;
   padding-left: 0.4rem;
   padding-right: 0.4rem;
 }
 
 .numericInput input {
+  height: 22px;
   border: 1px solid white;
   overflow: hidden;
   width: calc(100% - 0.28rem);

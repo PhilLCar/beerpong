@@ -1,0 +1,122 @@
+html, body {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  background-color: green;
+}
+
+#DiceArray {
+  width: 700px;
+  margin: auto;
+  margin-top: 200px
+}
+
+.sep {
+  display: inline-block;
+  width: 45px;
+}
+
+.die {
+  position: relative;
+  display: inline-block;
+  background-color: white;
+  border: 2px solid black;
+  border-radius: 20px;
+  height: 100px;
+  width: 100px;
+}
+
+.die[disabled="true"] {
+  background-color: darkolivegreen;
+}
+
+.die[disabled="true"]:hover {
+  background-color: #330;
+}
+
+.die:hover {
+  cursor: pointer;
+  background-color: grey;
+}
+
+.dot {
+  position: absolute;
+  height: 20px;
+  width: 20px;
+  background-color: black;
+  border-radius: 20px;
+}
+
+#Center {
+  top: 40px;
+  left: 40px;
+}
+
+#TopLeft {
+  top: 10px;
+  left: 10px;
+}
+
+#CenterLeft {
+  top: 40px;
+  left: 10px;
+}
+
+#BottomLeft {
+  left: 10px;
+  bottom: 10px;
+}
+
+#TopRight {
+  top: 10px;
+  right: 10px;
+}
+
+#CenterRight {
+  top: 40px;
+  right: 10px;
+}
+
+#BottomRight {
+  right: 10px;
+  bottom: 10px;
+}
+
+#DiceContainer div {
+  text-align: center;
+}
+
+input[type="button"] {
+  width: 200px;
+  height: 50px;
+  margin: auto;
+  margin-top: 50px;
+  background-color: brown;
+  color: gold;
+  border: 2px solid gold;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: large;
+}
+
+input[type="button"]:hover {
+  background-color: maroon;
+  cursor: pointer;
+}
+
+#DBButtons {
+  position: absolute;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+}
+
+#SessionID {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  color: gold;
+  font-size: 30px;
+}

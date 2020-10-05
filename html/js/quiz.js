@@ -174,18 +174,18 @@ function updateSlide(slideInfo) {
     var element = elements[i].split(':');
     if (element[0] == "L") {
       var fontSize = document.getElementById("Slide").clientWidth * element[4] / 1000.0 + "px";
-      slide.innerHTML += `<div id="LabelContainer${element[1]}" class="labelContainer" onfocusin="deselect();showLabelOptions(${element[1]})" ` +
+      slide.innerHTML += `<div id="LabelContainer${element[1]}" class="labelContainer" onfocusin="selectLabel(${element[1]})" onclick="event.stopPropagation()" ` +
                          `style="left:${element[5]}%;top:${element[6]}%">\n<div id="Label${element[1]}" class="label" onfocusout="sendText()"` +
                          `style="color:${element[3]};font-size:${fontSize}" fontsize="${element[4]}" posx="${element[5]}" posy="${element[6]}" contenteditable="true" ` +
                          `onmousedown="event.stopPropagation()">${decodeURIComponent(element[2])}</div>\n</div>`;
     } else if (element[0] == "I") {
-      slide.innerHTML += `<div id="ImageContainer${element[1]}" class="imageContainer" onfocusin="deselect();showImageOptions(${element[1]})" ` +
-                         `style="left:${element[3]}%;top:${element[4]}%;width:${element[5]}%;height:${element[6]}%">` +
+      slide.innerHTML += `<div id="ImageContainer${element[1]}" class="imageContainer" onfocusin="selectImage(${element[1]})" ` +
+                         `style="left:${element[3]}%;top:${element[4]}%;width:${element[5]}%;height:${element[6]}%" onclick="event.stopPropagation()">` +
                          `<img imageid="${element[1]}" style="width:100%;height:100%" src="${decodeURIComponent(element[2])}"></img>` +
                          `<div imageid="${element[1]}" class="resizer"></div></div>`;
     } else if (element[0] == "S") {
-      slide.innerHTML += `<div id="SampleContainer${element[1]}" class="sampleContainer" onfocusin="deselect();showSampleOptions(${element[1]})" ` +
-                         `style="left:${element[5]}%;top:${element[6]}%">` +
+      slide.innerHTML += `<div id="SampleContainer${element[1]}" class="sampleContainer" onfocusin="selectSample(${element[1]})" ` +
+                         `style="left:${element[5]}%;top:${element[6]}%" onclick="event.stopPropagation()">` +
                          `<audio sampleid="${element[1]}" preload="auto" src="${decodeURIComponent(element[2])}" ` +
                          ` start="${element[3]}" end="${element[4]}"></audio>` +
                          "</div>";
@@ -218,7 +218,7 @@ function deselect() {
     var label = labelContainer.getElementsByClassName("label")[0];
     // leftover <br> sometimes
     if (label.innerHTML == "" || label.innerHTML == "<br>") labelContainer.style.border = "2px dashed blue";
-    else                       labelContainer.style.border = null;
+    else                                                    labelContainer.style.border = null;
     label.blur();
     hideLabelOptions();
   }
@@ -232,19 +232,44 @@ function deselect() {
   }
 }
 
+function selectLabel(labelid) {
+  if (_LABEL_NUM != labelid) {
+    deselect();
+    showLabelOptions(labelid);
+  }
+}
+
 function showLabelOptions(labelid) {
   _LABEL_NUM = labelid;
   document.getElementById("DelLabel").hidden     = false;
   document.getElementById("ColorPalette").hidden = false;
   document.getElementById("FontSize").hidden     = false;
   document.getElementById("FontSizeInput").value = document.getElementById("Label" + labelid).getAttribute("fontsize");
-  document.getElementById("LabelContainer" + labelid).style.border = "1px dashed red";
+  var labelContainer = document.getElementById("LabelContainer" + labelid);
+  labelContainer.style.border = "1px dashed red";
+  labelContainer.setAttribute("onfocusin", "");
+  document.getElementById("Label" + labelid).focus();
+  labelContainer.setAttribute("onfocusin", "deselect();showLabelOptions(" + labelid + ")");
+}
+
+function selectImage(imageid) {
+  if (_IMAGE_NUM != imageid) {
+    deselect();
+    showImageOptions(imageid);
+  }
 }
 
 function showImageOptions(imageid) {
   _IMAGE_NUM = imageid;
   document.getElementById("DelImage").hidden = false;
   document.getElementById("ImageContainer" + imageid).style.border = "1px solid red";
+}
+
+function selectSample(sampleid) {
+  if (_SAMPLE_NUM != sampleid) {
+    deselect();
+    showSampleOptions(sampleid);
+  }
 }
 
 function showSampleOptions(sampleid) {
@@ -488,8 +513,7 @@ function makeDraggableLabel(elmnt) {
     // call a function whenever the cursor moves:
     document.onmousemove = elementDrag;
 
-    deselect();
-    showLabelOptions(id);
+    selectLabel(id);
     slide = document.getElementById("Slide").getBoundingClientRect();
     label = elmnt.getBoundingClientRect();
     x1    = e.clientX;
@@ -549,8 +573,7 @@ function makeDraggableImage(elmnt) {
     // call a function whenever the cursor moves:
     document.onmousemove = elementDrag;
 
-    deselect();
-    showImageOptions(id);
+    selectImage(id);
     slide  = document.getElementById("Slide").getBoundingClientRect();
     image  = elmnt.getBoundingClientRect();
     x1     = e.clientX;
@@ -639,8 +662,7 @@ function makeDraggableSample(elmnt) {
     // call a function whenever the cursor moves:
     document.onmousemove = elementDrag;
 
-    deselect();
-    showSampleOptions(id);
+    selectSample(id);
     slide = document.getElementById("Slide").getBoundingClientRect();
     sample = elmnt.getBoundingClientRect();
     x1    = e.clientX;

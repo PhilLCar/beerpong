@@ -12,5 +12,6 @@
     <div id="Whoami"    onclick="window.location='whoami'">Who am I?</div>
     <div id="Codenames" onclick="window.location='codenames'">CODE NAMES</div>
     <div id="Quiz"      onclick="window.location='quiz'">QUIZ</div>
+    <div id="Dice"      onclick="window.location='dice'">DICE</div>
   </body>
 </html>

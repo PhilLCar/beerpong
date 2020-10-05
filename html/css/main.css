@@ -88,3 +88,15 @@ h1 {
     color: blue;
     background-color: #0F7;
 }
+
+#Dice {
+    font-size: 100px;
+    width: 100%;
+    color: gold;
+    background-color: darkgreen;
+}
+
+#Dice:hover {
+    cursor: pointer;
+    background-color: brown;
+}
