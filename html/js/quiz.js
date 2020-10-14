@@ -47,7 +47,7 @@ function options(tr) {
   if (tr) {
     var presenting = tr.getAttribute("value") == "1";
     join.hidden    = !presenting;
-    present.hidden = presenting;
+    present.hidden = false;
     edit.hidden    = presenting;
   } else {
     join.hidden    = true;

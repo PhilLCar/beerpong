@@ -242,6 +242,7 @@ input[type="button"]:hover, input[type="submit"]:hover {
   left: 0px;
   width: 10rem;
   background-color: #007;
+  padding-bottom: 50px;
 }
 
 #SlidesContainer {

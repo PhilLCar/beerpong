@@ -126,6 +126,10 @@
           $conn->query("DELETE FROM images WHERE ImageID=" . $_POST["ImageID"]);
           updateSlide($conn);
           break;
+        case "DEL_SAMPLE":
+          $conn->query("DELETE FROM samples WHERE SampleID=" . $_POST["SampleID"]);
+          updateSlide($conn);
+          break;
         case "UP_LCOL":
           $conn->query("UPDATE labels SET Color='" . $_POST["Color"] . "' WHERE LabelID=" . $_POST["LabelID"]);
           break;

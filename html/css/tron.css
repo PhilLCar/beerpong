@@ -1,0 +1,243 @@
+@font-face {
+  font-family: 'Tron';
+  src: url('/fonts/Tron.ttf') format('truetype'); /* Chrome 4+, Firefox 3.5, Opera 10+, Safari 3—5 */
+} 
+
+html, body {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  margin: 0px;
+  font-family: 'Tron', sans-serif;
+  background-color: black;
+  color: #0BF;
+  overflow: hidden;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+#AudioPopUp {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  background-color: black;
+  color: #0BF;
+  font-size: 30px;
+  text-shadow: 0px 0px 5px #0BF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+}
+
+#AudioPopUpContainer {
+  text-align: center;
+}
+
+#AudioPopUpText {
+  max-width: 700px;
+}
+
+input[type="button"] {
+    border: none;
+    font-size: 30px;
+    font-family: 'Tron', sans-serif;
+    text-shadow: 0px 0px 5px #0BF;
+    background-color: transparent;
+}
+
+input[type="button"]:hover {
+  color: #0BF;
+  cursor: pointer;
+  text-shadow: 0px 0px 10px #0BF;
+}
+
+input[type="submit"] {
+    border: none;
+    font-size: 30px;
+    font-family: 'Tron', sans-serif;
+    text-shadow: 0px 0px 5px #0BF;
+    background-color: transparent;
+}
+
+input[type="submit"]:hover {
+  color: #0BF;
+  cursor: pointer;
+  text-shadow: 0px 0px 10px #0BF;
+}
+
+input[type="text"] {
+  border: 2px solid magenta;
+  box-shadow: 0px 0px 5px magenta;
+  font-family: 'Tron', sans-serif;
+  font-size: 30px;
+  background-color: black;
+  color: #0BF;
+  margin-top: 20px;
+  max-width: 200px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+#MainMenu {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  background-color: transparent;
+  color: #0BF;
+  font-size: 30px;
+  text-shadow: 0px 0px 5px #0BF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  text-align: center;
+}
+
+h1 {
+  font-size: 100px;
+  margin-top: -200px;
+}
+
+#Lines {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  z-index: 5;
+}
+
+.vline {
+  position: absolute;
+  border-bottom: 2px solid magenta;
+  box-shadow: 0px 0px 5px magenta;
+}
+
+.hline {
+  position: absolute;
+  border-bottom: 2px solid magenta;
+  box-shadow: 0px 0px 5px magenta;
+}
+
+.mbutton {
+  position: relative;
+  z-index: 12;
+  margin-left: 10px;
+  text-shadow: 0px 0px 5px #0BF;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.mbutton:hover {
+  color: #0BF;
+  cursor: pointer;
+}
+
+#MButtons {
+  position: absolute;
+  left: 0px;
+  bottom: 0px;
+}
+
+#Title {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  font-size: 50px;
+  z-index: 10;
+  margin-left: 20px;
+  text-shadow: 0px 0px 5px #0BF;
+}
+
+#GameID {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  font-size: 50px;
+  color: yellow;
+  z-index: 10;
+  margin-right: 20px;
+  text-shadow: 0px 0px 5px yellow;
+}
+
+#BoardContainer {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  background-image: linear-gradient(black, transparent);
+  z-index: 8;
+}
+
+#Board {
+  position: absolute;
+  background-color: black;
+  z-index: 20;
+  border: 1px solid #0BF;
+  box-shadow: 0px 0px 5px #0BF;
+}
+
+.cell {
+  position: absolute;
+  border: 1px solid #0BF;
+  box-shadow: 0px 0px 5px #0BF;
+}
+
+.cell[color="magenta"] {
+  background-color: magenta;
+  border-color: magenta;
+  box-shadow: 0px 0px 5px magenta;
+  z-index: 30;
+}
+
+.cell[color="orangered"] {
+  background-color: orangered;
+  border-color: orangered;
+  box-shadow: 0px 0px 5px orangered;
+  z-index: 30;
+}
+
+.cell[color="yellow"] {
+  background-color: yellow;
+  border-color: yellow;
+  box-shadow: 0px 0px 5px yellow;
+  z-index: 30;
+}
+
+.cell[color="lime"] {
+  background-color: lime;
+  border-color: lime;
+  box-shadow: 0px 0px 5px lime;
+  z-index: 30;
+}
+
+.cell[color="darkred"] {
+  background-color: darkred;
+  border-color: darkred;
+  box-shadow: 0px 0px 5px darkred;
+  z-index: 30;
+}
+
+.head {
+  position: absolute;
+  z-index: 32;
+}
+
+.eye {
+  position: absolute;
+  background-color: black;
+  border-radius: 100px;
+  max-width: 100px;
+  width: 20%;
+  height: 20%;
+  z-index: 35;
+}
