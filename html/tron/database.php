@@ -3,8 +3,8 @@
     $sql = "SELECT * FROM tron WHERE GameID='" . $_POST["GameID"] . "'";
     $result = $conn->query($sql)->fetch_assoc();
     for ($i = 0; $i < 32; $i++) {
-      echo(($result["R" . $i . "_0"] & 0xFFFFFFFF) . ";" . ($result["R" . $i . "_0"] >> 32) . ";" . 
-           ($result["R" . $i . "_1"] & 0xFFFFFFFF) . ";" . ($result["R" . $i . "_1"] >> 32) . ";");
+      echo(($result["R" . $i . "_0"] & 0xFFFFFFFF) . ";" . (($result["R" . $i . "_0"] >> 32) & 0xFFFFFFFF) . ";" . 
+           ($result["R" . $i . "_1"] & 0xFFFFFFFF) . ";" . (($result["R" . $i . "_1"] >> 32) & 0xFFFFFFFF) . ";");
     }
     echo($result["Ready"]);
   }
@@ -24,6 +24,12 @@
         $result = $conn->query($sql)->fetch_assoc();
         $ready = intval($result["Ready"]);
         $r = $ready;
+        //////////////////////////////////////////////////
+        // | 0 0 0 0 | 0 0 0 0 |
+        //         ^Dir      ^Ready
+        //                 ^Playing
+        //               ^Dead
+        //////////////////////////////////////////////////
         for ($i = 0; $i < 4; $i++) {
           if (($r & 0xFF) == 0) {
             $r = $i;
@@ -34,6 +40,11 @@
           if ($i == 3) $r = "S";
         }
         switch($r) {
+          //////////////////////////////////////////////////
+          // | 0 0 0 0 |
+          //   ^Head marker
+          //     ^Color code
+          //////////////////////////////////////////////////
           case 0:
             $sql = "UPDATE tron SET Ready=" . $ready . ", R8_0=" . (9 << 32) . " WHERE GameID='" . $_POST["GameID"] . "'";
             break;
@@ -55,15 +66,15 @@
         $sql = "SELECT Clock FROM tron WHERE GameID='" . $_POST["GameID"] . "'";
         $clock = $conn->query($sql)->fetch_assoc()["Clock"];
         $i = 0;
-        for (; $i < 200; $i++) {
+        for (; $i < 50; $i++) {
           usleep(15000);
           $nclock = $conn->query($sql)->fetch_assoc()["Clock"];
           if ($nclock > $clock) {
-            printBoard();
+            printBoard($conn);
             break;
           }
         }
-        if (!empty($_POST["Host"]) && $i == 200) {
+        if (!empty($_POST["Host"]) && $i == 50 && $nclock == 0) {
           $sql = "SELECT Ready FROM tron WHERE GameID='" . $_POST["GameID"] . "'";
           $ready = $conn->query($sql)->fetch_assoc()["Ready"];
           echo($ready);
@@ -81,7 +92,7 @@
         $sql = "SELECT Ready FROM tron WHERE GameID='" . $_POST["GameID"] . "'";
         $ready = $conn->query($sql)->fetch_assoc()["Ready"];
         for ($i = 0; $i < 4; $i++) {
-          if (($ready >> (8 * $i)) & 0x3) {
+          if (($ready >> (8 * $i)) & 0x4) {
             echo("1");
             break;
           }
@@ -92,14 +103,25 @@
         for ($i = 0; $i < 16; $i++) $mask |= 8 << (4 * $i);
         $mask = ~$mask;
         $sql = "UPDATE tron SET ";
-        for ($i = 0; $i < 32; $i++) $sql .= "R" . $i . "_0&=" . $mask . ", R" . $i . "_1&=" . $mask . ($i == 31 ? " " : ", ");
-        $sql = "WHERE GameID='" . $_POST["GameID"] . "'";
+        for ($i = 0; $i < 32; $i++) $sql .= "R" . $i . "_0=R" . $i . "_0&" . $mask . ", R" . $i . "_1=R" . $i . "_1&" . $mask . ($i == 31 ? " " : ", ");
+        $sql .= "WHERE GameID='" . $_POST["GameID"] . "'";
         $conn->query($sql);
         break;
       case "EAT":
-        $val = ($_POST["ID"] + 8) << (($_POST["X"] % 16) * 4);
-        $sql = "UPDATE tron SET R" . $_POST["Y"] . "_" . ($_POST["X"] > 31 ? "1" : "0") . "|=" . $val . " WHERE GameID='" . $_POST["GameID"] . "'";
+        $val  = ($_POST["ID"] + 9) << (($_POST["X"] % 16) * 4);
+        $item = "R" . $_POST["Y"] . "_" . ($_POST["X"] > 15 ? "1" : "0");
+        $sql = "UPDATE tron SET " . $item . "=" . $item . "|" . $val . " WHERE GameID='" . $_POST["GameID"] . "'";
         $conn->query($sql);
+        break;
+      case "DIE":
+        $val  = ($_POST["ID"] + 9) << (($_POST["X"] % 16) * 4);
+        $item = "R" . $_POST["Y"] . "_" . ($_POST["X"] > 15 ? "1" : "0");
+        $sql = "UPDATE tron SET " . $item . "=" . $item . "|" . $val . " WHERE GameID='" . $_POST["GameID"] . "'";
+        $conn->query($sql);
+        $val = 4 << ($_POST["ID"] * 8);
+        $sql = "UPDATE tron SET Ready=Ready|" . $val . " WHERE GameID='" . $_POST["GameID"] . "'";
+        $conn->query($sql);
+        break;
     }
     $conn->close();
   }

@@ -23,6 +23,7 @@ var _DOWN  = 2;
 var _UP    = 3;
 var _NEXT = [];
 var _DEAD = false;
+var _CLOCK_STARTED = false;
 
 function sendCommand(command, args, callback) {
   var xhttp = new XMLHttpRequest();
@@ -34,14 +35,14 @@ function sendCommand(command, args, callback) {
     }
   }
   
-  xhttp.timeout = 500;
+  xhttp.timeout = 8000;
   xhttp.onreadystatechange = async function() {
     if (this.readyState == 4 && this.status == 200) {
       // good answer
       callback(this.responseText);
     } else if (this.readyState == 4) {
       // wrong answer
-      alert("Unknown error!");
+      alert("Unknown error " + this.responseText + "!");
     }
   };
   xhttp.open("POST", "database.php", true);
@@ -235,14 +236,14 @@ function update(info) {
           break;
         }
       }
-      if (allReady && i > 0) { // temporary should be > 1
+      if (allReady && i > 0 && !_CLOCK_STARTED) { // temporary should be > 1
         clock(0);
       }
     } else {
       var ready = data[_GRID_SIZE * 4];
       var n, k;
       for (var i = 0; i < 4; i++) {
-        if (ready & 0xFF && !(ready & 0x3)) {
+        if (ready & 0xFF && !(ready & 0x4)) {
           k = i;
           n++;
           break;
@@ -278,19 +279,22 @@ function update(info) {
           cell.setAttribute("color", _COLORS[color]);
         }
       }
+      if (!initial_update) eat();
     }
     if (initial_update) {
       _MYTRON = data[_GRID_SIZE * 4 + 1];
     }
   }
-  eat();
   sendCommand("UPDATE", _HOST ? { Host: true } : null, update);
 }
 
 async function clock(stop) {
   if (stop != 1) {
-    await sleep(250);
+    _CLOCK_STARTED = true;
+    await sleep(100);
     sendCommand("CLOCK", null, clock);
+  } else {
+    _CLOCK_STARTED = false;
   }
 }
 
@@ -319,7 +323,11 @@ function changeDirection(e) {
 }
 
 function eat() {
-  if (_HOST) sendCommand("RESET_HEADS", null, function(){});
+  if (!_NEXT.length) return;
+  if (_HOST) sendCommand("RESET_HEADS", null, eat2);
+}
+
+function eat2(nothing) {
   for (var next1 of _NEXT) {
     for (var next2 of _NEXT) {
       if (next1 == next2) continue;
@@ -336,13 +344,16 @@ function eat() {
   for (var next of _NEXT) {
     if (next.die) continue;
     switch (next.dir) {
-      case _LEFT:  next.j--;
-      case _RIGHT: next.j++;
-      case _UP:    next.i--;
-      case _DOWN:  next.i++;
+      case _LEFT:  next.j--; break;
+      case _RIGHT: next.j++; break;
+      case _UP:    next.i--; break;
+      case _DOWN:  next.i++; break;
     }
     if (next.i < 0 || next.i >= _GRID_SIZE || next.j < 0 || next.j >= _GRID_SIZE) {
-      if (next.i < 0)
+      if (next.i < 0) next.i++;
+      if (next.i >= _GRID_SIZE) next.i--;
+      if (next.j < 0) next.j++;
+      if (next.j >= _GRID_SIZE) next.j--;
       die(next);
       if (_HOST) {
         sendCommand("DIE", { ID: next.id, Y: next.i, X: next.j }, function(){});
@@ -361,4 +372,5 @@ function eat() {
 
 function die(next) {
   if (next.id == _MYTRON) _DEAD = true;
+  next.die = true;
 }
