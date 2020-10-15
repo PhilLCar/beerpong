@@ -1,10 +1,13 @@
 <?php
+  header('Content-Type: text/event-stream');
+  header('Cache-Control: no-cache');
+
   function printBoard($conn) {
     $sql = "SELECT * FROM tron WHERE GameID='" . $_POST["GameID"] . "'";
     $result = $conn->query($sql)->fetch_assoc();
     for ($i = 0; $i < 32; $i++) {
-      echo(($result["R" . $i . "_0"] & 0xFFFFFFFF) . ";" . (($result["R" . $i . "_0"] >> 32) & 0xFFFFFFFF) . ";" . 
-           ($result["R" . $i . "_1"] & 0xFFFFFFFF) . ";" . (($result["R" . $i . "_1"] >> 32) & 0xFFFFFFFF) . ";");
+      echo(gmp_and($result["R" . $i . "_0"], 0xFFFFFFFF) . ";" . gmp_div($result["R" . $i . "_0"], gmp_pow(2, 32)) . ";" . 
+           gmp_and($result["R" . $i . "_1"], 0xFFFFFFFF) . ";" . gmp_div($result["R" . $i . "_1"], gmp_pow(2, 32)) . ";");
     }
     echo($result["Ready"]);
   }
@@ -63,18 +66,23 @@
         echo(";" . $r);
         break;
       case "UPDATE":
-        $sql = "SELECT Clock FROM tron WHERE GameID='" . $_POST["GameID"] . "'";
-        $clock = $conn->query($sql)->fetch_assoc()["Clock"];
+        $sql = "SELECT Clock, Ready FROM tron WHERE GameID='" . $_POST["GameID"] . "'";
+        $result = $conn->query($sql)->fetch_assoc();
+        $clock = $result["Clock"];
+        $ready = $result["Ready"];
         $i = 0;
         for (; $i < 50; $i++) {
           usleep(15000);
-          $nclock = $conn->query($sql)->fetch_assoc()["Clock"];
-          if ($nclock > $clock) {
+          $result = $conn->query($sql)->fetch_assoc();
+          $nclock = $result["Clock"];
+          $nready = $result["Ready"];
+          if (($nclock > $clock) || ($ready != $nready)) {
             printBoard($conn);
+            if (!$nclock) echo(";-1");
             break;
           }
         }
-        if (!empty($_POST["Host"]) && $i == 50 && $nclock == 0) {
+        if ($i == 50 && $nclock == 0) {
           $sql = "SELECT Ready FROM tron WHERE GameID='" . $_POST["GameID"] . "'";
           $ready = $conn->query($sql)->fetch_assoc()["Ready"];
           echo($ready);

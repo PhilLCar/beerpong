@@ -199,10 +199,24 @@ h1 {
   z-index: 30;
 }
 
+.cell[color="darkmagenta"] {
+  background-color: darkmagenta;
+  border-color: darkmagenta;
+  box-shadow: 0px 0px 5px darkmagenta;
+  z-index: 30;
+}
+
 .cell[color="orangered"] {
   background-color: orangered;
   border-color: orangered;
   box-shadow: 0px 0px 5px orangered;
+  z-index: 30;
+}
+
+.cell[color="darkred"] {
+  background-color: darkred;
+  border-color: darkred;
+  box-shadow: 0px 0px 5px darkred;
   z-index: 30;
 }
 
@@ -213,6 +227,13 @@ h1 {
   z-index: 30;
 }
 
+.cell[color="darkgoldenrod"] {
+  background-color: darkgoldenrod;
+  border-color: darkgoldenrod;
+  box-shadow: 0px 0px 5px darkgoldenrod;
+  z-index: 30;
+}
+
 .cell[color="lime"] {
   background-color: lime;
   border-color: lime;
@@ -220,10 +241,10 @@ h1 {
   z-index: 30;
 }
 
-.cell[color="darkred"] {
-  background-color: darkred;
-  border-color: darkred;
-  box-shadow: 0px 0px 5px darkred;
+.cell[color="darkgreen"] {
+  background-color: darkgreen;
+  border-color: darkgreen;
+  box-shadow: 0px 0px 5px darkgreen;
   z-index: 30;
 }
 
@@ -236,8 +257,23 @@ h1 {
   position: absolute;
   background-color: black;
   border-radius: 100px;
-  max-width: 100px;
   width: 20%;
   height: 20%;
   z-index: 35;
+}
+
+.deye {
+  position: absolute;
+  border: 1px solid white;
+  box-shadow: 0px 0px 5px white;
+  width: 30%;
+  z-index: 35;
+}
+
+.eye01, .eye02 {
+  transform: rotate(45deg);
+}
+
+.eye10, .eye20 {
+  transform: rotate(-45deg);
 }

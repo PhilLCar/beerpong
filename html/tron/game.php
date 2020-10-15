@@ -1092,28 +1092,36 @@
         <div id="T31L31" class="cell" style="" color=""></div>
         <!-- HEADS -->
         <div id="Head0" class="head" hidden="true">
-          <div class="eye eye00"></div>
-          <div class="eye eye01" hidden="true"></div>
-          <div class="eye eye10" hidden="true"></div>
-          <div class="eye eye11"></div>
+          <div class="eye  eye00"></div>
+          <div class="deye eye01" hidden="true"></div>
+          <div class="deye eye10" hidden="true"></div>
+          <div class="deye eye02" hidden="true"></div>
+          <div class="deye eye20" hidden="true"></div>
+          <div class="eye  eye11"></div>
         </div>
         <div id="Head1" class="head" hidden="true">
-          <div class="eye eye00"></div>
-          <div class="eye eye01" hidden="true"></div>
-          <div class="eye eye10" hidden="true"></div>
-          <div class="eye eye11"></div>
+          <div class="eye  eye00"></div>
+          <div class="deye eye01" hidden="true"></div>
+          <div class="deye eye10" hidden="true"></div>
+          <div class="deye eye02" hidden="true"></div>
+          <div class="deye eye20" hidden="true"></div>
+          <div class="eye  eye11"></div>
         </div>
         <div id="Head2" class="head" hidden="true">
-          <div class="eye eye00"></div>
-          <div class="eye eye01" hidden="true"></div>
-          <div class="eye eye10" hidden="true"></div>
-          <div class="eye eye11"></div>
+          <div class="eye  eye00"></div>
+          <div class="deye eye01" hidden="true"></div>
+          <div class="deye eye10" hidden="true"></div>
+          <div class="deye eye02" hidden="true"></div>
+          <div class="deye eye20" hidden="true"></div>
+          <div class="eye  eye11"></div>
         </div>
         <div id="Head3" class="head" hidden="true">
-          <div class="eye eye00"></div>
-          <div class="eye eye01" hidden="true"></div>
-          <div class="eye eye10" hidden="true"></div>
-          <div class="eye eye11"></div>
+          <div class="eye  eye00"></div>
+          <div class="deye eye01" hidden="true"></div>
+          <div class="deye eye10" hidden="true"></div>
+          <div class="deye eye02" hidden="true"></div>
+          <div class="deye eye20" hidden="true"></div>
+          <div class="eye  eye11"></div>
         </div>
       </div>
     </div>

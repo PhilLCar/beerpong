@@ -14,7 +14,7 @@ var _VTERRAIN_START;
 var _GAME_ID;
 var _HOST;
 var _MYTRON;
-var _COLORS = [ "", "magenta", "lime", "orangered", "yellow", "darkred" ];
+var _COLORS = [ "", "magenta", "lime", "orangered", "yellow", "darkmagenta", "darkgreen", "darkred", "darkgoldenrod" ];
 var _SPECTATE = false;
 var _CELL_SIZE;
 var _RIGHT = 0;
@@ -231,19 +231,21 @@ function update(info) {
       var i;
       var allReady = true;
       for (i = 0; i < 4; i++) {
-        if (ready & 0xFF && !(ready & 0x2)) {
+        var r = ready >> (i * 8); 
+        if (r & 0xFF && !(r & 0x2)) {
           allReady = false;
           break;
         }
       }
-      if (allReady && i > 0 && !_CLOCK_STARTED) { // temporary should be > 1
+      if (_HOST && allReady && i > 0 && !_CLOCK_STARTED) { // temporary should be > 1
         clock(0);
       }
     } else {
       var ready = data[_GRID_SIZE * 4];
       var n, k;
       for (var i = 0; i < 4; i++) {
-        if (ready & 0xFF && !(ready & 0x4)) {
+        var r = ready >> (i * 8); 
+        if (r & 0xFF && !(r & 0x4)) {
           k = i;
           n++;
           break;
@@ -257,35 +259,40 @@ function update(info) {
           var cell      = document.getElementById("T" + i + "L" + j);
           var head  = cellValue & 8;
           var color = cellValue & 7;
-          if (head) {
-            var dir  = ready >> ((color - 1) * 8 + 4) & 0xF;
-            var head = document.getElementById("Head" + (color - 1));
-            if (initial_update) {
-              head.hidden = false;
-              head.style.top    = _CELL_SIZE * i + "px";
-              head.style.left   = _CELL_SIZE * j + "px";
+          if (!((ready >> ((color - 1) * 8)) & 0x4)) {
+            if (head) {
+              var dir  = ready >> ((color - 1) * 8 + 4) & 0xF;
+              var head = document.getElementById("Head" + (color - 1));
+              if (initial_update) {
+                head.hidden = false;
+                head.style.top    = _CELL_SIZE * i + "px";
+                head.style.left   = _CELL_SIZE * j + "px";
+                cell.setAttribute("color", _COLORS[color]);
+              } else {
+                _NEXT.push({
+                  id:   color - 1,
+                  head: head,
+                  dir:  dir,
+                  i:    i,
+                  j:    j,
+                  die: false
+                });
+              }
+              turnHead(head, dir);
             } else {
-              _NEXT.push({
-                id:   color - 1,
-                head: head,
-                dir:  dir,
-                i:    i,
-                j:    j,
-                die: false
-              });
+              cell.setAttribute("color", _COLORS[color]);
             }
-            turnHead(head, dir);
           }
-          cell.setAttribute("color", _COLORS[color]);
         }
       }
       if (!initial_update) eat();
     }
     if (initial_update) {
-      _MYTRON = data[_GRID_SIZE * 4 + 1];
+      var r = data[_GRID_SIZE * 4 + 1];
+      if (r != -1) _MYTRON = r;
     }
   }
-  sendCommand("UPDATE", _HOST ? { Host: true } : null, update);
+  sendCommand("UPDATE", null, update);
 }
 
 async function clock(stop) {
@@ -361,9 +368,17 @@ function eat2(nothing) {
     } else {
       next.head.style.top    = _CELL_SIZE * next.i + "px";
       next.head.style.left   = _CELL_SIZE * next.j + "px";
-      document.getElementById("T" + next.i + "L" + next.j).setAttribute("color", _COLORS[next.id + 1]);
-      if (_HOST) {
-        sendCommand("EAT", { ID: next.id, Y: next.i, X: next.j }, function(){});
+      var nextCell = document.getElementById("T" + next.i + "L" + next.j);
+      if (nextCell.getAttribute("color") != "") {
+        die(next);
+        if (_HOST) {
+          sendCommand("DIE", { ID: next.id, Y: next.i, X: next.j }, function(){});
+        }
+      } else {
+        nextCell.setAttribute("color", _COLORS[next.id + 1]);
+        if (_HOST) {
+          sendCommand("EAT", { ID: next.id, Y: next.i, X: next.j }, function(){});
+        }
       }
     }
   }
@@ -373,4 +388,75 @@ function eat2(nothing) {
 function die(next) {
   if (next.id == _MYTRON) _DEAD = true;
   next.die = true;
+  var eye1 = next.head.getElementsByClassName("eye00")[0];
+  var eye2 = next.head.getElementsByClassName("eye11")[0];
+  var eye3 = next.head.getElementsByClassName("eye01")[0];
+  var eye4 = next.head.getElementsByClassName("eye10")[0];
+  var eye5 = next.head.getElementsByClassName("eye02")[0];
+  var eye6 = next.head.getElementsByClassName("eye20")[0];
+  eye1.hidden = true;
+  eye2.hidden = true;
+  eye3.hidden = false;
+  eye4.hidden = false;
+  eye5.hidden = false;
+  eye6.hidden = false;
+  switch (next.dir) {
+    case _RIGHT:
+      eye3.style = "";
+      eye4.style = "";
+      eye5.style = "";
+      eye6.style = "";
+      eye3.style.top    = 0.3  * _CELL_SIZE - 2 + "px";
+      eye3.style.right  = 0.15 * _CELL_SIZE - 2 + "px";
+      eye4.style.top    = 0.3  * _CELL_SIZE - 2 + "px";
+      eye4.style.right  = 0.15 * _CELL_SIZE - 2 + "px";
+      eye5.style.bottom = 0.3  * _CELL_SIZE - 2 + "px";
+      eye5.style.right  = 0.15 * _CELL_SIZE - 2 + "px";
+      eye6.style.bottom = 0.3  * _CELL_SIZE - 2 + "px";
+      eye6.style.right  = 0.15 * _CELL_SIZE - 2 + "px";
+      break;
+    case _LEFT:
+      eye3.style = "";
+      eye4.style = "";
+      eye5.style = "";
+      eye6.style = "";
+      eye3.style.top    = 0.3  * _CELL_SIZE - 2 + "px";
+      eye3.style.left   = 0.15 * _CELL_SIZE - 2 + "px";
+      eye4.style.top    = 0.3  * _CELL_SIZE - 2 + "px";
+      eye4.style.left   = 0.15 * _CELL_SIZE - 2 + "px";
+      eye5.style.bottom = 0.3  * _CELL_SIZE - 2 + "px";
+      eye5.style.left   = 0.15 * _CELL_SIZE - 2 + "px";
+      eye6.style.bottom = 0.3  * _CELL_SIZE - 2 + "px";
+      eye6.style.left   = 0.15 * _CELL_SIZE - 2 + "px";
+      break;
+    case _DOWN:
+      eye3.style = "";
+      eye4.style = "";
+      eye5.style = "";
+      eye6.style = "";
+      eye3.style.bottom = 0.3  * _CELL_SIZE - 2 + "px";
+      eye3.style.right  = 0.15 * _CELL_SIZE - 2 + "px";
+      eye4.style.bottom = 0.3  * _CELL_SIZE - 2 + "px";
+      eye4.style.right  = 0.15 * _CELL_SIZE - 2 + "px";
+      eye5.style.bottom = 0.3  * _CELL_SIZE - 2 + "px";
+      eye5.style.left   = 0.15 * _CELL_SIZE - 2 + "px";
+      eye6.style.bottom = 0.3  * _CELL_SIZE - 2 + "px";
+      eye6.style.left   = 0.15 * _CELL_SIZE - 2 + "px";
+      break;
+    case _UP:
+      eye3.style = "";
+      eye4.style = "";
+      eye5.style = "";
+      eye6.style = "";
+      eye3.style.top    = 0.3  * _CELL_SIZE - 2 + "px";
+      eye3.style.right  = 0.15 * _CELL_SIZE - 2 + "px";
+      eye4.style.top    = 0.3  * _CELL_SIZE - 2 + "px";
+      eye4.style.right  = 0.15 * _CELL_SIZE - 2 + "px";
+      eye5.style.top    = 0.3  * _CELL_SIZE - 2 + "px";
+      eye5.style.left   = 0.15 * _CELL_SIZE - 2 + "px";
+      eye6.style.top    = 0.3  * _CELL_SIZE - 2 + "px";
+      eye6.style.left   = 0.15 * _CELL_SIZE - 2 + "px";
+      break;
+  }
+  document.getElementById("T" + next.i + "L" + next.j).setAttribute("color", _COLORS[next.id + 5]);
 }
