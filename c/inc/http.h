@@ -106,14 +106,25 @@ const char *HTTP_NETAUTHREQ_M     = "Network Authentication Required";
 
 typedef struct http_request {
   int   method;
-  char *file;
-  char *version;
-  char *header;
+  char  file[512];
+  char  version[32];
+  char  header[1024];
   char *body;
 } HttpRequest;
 
 typedef struct http_response {
-
+  char  version[32];
+  int   status;
+  char  message[128];
+  char  header[1024];
+  char *body;
 } HttpResponse;
+
+void httpreqstr(HttpRequest*, char*);
+void httprespstr(HttpResponse*, char*);
+void buildhttpreq(HttpRequest*, char*);
+void buildhttpresp(HttpResponse*, char*);
+HttpRequest  *httpreqfromstr(char*);
+HttpResponse *httprespformstr(char*);
 
 #endif
