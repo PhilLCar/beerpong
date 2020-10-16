@@ -1,0 +1,30 @@
+{
+  "tasks": [
+    {
+      "type": "shell",
+      "label": "BUILD",
+      "command": "/usr/bin/gcc",
+      "args": [
+        "-g",
+        "-Iinc",
+        "src/*",
+        "main.c",
+        "-lpthread",
+        "-o",
+        "webserver"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/c"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "Generated task by Debugger"
+    }
+  ],
+  "version": "2.0.0"
+}
