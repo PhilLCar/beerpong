@@ -494,5 +494,9 @@ socket.onopen = function(event) {
     };
 
     // Envoi d'un message vers le serveur.
-    this.send("Hello world!");
+    this.send("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB");
+    // var test = new Uint8Array([ 65, 76, 76, 79 ])
+    // this.binaryType = "arrayBuffer";
+    // this.send(test);
+    // alert("yeah!");
 };

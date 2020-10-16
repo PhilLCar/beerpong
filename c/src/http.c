@@ -4,32 +4,37 @@
 #include <string.h>
 
 void httpreqstr(HttpRequest *request, char *buffer) {
+  char *method;
   switch(request->method) {
     case HTTP_GET:
-      sprintf(buffer, "GET ");
+      method = "GET ";
       break;
     case HTTP_HEAD:
-      sprintf(buffer, "HEAD ");
+      method = "HEAD ";
       break;
     case HTTP_PUT:
-      sprintf(buffer, "PUT ");
+      method = "PUT ";
       break;
     case HTTP_POST:
-      sprintf(buffer, "POST ");
+      method = "POST ";
       break;
     case HTTP_DELETE:
-      sprintf(buffer, "DELETE ");
+      method = "DELETE ";
       break;
   }
-  sprintf(buffer, "%s %s\n", request->file, request->version);
-  sprintf(buffer, "%s\n", request->header);
-  sprintf(buffer, "%s", request->body);
+  sprintf(buffer, "%s %s %s\n%s\n%s", method, 
+                                      request->file, 
+                                      request->version,
+                                      request->header,
+                                      request->body);
 }
 
 void httprespstr(HttpResponse *response, char *buffer) {
-  sprintf(buffer, "%s %d %s\n", response->version, response->status, response->message);
-  sprintf(buffer, "%s\n", response->header);
-  sprintf(buffer, "%s", response->body);
+  sprintf(buffer, "%s %d %s\n%s\n%s", response->version,
+                                      response->status, 
+                                      response->message,
+                                      response->header,
+                                      response->body);
 }
 
 void buildhttpreq(HttpRequest *request, char *field, char *value) {
@@ -74,13 +79,16 @@ void httpreqfromstr(HttpRequest *request, char *str) {
   memset(request->version, 0, 32 * sizeof(char));
   ++i;
   for (int j = 0; str[i] != '\n'; i++, j++) {
-    request->file[j] = str[i];
+    if (str[i] != '\r') request->version[j] = str[i];
+    else j--;
   }
   memset(request->header, 0, 2048 * sizeof(char));
   ++i;
   for (int j = 0, l = 0; str[i] != '\n' || !l; i++, j++) {
-    request->header[j] = str[i];
-    if (str[i] == '\n') l = 1;
+    if (str[i] != '\r') request->header[j] = str[i];
+    else j--;
+    if (str[i] == '\n')      l = 1;
+    else if (str[i] != '\r') l = 0;
   }
   ++i;
   if (request->body) free(request->body);
@@ -104,13 +112,16 @@ void httprespfromstr(HttpResponse *response, char *str) {
   response->status = atoi(buffer);
   memset(response->message, 0, 128 * sizeof(char));
   for (int j = 0; str[i] != '\n'; i++, j++) {
-    response->message[j] = str[i];
+    if (str[i] != '\r') response->message[j] = str[i];
+    else j--;
   }
   ++i;
   memset(response->header, 0, 2048 & sizeof(char));
   for (int j = 0, l = 0; str[i] != '\n' || !l; i++, j++) {
-    response->header[j] = str[i];
-    if (str[i] == '\n') l = 1;
+    if (str[i] != '\r') response->header[j] = str[i];
+    else j--;
+    if (str[i] == '\n')      l = 1;
+    else if (str[i] != '\r') l = 0;
   }
   ++i;
   if (response->body) free(response->body);
@@ -121,13 +132,13 @@ void httprespfromstr(HttpResponse *response, char *str) {
 void getfield(char *text, char *field, char *buffer) {
   for (int i = 0; text[i]; i++) {
     for (int j = 0;; j++) {
-      if (text[i + j] != field[j]) break;
-      if (!field[j] && text[i + j + 1] == ':' && text[i + j + 2] == ' ') {
+      if (!field[j] && text[i + j] == ':' && text[i + j + 1] == ' ') {
         int l = 0;
-        for (int k = i + j + 3; text[k] != '\n'; k++) buffer[l++] = text[k];
+        for (int k = i + j + 2; text[k] != '\n' && text[k] != '\r'; k++) buffer[l++] = text[k];
         buffer[l] = 0;
         return;
       }
+      if (text[i + j] != field[j]) break;
     }
   }
 }
