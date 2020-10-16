@@ -1,6 +1,8 @@
 #ifndef TRON_H
 #define TRON_H
 
+#include <websocket.h>
+
 #define GRID_SIZE 32
 
 #define DIR_UP     0
@@ -12,18 +14,26 @@
 #define GAME_START 1
 #define GAME_DONE  2
 
+#define UPDATE_STANDARD 0
+#define UPDATE_FULL     1
+#define UPDATE_ASSIGN   2
+
 #define NOUPDATE_MAX_CYCLE 1000
+
+#define TRON_MAX_GAMES  8
+#define TRON_MULTICAST -1
 
 #pragma pack(push, 1)
 typedef struct status {
   union {
     char value;
     struct {
-      unsigned int approve   : 1;
-      unsigned int ready     : 1;
       unsigned int online    : 1;
+      unsigned int ready     : 1;
+      unsigned int playing   : 1;
       unsigned int dead      : 1;
       unsigned int direction : 2;
+      unsigned int approve   : 1;
     };
   };
 } Status;
@@ -43,12 +53,11 @@ typedef struct cell {
 
 #pragma pack(push, 1)
 typedef struct grid {
-  char   id[4];
   Status status[4];
   Cell   cell[GRID_SIZE * GRID_SIZE];
 } Grid;
 #pragma pack(pop)
 
-void *play(void*);
+void tron(Interface*);
 
 #endif

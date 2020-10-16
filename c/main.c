@@ -1,12 +1,10 @@
 #include <websocket.h>
 #include <stdio.h>
+#include <tron.h>
 
 int main() {
   Interface *i = startservice();
-
-  char c;
-  scanf("%c", &c);
-
+  tron(i);
   stopservice();
   return 0;
 }

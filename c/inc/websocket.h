@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 
+#define WS_MAX_CONN         32
 #define COM_BUFFERS_SIZE 16384
 #define FRAME_MAX_SIZE   32768
 #define FRAME_CONTINUE     0x0
@@ -17,7 +18,8 @@ typedef struct interface {
   int in_ptr;
   unsigned char out[COM_BUFFERS_SIZE];
   unsigned char in[COM_BUFFERS_SIZE];
-  pthread_mutex_t lock;
+  pthread_mutex_t in_lock;
+  pthread_mutex_t out_lock;
 } Interface;
 
 // This struct is a little bit weird

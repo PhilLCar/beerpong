@@ -13,15 +13,14 @@
 #include <time.h>
 
 #define PORT              8000
-#define MAX_CONNECTIONS     32
 #define SLEEP_PERIOD_S       1
 
 const char *SOCKET_MAGIC_STR = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 Interface      _interface;
 pthread_t      _serverthread = 0;
-pthread_t      _clientthread[MAX_CONNECTIONS];
-int            _clientstop[MAX_CONNECTIONS];
+pthread_t      _clientthread[WS_MAX_CONN];
+int            _clientstop[WS_MAX_CONN];
 int            _started = 0;
 struct timeval _timeout;
 
@@ -96,18 +95,18 @@ int handshake(int fd) {
 }
 
 void *_client(void *vargp) {
-  int me = (long)vargp >> 32;
-  int fd = (long)vargp & 0xFFFFFFFF;
-  int cc = 0;
-  int id = 0;
+  int          me = (long)vargp >> 32;
+  int          fd = (long)vargp & 0xFFFFFFFF;
+  int          cc = 0;
+  unsigned int id = 0;
   Frame        frame;
   ControlFrame cframe;
   int          lastpos;
 
   // init the last position pointer
-  pthread_mutex_lock(&_interface.lock);
+  pthread_mutex_lock(&_interface.out_lock);
   lastpos = _interface.out_ptr;
-  pthread_mutex_unlock(&_interface.lock);
+  pthread_mutex_unlock(&_interface.out_lock);
 
   _clientstop[me] = handshake(fd);
 
@@ -143,17 +142,24 @@ void *_client(void *vargp) {
         break;
       case FRAME_BINARY:
         // Update the inputs
-        id = *(int*)frame.payload;
-        pthread_mutex_lock(&_interface.lock);
-        int ptr = _interface.in_ptr;
-        *(short*)&_interface.in[ptr] = (short)frame.length + sizeof(short);
-        ptr += sizeof(short);
+        id = ntohl(*(unsigned int*)frame.payload);
+        pthread_mutex_lock(&_interface.in_lock);
+        int ptr        = _interface.in_ptr;
+        int chunk_size = frame.length + sizeof(short) + sizeof(int);
+        for (int i = 0; i < sizeof(short); i++) {
+          _interface.in[ptr] = ((char*)&chunk_size)[i];
+          ptr = (ptr + 1) % COM_BUFFERS_SIZE;
+        }
+        for (int i = 0; i < sizeof(int); i++) {
+          _interface.in[ptr] = ((char*)&fd)[i];
+          ptr = (ptr + 1) % COM_BUFFERS_SIZE;
+        }
         for (int i = 0; i < frame.length; i++) {
           _interface.in[ptr] = frame.payload[i] ^ frame.mask[i % 4];
           ptr = (ptr + 1) % COM_BUFFERS_SIZE;
         }
         _interface.in_ptr = ptr;
-        pthread_mutex_unlock(&_interface.lock);
+        pthread_mutex_unlock(&_interface.in_lock);
         break;
       case FRAME_CLOSE:
         _clientstop[me] = 1;
@@ -200,13 +206,27 @@ void *_client(void *vargp) {
         break;
     }
     if (lastpos != _interface.out_ptr && id) {
-      pthread_mutex_lock(&_interface.lock);
+      pthread_mutex_lock(&_interface.out_lock);
       int size = _interface.out_ptr - lastpos;
       if (size < 0) size += COM_BUFFERS_SIZE;
       do {
-        short length = *(short*)&_interface.out[lastpos];
-        lastpos += sizeof(short);
-        if (id == *(int*)&_interface.out[lastpos]) {
+        short length;
+        int   gid;
+        int   uid;
+        for (int i = 0; i < sizeof(short); i++) {
+          ((char*)&length)[i] = _interface.out[lastpos];
+          lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
+        }
+        for (int i = 0; i < sizeof(int); i++) {
+          ((char*)&gid)[i] = _interface.out[lastpos];
+          lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
+        }
+        for (int i = 0; i < sizeof(int); i++) {
+          ((char*)&uid)[i] = _interface.out[lastpos];
+          lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
+        }
+        length -= sizeof(short) + 2 * sizeof(int);
+        if (id == gid && (fd == uid || uid == -1)) {
           if (length < 126) { // use a cframe
             memset(&cframe.header, 0, sizeof(FrameHeader));
             cframe.header.end  = 1;
@@ -238,14 +258,14 @@ void *_client(void *vargp) {
             }
             write(fd, &lf, length + 10);
           }
-        }
-        size -= length;
+        } else lastpos = (lastpos + length);
+        size -= length + sizeof(short) + 2 * sizeof(int);
       } while (size > 0);
       if (lastpos != _interface.out_ptr) {
         fprintf(stderr, "Fatal synchronization error! (output buffer)\n");
         exit(EXIT_FAILURE);
       }
-      pthread_mutex_unlock(&_interface.lock);
+      pthread_mutex_unlock(&_interface.out_lock);
     }
   }
   close(fd);
@@ -277,7 +297,7 @@ void *_server(void *vargp) {
     return NULL;
   }
 
-  if (listen(server_fd, MAX_CONNECTIONS) < 0) {
+  if (listen(server_fd, WS_MAX_CONN) < 0) {
     fprintf(stderr, "cannot listen\n");
     return NULL;
   }
@@ -290,7 +310,7 @@ void *_server(void *vargp) {
     }
 
     int success = 0;
-    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+    for (int i = 0; i < WS_MAX_CONN; i++) {
       if (_clientthread[i] && _clientstop[i]) { // reclaim a dead thread
         pthread_join(_clientthread[i], NULL);
         _clientthread[i] = 0;
@@ -314,8 +334,8 @@ Interface *startservice() {
   if (!_started) {
     _timeout.tv_sec  = SLEEP_PERIOD_S;
     _timeout.tv_usec = 0;
-    for (int i = 0; i < MAX_CONNECTIONS; i++) _clientstop[i]   = 0;
-    for (int i = 0; i < MAX_CONNECTIONS; i++) _clientthread[i] = 0;
+    for (int i = 0; i < WS_MAX_CONN; i++) _clientstop[i]   = 0;
+    for (int i = 0; i < WS_MAX_CONN; i++) _clientthread[i] = 0;
     memset(&_interface, 0, sizeof(Interface));
     pthread_create(&_serverthread, NULL, _server, NULL);
     _started = 1;
@@ -327,7 +347,7 @@ void stopservice() {
   if (_started) {
     pthread_cancel(_serverthread);
     pthread_join(_serverthread, NULL);
-    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+    for (int i = 0; i < WS_MAX_CONN; i++) {
       if (_clientthread[i]) {
         _clientstop[i] = 1;
         pthread_join(_clientthread[i], NULL);
