@@ -99,6 +99,7 @@ void *_client(void *vargp) {
   int me = (long)vargp >> 32;
   int fd = (long)vargp & 0xFFFFFFFF;
   int cc = 0;
+  int id = 0;
   Frame        frame;
   ControlFrame cframe;
   int          lastpos;
@@ -122,16 +123,18 @@ void *_client(void *vargp) {
     if (frame.header.length < 126) {
       frame.length = frame.header.length;
     } else if (frame.header.length == 126) {
-      unsigned char l[2];
-      read(fd, l, 2);
-      frame.length = (l[0] << 8) | l[1];
+      short l;
+      read(fd, &l, 2);
+      frame.length = ntohs(l);
     } else if (frame.header.length == 127) {
-      unsigned char l[4];
-      read(fd, l, 4);
-      frame.length = (l[0] << 24) | (l[1] << 16) | (l[2] << 8) | l[3];
+      int l;
+      read(fd, &l, 4);
+      frame.length = ntohl(l);
     }
     if (frame.header.mask) {
       read(fd, frame.mask, 4);
+    } else {
+      memset(frame.mask, 0, 4 * sizeof(char));
     }
     read(fd, frame.payload, frame.length);
     switch (frame.header.opcode) {
@@ -140,8 +143,16 @@ void *_client(void *vargp) {
         break;
       case FRAME_BINARY:
         // Update the inputs
+        id = *(int*)frame.payload;
         pthread_mutex_lock(&_interface.lock);
-        for (int i = 0; i < frame.length; i++)
+        int ptr = _interface.in_ptr;
+        *(short*)&_interface.in[ptr] = (short)frame.length + sizeof(short);
+        ptr += sizeof(short);
+        for (int i = 0; i < frame.length; i++) {
+          _interface.in[ptr] = frame.payload[i] ^ frame.mask[i % 4];
+          ptr = (ptr + 1) % COM_BUFFERS_SIZE;
+        }
+        _interface.in_ptr = ptr;
         pthread_mutex_unlock(&_interface.lock);
         break;
       case FRAME_CLOSE:
@@ -185,13 +196,55 @@ void *_client(void *vargp) {
         // we don't really care...
         break;
       default:
-        fprintf(stderr, "Unimplemented!\n")
+        fprintf(stderr, "Unimplemented!\n");
         break;
     }
-    if (lastpos != _interface.out_ptr) {
+    if (lastpos != _interface.out_ptr && id) {
       pthread_mutex_lock(&_interface.lock);
-      //printf("%s\n", buffer); // tmp
-      //write(fd, buffer, strlen(buffer));
+      int size = _interface.out_ptr - lastpos;
+      if (size < 0) size += COM_BUFFERS_SIZE;
+      do {
+        short length = *(short*)&_interface.out[lastpos];
+        lastpos += sizeof(short);
+        if (id == *(int*)&_interface.out[lastpos]) {
+          if (length < 126) { // use a cframe
+            memset(&cframe.header, 0, sizeof(FrameHeader));
+            cframe.header.end  = 1;
+            cframe.header.mask = 1;
+            cframe.header.length = length;
+            cframe.header.opcode = FRAME_BINARY;
+            for (int i = 0; i < 4; i++) {
+              cframe.mask[i] = rand() % UCHAR_MAX;
+            }
+            for (int i = 0; i < length; i++) {
+              cframe.payload[i] = _interface.out[lastpos] ^ cframe.mask[i];
+              lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
+            }
+            write(fd, &cframe, length + 6);
+          } else {
+            LongFrame lf;
+            memset(&lf.header, 0, sizeof(FrameHeader));
+            lf.header.end  = 1;
+            lf.header.mask = 1;
+            lf.header.length = 126;
+            lf.header.opcode = FRAME_BINARY;
+            lf.length = htons(length);
+            for (int i = 0; i < 4; i++) {
+              lf.mask[i] = rand() % UCHAR_MAX;
+            }
+            for (int i = 0; i < length; i++) {
+              lf.payload[i] = _interface.out[lastpos] ^ lf.mask[i];
+              lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
+            }
+            write(fd, &lf, length + 10);
+          }
+        }
+        size -= length;
+      } while (size > 0);
+      if (lastpos != _interface.out_ptr) {
+        fprintf(stderr, "Fatal synchronization error! (output buffer)\n");
+        exit(EXIT_FAILURE);
+      }
       pthread_mutex_unlock(&_interface.lock);
     }
   }

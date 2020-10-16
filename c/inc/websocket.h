@@ -3,7 +3,7 @@
 
 #include <pthread.h>
 
-#define COM_BUFFERS_SIZE  2048
+#define COM_BUFFERS_SIZE 16384
 #define FRAME_MAX_SIZE   32768
 #define FRAME_CONTINUE     0x0
 #define FRAME_TEXT         0x1
@@ -44,17 +44,19 @@ typedef struct control_frame {
 
 #pragma pack(push, 1)
 typedef struct long_frame {
-  FrameHeader header;
-  unsigned int  length;
-  unsigned char mask[4];
-  unsigned char payload[(1 << 16) - 8];
+  FrameHeader    header;
+  unsigned short length;
+  unsigned char  mask[4];
+  unsigned char  payload[(1 << 16) - 8];
 } LongFrame;
 #pragma pack(pop)
+
+// No very big frames : because that's insane!
 
 typedef struct frame {
   FrameHeader   header;
   unsigned char mask[4];
-  unsigned long length;
+  unsigned int  length;
   unsigned char payload[FRAME_MAX_SIZE];
 } Frame;
 
