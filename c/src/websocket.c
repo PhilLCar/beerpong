@@ -17,12 +17,14 @@
 
 const char *SOCKET_MAGIC_STR = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-Interface      _interface;
-pthread_t      _serverthread = 0;
-pthread_t      _clientthread[WS_MAX_CONN];
-int            _clientstop[WS_MAX_CONN];
-int            _started = 0;
-struct timeval _timeout;
+Interface       _interface;
+pthread_t       _serverthread = 0;
+pthread_t       _clientthreadI[WS_MAX_CONN];
+pthread_t       _clientthreadO[WS_MAX_CONN];
+pthread_mutex_t _clientmutex[WS_MAX_CONN];
+int             _clientstop[WS_MAX_CONN];
+int             _started = 0;
+struct timeval  _timeout;
 
 // https://stackoverflow.com/questions/342409/how-do-i-base64-encode-decode-in-c
 char *encode64(const unsigned char *input, int length) {
@@ -39,7 +41,7 @@ unsigned char *decode64(const char *input, int length) {
   return output;
 }
 
-int handshake(int fd) {
+int handshake(int fd, int me) {
   const int bufsize = 4096;
   char buffer[bufsize];
   char key[64];
@@ -86,7 +88,9 @@ int handshake(int fd) {
   buildhttpresp(&response, "Sec-WebSocket-Accept", ans);
   response.body = "";
   httprespstr(&response, buffer);
+  pthread_mutex_lock(&_clientmutex[me]);
   write(fd, buffer, strlen(buffer));
+  pthread_mutex_unlock(&_clientmutex[me]);
 
   free(resp);
   free(ans);
@@ -94,12 +98,11 @@ int handshake(int fd) {
   return 0;
 }
 
-void *_client(void *vargp) {
+void *_cliento(void *vargp) {
   int          me = (long)vargp >> 32;
   int          fd = (long)vargp & 0xFFFFFFFF;
-  int          cc = 0;
   unsigned int id = 0;
-  Frame        frame;
+  LongFrame    lframe;
   ControlFrame cframe;
   int          lastpos;
 
@@ -108,7 +111,89 @@ void *_client(void *vargp) {
   lastpos = _interface.out_ptr;
   pthread_mutex_unlock(&_interface.out_lock);
 
-  _clientstop[me] = handshake(fd);
+  while (!_clientstop[me]) {
+    if (lastpos != _interface.out_ptr && id) {
+      pthread_mutex_lock(&_interface.out_lock);
+      int size = _interface.out_ptr - lastpos;
+      if (size < 0) size += COM_BUFFERS_SIZE;
+      do {
+        short length;
+        int   gid;
+        int   uid;
+        for (int i = 0; i < sizeof(short); i++) {
+          ((char*)&length)[i] = _interface.out[lastpos];
+          lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
+        }
+        for (int i = 0; i < sizeof(int); i++) {
+          ((char*)&gid)[i] = _interface.out[lastpos];
+          lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
+        }
+        for (int i = 0; i < sizeof(int); i++) {
+          ((char*)&uid)[i] = _interface.out[lastpos];
+          lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
+        }
+        length -= sizeof(short) + 2 * sizeof(int);
+        if (id == gid && (fd == uid || uid == -1)) {
+          if (length < 126) { // use a cframe
+            memset(&cframe.header, 0, sizeof(FrameHeader));
+            cframe.header.end  = 1;
+            cframe.header.mask = 1;
+            cframe.header.length = length;
+            cframe.header.opcode = FRAME_BINARY;
+            for (int i = 0; i < 4; i++) {
+              cframe.mask[i] = rand() % UCHAR_MAX;
+            }
+            for (int i = 0; i < length; i++) {
+              cframe.payload[i] = _interface.out[lastpos] ^ cframe.mask[i];
+              lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
+            }
+            pthread_mutex_lock(&_clientmutex[me]);
+            write(fd, &cframe, length + 6);
+            pthread_mutex_unlock(&_clientmutex[me]);
+          } else {
+            LongFrame lf;
+            memset(&lf.header, 0, sizeof(FrameHeader));
+            lf.header.end  = 1;
+            lf.header.mask = 1;
+            lf.header.length = 126;
+            lf.header.opcode = FRAME_BINARY;
+            lf.length = htons(length);
+            for (int i = 0; i < 4; i++) {
+              lf.mask[i] = rand() % UCHAR_MAX;
+            }
+            for (int i = 0; i < length; i++) {
+              lf.payload[i] = _interface.out[lastpos] ^ lf.mask[i];
+              lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
+            }
+            pthread_mutex_lock(&_clientmutex[me]);
+            write(fd, &lf, length + 10);
+            pthread_mutex_unlock(&_clientmutex[me]);
+          }
+        } else lastpos = (lastpos + length);
+        size -= length + sizeof(short) + 2 * sizeof(int);
+      } while (size > 0);
+      if (lastpos != _interface.out_ptr) {
+        fprintf(stderr, "Fatal synchronization error! (output buffer)\n");
+        exit(EXIT_FAILURE);
+      }
+      pthread_mutex_unlock(&_interface.out_lock);
+    }
+    usleep(WS_CHECK_PREIOD_MS);
+  }
+}
+
+void *_clienti(void *vargp) {
+  int          me = (long)vargp >> 32;
+  int          fd = (long)vargp & 0xFFFFFFFF;
+  unsigned int id = 0;
+  Frame        frame;
+  ControlFrame cframe;
+
+  _clientstop[me] = handshake(fd, me);
+
+  if (!_clientstop[me]) {
+    pthread_create(&_clientthreadO[me], NULL, _cliento, vargp);
+  }
 
   while (!_clientstop[me]) {
     fd_set input;
@@ -118,6 +203,7 @@ void *_client(void *vargp) {
     if (n < 0) {
       _clientstop[me] = 1; break;
     } else if (n == 0) continue;
+    pthread_mutex_lock(&_clientmutex[me]);
     read(fd, &frame.header, sizeof(FrameHeader));
     if (frame.header.length < 126) {
       frame.length = frame.header.length;
@@ -136,6 +222,7 @@ void *_client(void *vargp) {
       memset(frame.mask, 0, 4 * sizeof(char));
     }
     read(fd, frame.payload, frame.length);
+    pthread_mutex_unlock(&_clientmutex[me]);
     switch (frame.header.opcode) {
       case FRAME_TEXT:
         printf("Message received: %s\n", frame.payload);
@@ -178,7 +265,9 @@ void *_client(void *vargp) {
             cframe.mask[i] = frame.payload[i];
           }
         }
+        pthread_mutex_lock(&_clientmutex[me]);
         write(fd, &cframe, sizeof(FrameHeader) + (cframe.header.mask ? 2 : 6));
+        pthread_mutex_unlock(&_clientmutex[me]);
         break;
       case FRAME_PING:
         memset(&cframe, 0, sizeof(ControlFrame));
@@ -196,7 +285,9 @@ void *_client(void *vargp) {
             cframe.mask[i] = frame.payload[i];
           }
         }
+        pthread_mutex_lock(&_clientmutex[me]);
         write(fd, &cframe, sizeof(FrameHeader) + (cframe.header.mask ? 2 : 6));
+        pthread_mutex_unlock(&_clientmutex[me]);
         break;
       case FRAME_PONG:
         // we don't really care...
@@ -205,68 +296,10 @@ void *_client(void *vargp) {
         fprintf(stderr, "Unimplemented!\n");
         break;
     }
-    if (lastpos != _interface.out_ptr && id) {
-      pthread_mutex_lock(&_interface.out_lock);
-      int size = _interface.out_ptr - lastpos;
-      if (size < 0) size += COM_BUFFERS_SIZE;
-      do {
-        short length;
-        int   gid;
-        int   uid;
-        for (int i = 0; i < sizeof(short); i++) {
-          ((char*)&length)[i] = _interface.out[lastpos];
-          lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
-        }
-        for (int i = 0; i < sizeof(int); i++) {
-          ((char*)&gid)[i] = _interface.out[lastpos];
-          lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
-        }
-        for (int i = 0; i < sizeof(int); i++) {
-          ((char*)&uid)[i] = _interface.out[lastpos];
-          lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
-        }
-        length -= sizeof(short) + 2 * sizeof(int);
-        if (id == gid && (fd == uid || uid == -1)) {
-          if (length < 126) { // use a cframe
-            memset(&cframe.header, 0, sizeof(FrameHeader));
-            cframe.header.end  = 1;
-            cframe.header.mask = 1;
-            cframe.header.length = length;
-            cframe.header.opcode = FRAME_BINARY;
-            for (int i = 0; i < 4; i++) {
-              cframe.mask[i] = rand() % UCHAR_MAX;
-            }
-            for (int i = 0; i < length; i++) {
-              cframe.payload[i] = _interface.out[lastpos] ^ cframe.mask[i];
-              lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
-            }
-            write(fd, &cframe, length + 6);
-          } else {
-            LongFrame lf;
-            memset(&lf.header, 0, sizeof(FrameHeader));
-            lf.header.end  = 1;
-            lf.header.mask = 1;
-            lf.header.length = 126;
-            lf.header.opcode = FRAME_BINARY;
-            lf.length = htons(length);
-            for (int i = 0; i < 4; i++) {
-              lf.mask[i] = rand() % UCHAR_MAX;
-            }
-            for (int i = 0; i < length; i++) {
-              lf.payload[i] = _interface.out[lastpos] ^ lf.mask[i];
-              lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
-            }
-            write(fd, &lf, length + 10);
-          }
-        } else lastpos = (lastpos + length);
-        size -= length + sizeof(short) + 2 * sizeof(int);
-      } while (size > 0);
-      if (lastpos != _interface.out_ptr) {
-        fprintf(stderr, "Fatal synchronization error! (output buffer)\n");
-        exit(EXIT_FAILURE);
-      }
-      pthread_mutex_unlock(&_interface.out_lock);
-    }
+  }
+  if (_clientthreadO[me]) {
+    pthread_join(_clientthreadO[me], NULL);
+    _clientthreadO[me] = 0;
   }
   close(fd);
 }
@@ -311,16 +344,16 @@ void *_server(void *vargp) {
 
     int success = 0;
     for (int i = 0; i < WS_MAX_CONN; i++) {
-      if (_clientthread[i] && _clientstop[i]) { // reclaim a dead thread
-        pthread_join(_clientthread[i], NULL);
-        _clientthread[i] = 0;
+      if (_clientthreadI[i] && _clientstop[i]) { // reclaim a dead thread
+        pthread_join(_clientthreadI[i], NULL);
+        _clientthreadI[i] = 0;
         _clientstop[i]   = 0;
 
       }
-      if (!_clientthread[i]) {
+      if (!_clientthreadI[i]) {
         long arg = ((long)i << 32) | client_fd;
         printf("Connecting client #%d...\n", i);
-        pthread_create(&_clientthread[i], NULL, _client, (void*)arg);
+        pthread_create(&_clientthreadI[i], NULL, _clienti, (void*)arg);
         success = 1;
         break;
       }
@@ -334,8 +367,14 @@ Interface *startservice() {
   if (!_started) {
     _timeout.tv_sec  = SLEEP_PERIOD_S;
     _timeout.tv_usec = 0;
-    for (int i = 0; i < WS_MAX_CONN; i++) _clientstop[i]   = 0;
-    for (int i = 0; i < WS_MAX_CONN; i++) _clientthread[i] = 0;
+    pthread_mutex_init(&_interface.in_lock,  NULL);
+    pthread_mutex_init(&_interface.out_lock, NULL);
+    for (int i = 0; i < WS_MAX_CONN; i++) {
+      _clientstop[i]    = 0;
+      _clientthreadI[i] = 0;
+      _clientthreadO[i] = 0;
+      pthread_mutex_init(&_clientmutex[i], NULL);
+    }
     memset(&_interface, 0, sizeof(Interface));
     pthread_create(&_serverthread, NULL, _server, NULL);
     _started = 1;
@@ -348,10 +387,10 @@ void stopservice() {
     pthread_cancel(_serverthread);
     pthread_join(_serverthread, NULL);
     for (int i = 0; i < WS_MAX_CONN; i++) {
-      if (_clientthread[i]) {
+      if (_clientthreadI[i]) {
         _clientstop[i] = 1;
-        pthread_join(_clientthread[i], NULL);
-        _clientthread[i] = 0;
+        pthread_join(_clientthreadI[i], NULL);
+        _clientthreadI[i] = 0;
       }
     }
     _started = 0;

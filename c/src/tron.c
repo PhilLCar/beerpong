@@ -6,7 +6,6 @@
 #include <string.h>
 
 #define SLEEP_PERIOD_MS 300000
-#define CHECK_PREIOD_MS  15000
 
 void *play(void *vargp) {
   Interface    *interface = ((Interface**)vargp)[0];
@@ -305,6 +304,6 @@ void tron(Interface *interface) {
         playing = ngames;
       }
     }
-    usleep(CHECK_PREIOD_MS);
+    usleep(WS_CHECK_PREIOD_MS);
   }
 }
