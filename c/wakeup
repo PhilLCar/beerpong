@@ -1,0 +1,8 @@
+#! /usr/bin/env bash
+
+# https://stackoverflow.com/questions/20162678/linux-script-to-check-if-process-is-running-and-act-on-the-result
+
+pidof webserver >/dev/null
+if [[ $? -ne 0 ]] ; then
+        /var/www/c/webserver &
+fi

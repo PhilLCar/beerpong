@@ -22,31 +22,31 @@ void httpreqstr(HttpRequest *request, char *buffer) {
       method = "DELETE ";
       break;
   }
-  sprintf(buffer, "%s %s %s\n%s\n%s", method, 
-                                      request->file, 
-                                      request->version,
-                                      request->header,
-                                      request->body);
+  sprintf(buffer, "%s %s %s\r\n%s\r\n%s", method, 
+                                          request->file, 
+                                          request->version,
+                                          request->header,
+                                          request->body);
 }
 
 void httprespstr(HttpResponse *response, char *buffer) {
-  sprintf(buffer, "%s %d %s\n%s\n%s", response->version,
-                                      response->status, 
-                                      response->message,
-                                      response->header,
-                                      response->body);
+  sprintf(buffer, "%s %d %s\r\n%s\r\n%s", response->version,
+                                          response->status, 
+                                          response->message,
+                                          response->header,
+                                          response->body);
 }
 
 void buildhttpreq(HttpRequest *request, char *field, char *value) {
   int i;
   for (i = 0; request->header[i]; i++);
-  sprintf(&request->header[i], "%s: %s\n", field, value);
+  sprintf(&request->header[i], "%s: %s\r\n", field, value);
 }
 
 void buildhttpresp(HttpResponse *response, char *field, char *value) {
   int i;
   for (i = 0; response->header[i]; i++);
-  sprintf(&response->header[i], "%s: %s\n", field, value);
+  sprintf(&response->header[i], "%s: %s\r\n", field, value);
 }
 
 void freehttpreq(HttpRequest *request) {

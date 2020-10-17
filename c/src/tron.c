@@ -5,11 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SLEEP_PERIOD_MS 300000
+#define SLEEP_PERIOD_MS 150000
 
 void *play(void *vargp) {
   Interface    *interface = ((Interface**)vargp)[0];
-  unsigned int *id        = ((int**)vargp)[1];
+  unsigned int *id        = ((unsigned int**)vargp)[1];
   Grid         *grid      = malloc(sizeof(Grid));
   int  prev_ptr;
   int  newgame     = 1;
@@ -43,11 +43,11 @@ void *play(void *vargp) {
       int size = interface->in_ptr - prev_ptr;
       if (size < 0) size += COM_BUFFERS_SIZE;
       do {
-        char *in = interface->in;
-        unsigned char c;
-        unsigned int  gid;
-        int           uid;
-        short         s;
+        unsigned char *in = interface->in;
+        unsigned char  c;
+        unsigned int   gid;
+        int            uid;
+        short          s;
         for (int i = 0; i < sizeof(short); i++) {
           ((char*)&s)[i] = in[prev_ptr];
           prev_ptr = (prev_ptr + 1) % COM_BUFFERS_SIZE;
@@ -68,7 +68,7 @@ void *play(void *vargp) {
         c = in[prev_ptr];
         if (c == 0xFF) {
           for (int i = 0; i < 4; i++) {
-            if (!grid->status[i].value) {
+            if (!grid->status[i].playing && !grid->status[i].ready) {
               grid->status[i].online = 1;
               c = (unsigned char)i;
               break;
@@ -76,7 +76,7 @@ void *play(void *vargp) {
           }
           uids[nuid]    = uid;
           utypes[nuid] |= UPDATE_ASSIGN;
-          vals[nuid] = c;
+          vals[nuid]    = c;
           if (game_state != GAME_WAIT) utypes[nuid] |= UPDATE_FULL;
           nuid++;
         } else if (c < 4) {
@@ -96,7 +96,7 @@ void *play(void *vargp) {
     int nplayers = 0;
     for (int i = 0; i < 4; i++) {
       if (grid->status[i].value) {
-        nplayers++;
+        if (grid->status[i].online)  nplayers++;
         if (grid->status[i].approve) reset++;
         if (grid->status[i].ready)   ready++;
       }
@@ -105,12 +105,17 @@ void *play(void *vargp) {
       if (reset == nplayers || newgame == 1) {
         for (int i = 0; i < 4; i++) grid->status[i].approve = 0;
         newgame = 0;
-        memset(grid->cell, 0, GRID_SIZE * GRID_SIZE * sizeof(char));
-        memset(heads, 0, 8 * sizeof(char));
-        memset(cells, 0, 5 * sizeof(char));
+        memset(grid->cell,  0, GRID_SIZE * GRID_SIZE * sizeof(char));
+        memset(heads, 0xFF, 8 * sizeof(char));
+        memset(cells, 0,    5 * sizeof(char));
         game_state = GAME_WAIT;
-      } else if (ready == nplayers && ready > 1) {
+        grid->status[0].direction = DIR_RIGHT;
+        grid->status[1].direction = DIR_LEFT;
+        grid->status[2].direction = DIR_UP;
+        grid->status[3].direction = DIR_DOWN;
+      } else if (ready == nplayers && ready > 0) { // TODO: > 1
         for (int i = 0; i < 4; i++) {
+          if (!grid->status[i].online) continue;
           grid->status[i].ready   = 0;
           grid->status[i].playing = 1;
         }
@@ -120,12 +125,12 @@ void *play(void *vargp) {
         if (grid->status[0].online) { grid->cell[8  +  8 * GRID_SIZE].value = 17; heads[0] =  8; heads[1] =  8; }
         if (grid->status[1].online) { grid->cell[23 + 23 * GRID_SIZE].value = 18; heads[2] = 23; heads[3] = 23; }
         if (grid->status[2].online) { grid->cell[8  + 23 * GRID_SIZE].value = 20; heads[4] =  8; heads[5] = 23; }
-        if (grid->status[2].online) { grid->cell[23 +  8 * GRID_SIZE].value = 24; heads[6] = 23; heads[7] =  8; }
+        if (grid->status[3].online) { grid->cell[23 +  8 * GRID_SIZE].value = 24; heads[6] = 23; heads[7] =  8; }
       } else if (game_state == GAME_START) {
         int nalive = 0;
         for (int i = 0; i < 4; i++) {
           if (!grid->status[i].dead && grid->status[i].playing) {
-            grid->cell[heads[2 * i] + heads[2 * i + 1] * GRID_SIZE].value &= ~16;
+            grid->cell[(int)heads[2 * i] + (int)heads[2 * i + 1] * GRID_SIZE].value &= ~16;
             switch (grid->status[i].direction)
             {
             case DIR_UP:
@@ -145,18 +150,22 @@ void *play(void *vargp) {
               else grid->status[i].dead = 1;
               break;
             }
-            grid->cell[heads[2 * i] + heads[2 * i + 1] * GRID_SIZE].value |= 16 | (1 << i);
+            char *v = &grid->cell[(int)heads[2 * i] + (int)heads[2 * i + 1] * GRID_SIZE].value;
+            if (*v) grid->status[i].dead = 1;
+            *v |= 16 | (1 << i);
           }
         }
         for (int i = 0; i < 4; i++) {
-          Cell cell = grid->cell[heads[2 * i] + heads[2 * i + 1] * GRID_SIZE];
-          int  n    = 0;
-          for (int j = 0; j < 4; j++) if (cell.value & (1 << j)) n++;
-          if (n) grid->status[i].dead = 1;
-          cells[i] = cell.value;
-          if (grid->status[i].playing && ! grid->status[i].dead) nalive++;
+          if (!grid->status[i].dead && grid->status[i].playing) {
+            Cell cell = grid->cell[heads[2 * i] + heads[2 * i + 1] * GRID_SIZE];
+            int  n    = 0;
+            for (int j = 0; j < 4; j++) if (cell.value & (1 << j)) n++;
+            if (n > 1) grid->status[i].dead = 1;
+            cells[i] = cell.value;
+            nalive++;
+          }
         }
-        if (nalive < 2) game_state = GAME_DONE;
+        if (nalive < 1) game_state = GAME_DONE;
       }
     }
     pthread_mutex_lock(&interface->out_lock);
@@ -175,14 +184,14 @@ void *play(void *vargp) {
       interface->out[ptr] = ((char*)&u)[i];
       ptr = (ptr + 1) % COM_BUFFERS_SIZE;
     }
-    interface->out[ptr] = 0xFF;
+    interface->out[ptr] = UPDATE_STANDARD;
     ptr = (ptr + 1) % COM_BUFFERS_SIZE;
-    for (int i = 0; i < 8; i++) {
-      interface->out[ptr] = heads[i];
+    for (int i = 0; i < 4; i++) {
+      interface->out[ptr] = grid->status[i].value;
       ptr = (ptr + 1) % COM_BUFFERS_SIZE;
     }
-    for (int i = 0; i < 4; i++) {
-      interface->out[ptr] = cells[i];
+    for (int i = 0; i < 8; i++) {
+      interface->out[ptr] = heads[i];
       ptr = (ptr + 1) % COM_BUFFERS_SIZE;
     }
     for (int i = 0; i < WS_MAX_CONN; i++) {
@@ -201,13 +210,13 @@ void *play(void *vargp) {
             interface->out[ptr] = ((char*)&uids[i])[j];
             ptr = (ptr + 1) % COM_BUFFERS_SIZE;
           }
-          interface->out[ptr] = 0xFF;
+          interface->out[ptr] = UPDATE_ASSIGN;
           ptr = (ptr + 1) % COM_BUFFERS_SIZE;
           interface->out[ptr] = vals[i];
           ptr = (ptr + 1) % COM_BUFFERS_SIZE;
         }
         if (utypes[i] & UPDATE_FULL) {
-          chunk_size = sizeof(short) + 2 * sizeof(int) + sizeof(Grid);
+          chunk_size = sizeof(short) + 2 * sizeof(int) + sizeof(Grid) + 1;
           for (int j = 0; j < sizeof(short); j++) {
             interface->out[ptr] = ((char*)&chunk_size)[j];
             ptr = (ptr + 1) % COM_BUFFERS_SIZE;
@@ -220,6 +229,8 @@ void *play(void *vargp) {
             interface->out[ptr] = ((char*)&uids[i])[j];
             ptr = (ptr + 1) % COM_BUFFERS_SIZE;
           }
+          interface->out[ptr] = UPDATE_FULL;
+          ptr = (ptr + 1) % COM_BUFFERS_SIZE;
           for (int j = 0; j < sizeof(Grid); j++) {
             interface->out[ptr] = ((char*)grid)[j];
             ptr = (ptr + 1) % COM_BUFFERS_SIZE;
@@ -235,7 +246,9 @@ void *play(void *vargp) {
     usleep(SLEEP_PERIOD_MS);
   }
   *id = 0;
+  free(grid);
   printf("######## Game ended #########\n");
+  return NULL;
 }
 
 void tron(Interface *interface) {
@@ -245,7 +258,7 @@ void tron(Interface *interface) {
   pthread_t    games[TRON_MAX_GAMES];
   unsigned int ids[TRON_MAX_GAMES];
   memset(&games, 0, TRON_MAX_GAMES * sizeof(pthread_t));
-  memset(&ids,   0, TRON_MAX_GAMES * sizeof(int));
+  memset(&ids,   0, TRON_MAX_GAMES * sizeof(unsigned int));
 
   pthread_mutex_lock(&interface->in_lock);
   prev_ptr = interface->in_ptr;
@@ -257,10 +270,10 @@ void tron(Interface *interface) {
       int size = interface->in_ptr - prev_ptr;
       if (size < 0) size += COM_BUFFERS_SIZE;
       do {
-        unsigned int id;
-        char  *in = interface->in;
-        int    p  = -1;
-        short  s;
+        unsigned int   id;
+        unsigned char *in = interface->in;
+        int   p  = -1;
+        short s;
         for (int i = 0; i < sizeof(short); i++) {
           ((char*)&s)[i] = in[prev_ptr];
           prev_ptr = (prev_ptr + 1) % COM_BUFFERS_SIZE;
@@ -294,14 +307,14 @@ void tron(Interface *interface) {
     for (int i = 0; i < TRON_MAX_GAMES; i++) {
       if (ids[i] && !games[i]) {
         void *vargp = malloc(2 * sizeof(void*));
-        ((Interface**)vargp)[0] = interface;
-        ((int**)vargp)[1]       = &ids[i];
+        ((Interface**)vargp)[0]    = interface;
+        ((unsigned int**)vargp)[1] = &ids[i];
         pthread_create(&games[i], NULL, play, vargp);
         ngames++;
       } else if (!ids[i] && games[i]) {
         pthread_join(games[i], NULL);
-        ngames--;
-        playing = ngames;
+        games[i] = 0;
+        playing = --ngames;
       }
     }
     usleep(WS_CHECK_PREIOD_MS);

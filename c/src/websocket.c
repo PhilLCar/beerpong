@@ -27,14 +27,14 @@ int             _started = 0;
 struct timeval  _timeout;
 
 // https://stackoverflow.com/questions/342409/how-do-i-base64-encode-decode-in-c
-char *encode64(const unsigned char *input, int length) {
+unsigned char *encode64(const unsigned char *input, int length) {
   const int pl = 4 * ((length + 2) / 3);
-  char *output = malloc((pl + 1) * sizeof(char));
+  unsigned char *output = malloc((pl + 1) * sizeof(char));
   EVP_EncodeBlock(output, input, length);
   return output;
 }
 // https://stackoverflow.com/questions/342409/how-do-i-base64-encode-decode-in-c
-unsigned char *decode64(const char *input, int length) {
+unsigned char *decode64(const unsigned char *input, int length) {
   const int pl = 3 * length / 4;
   unsigned char *output = malloc((pl + 1) * sizeof(char));
   EVP_DecodeBlock(output, input, length);
@@ -46,10 +46,13 @@ int handshake(int fd, int me) {
   char buffer[bufsize];
   char key[64];
   int  version;
-  long bytes;
   HttpRequest  request;
   HttpResponse response;
-  bytes = read(fd, buffer, bufsize);
+  memset(buffer, 0, bufsize * sizeof(char));
+  pthread_mutex_lock(&_interface.in_lock);
+  read(fd, buffer, bufsize);
+  pthread_mutex_unlock(&_interface.in_lock);
+  printf("%s\n", buffer);
   httpreqfromstr(&request, buffer);
   buffer[0] = 0;
   getfield(request.header, "Connection", buffer);
@@ -63,17 +66,22 @@ int handshake(int fd, int me) {
     free(request.body);
     return 1;
   }
+  key[0] = 0;
   getfield(request.header, "Sec-WebSocket-Key", key);
   getfield(request.header, "Sec-WebSocket-Version", buffer);
+  if (!key[0]) {
+    getfield(request.header, "Sec-Websocket-Key", key);
+    getfield(request.header, "Sec-Websocket-Version", buffer);
+  }
   version = atoi(buffer);
   printf("Connecting to socket with key: %s\n", key);
   printf("WebSocket version:             %d\n", version);
 
   // Response
-  char *resp = malloc((strlen(key) + strlen(SOCKET_MAGIC_STR) + 1) * sizeof(char));
-  char *ans;
+  unsigned char *resp = malloc((strlen(key) + strlen(SOCKET_MAGIC_STR) + 1) * sizeof(char));
+  unsigned char  digest[SHA_DIGEST_LENGTH];
+  unsigned char *ans;
   int   i;
-  unsigned char digest[SHA_DIGEST_LENGTH];
 
   for (i = 0; key[i]; i++) resp[i] = key[i];
   for (int p = 0; SOCKET_MAGIC_STR[p]; i++, p++) resp[i] = SOCKET_MAGIC_STR[p];
@@ -85,7 +93,7 @@ int handshake(int fd, int me) {
   sprintf(response.message, HTTP_SWITCH_M);
   buildhttpresp(&response, "Upgrade", "websocket");
   buildhttpresp(&response, "Connection", "Upgrade");
-  buildhttpresp(&response, "Sec-WebSocket-Accept", ans);
+  buildhttpresp(&response, "Sec-WebSocket-Accept", (char*)ans);
   response.body = "";
   httprespstr(&response, buffer);
   pthread_mutex_lock(&_clientmutex[me]);
@@ -99,12 +107,14 @@ int handshake(int fd, int me) {
 }
 
 void *_cliento(void *vargp) {
-  int          me = (long)vargp >> 32;
-  int          fd = (long)vargp & 0xFFFFFFFF;
-  unsigned int id = 0;
-  LongFrame    lframe;
-  ControlFrame cframe;
-  int          lastpos;
+  long          arg1 = ((long*)vargp)[0];
+  int           me = arg1 >> 32;
+  int           fd = arg1 & 0xFFFFFFFF;
+  unsigned int *id = ((unsigned int**)vargp)[1];
+  LongFrame     lframe;
+  ControlFrame  cframe;
+  int           lastpos;
+  free(vargp);
 
   // init the last position pointer
   pthread_mutex_lock(&_interface.out_lock);
@@ -112,7 +122,7 @@ void *_cliento(void *vargp) {
   pthread_mutex_unlock(&_interface.out_lock);
 
   while (!_clientstop[me]) {
-    if (lastpos != _interface.out_ptr && id) {
+    if (lastpos != _interface.out_ptr && *id) {
       pthread_mutex_lock(&_interface.out_lock);
       int size = _interface.out_ptr - lastpos;
       if (size < 0) size += COM_BUFFERS_SIZE;
@@ -133,40 +143,33 @@ void *_cliento(void *vargp) {
           lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
         }
         length -= sizeof(short) + 2 * sizeof(int);
-        if (id == gid && (fd == uid || uid == -1)) {
+        if (*id == gid && (fd == uid || uid == -1)) {
           if (length < 126) { // use a cframe
             memset(&cframe.header, 0, sizeof(FrameHeader));
             cframe.header.end  = 1;
-            cframe.header.mask = 1;
+            cframe.header.mask = 0;
             cframe.header.length = length;
             cframe.header.opcode = FRAME_BINARY;
-            for (int i = 0; i < 4; i++) {
-              cframe.mask[i] = rand() % UCHAR_MAX;
-            }
             for (int i = 0; i < length; i++) {
-              cframe.payload[i] = _interface.out[lastpos] ^ cframe.mask[i];
+              cframe.spayload[i] = _interface.out[lastpos];
               lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
             }
             pthread_mutex_lock(&_clientmutex[me]);
-            write(fd, &cframe, length + 6);
+            write(fd, &cframe, length + 2);
             pthread_mutex_unlock(&_clientmutex[me]);
           } else {
-            LongFrame lf;
-            memset(&lf.header, 0, sizeof(FrameHeader));
-            lf.header.end  = 1;
-            lf.header.mask = 1;
-            lf.header.length = 126;
-            lf.header.opcode = FRAME_BINARY;
-            lf.length = htons(length);
-            for (int i = 0; i < 4; i++) {
-              lf.mask[i] = rand() % UCHAR_MAX;
-            }
+            memset(&lframe.header, 0, sizeof(FrameHeader));
+            lframe.header.end  = 1;
+            lframe.header.mask = 0;
+            lframe.header.length = 126;
+            lframe.header.opcode = FRAME_BINARY;
+            lframe.length = htons(length);
             for (int i = 0; i < length; i++) {
-              lf.payload[i] = _interface.out[lastpos] ^ lf.mask[i];
+              lframe.spayload[i] = _interface.out[lastpos];
               lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
             }
             pthread_mutex_lock(&_clientmutex[me]);
-            write(fd, &lf, length + 10);
+            write(fd, &lframe, length + 4);
             pthread_mutex_unlock(&_clientmutex[me]);
           }
         } else lastpos = (lastpos + length);
@@ -180,6 +183,7 @@ void *_cliento(void *vargp) {
     }
     usleep(WS_CHECK_PREIOD_MS);
   }
+  return NULL;
 }
 
 void *_clienti(void *vargp) {
@@ -192,7 +196,10 @@ void *_clienti(void *vargp) {
   _clientstop[me] = handshake(fd, me);
 
   if (!_clientstop[me]) {
-    pthread_create(&_clientthreadO[me], NULL, _cliento, vargp);
+    void *args = malloc(2 * sizeof(void*));
+    ((long*)args)[0]          = (long)vargp;
+    ((unsigned int**)args)[1] = &id;
+    pthread_create(&_clientthreadO[me], NULL, _cliento, args);
   }
 
   while (!_clientstop[me]) {
@@ -229,7 +236,6 @@ void *_clienti(void *vargp) {
         break;
       case FRAME_BINARY:
         // Update the inputs
-        id = ntohl(*(unsigned int*)frame.payload);
         pthread_mutex_lock(&_interface.in_lock);
         int ptr        = _interface.in_ptr;
         int chunk_size = frame.length + sizeof(short) + sizeof(int);
@@ -243,6 +249,9 @@ void *_clienti(void *vargp) {
         }
         for (int i = 0; i < frame.length; i++) {
           _interface.in[ptr] = frame.payload[i] ^ frame.mask[i % 4];
+          if (i < 4) {
+            ((char*)&id)[i] = _interface.in[ptr];
+          }
           ptr = (ptr + 1) % COM_BUFFERS_SIZE;
         }
         _interface.in_ptr = ptr;
@@ -253,40 +262,26 @@ void *_clienti(void *vargp) {
         memset(&cframe, 0, sizeof(ControlFrame));
         cframe.header.opcode = FRAME_CLOSE;
         cframe.header.end    = 1;
-        cframe.header.mask   = frame.header.mask;
+        cframe.header.mask   = 0;
         cframe.header.length = frame.header.length;
-        if (frame.header.mask) {
-          for (int i = 0; i < 4; i++) cframe.mask[i] = frame.mask[i];
-          for (int i = 0; i < frame.header.length; i++) {
-            cframe.payload[i] = frame.payload[i];
-          }
-        } else {
-          for (int i = 0; i < frame.header.length; i++) {
-            cframe.mask[i] = frame.payload[i];
-          }
+        for (int i = 0; i < frame.header.length; i++) {
+          cframe.spayload[i] = frame.payload[i] ^ frame.mask[i % 4];
         }
         pthread_mutex_lock(&_clientmutex[me]);
-        write(fd, &cframe, sizeof(FrameHeader) + (cframe.header.mask ? 2 : 6));
+        write(fd, &cframe, sizeof(FrameHeader) + 2);
         pthread_mutex_unlock(&_clientmutex[me]);
         break;
       case FRAME_PING:
         memset(&cframe, 0, sizeof(ControlFrame));
         cframe.header.opcode = FRAME_PONG;
         cframe.header.end    = 1;
-        cframe.header.mask   = frame.header.mask;
+        cframe.header.mask   = 0;
         cframe.header.length = frame.header.length;
-        if (frame.header.mask) {
-          for (int i = 0; i < 4; i++) cframe.mask[i] = frame.mask[i];
-          for (int i = 0; i < frame.header.length; i++) {
-            cframe.payload[i] = frame.payload[i];
-          }
-        } else {
-          for (int i = 0; i < frame.header.length; i++) {
-            cframe.mask[i] = frame.payload[i];
-          }
+        for (int i = 0; i < frame.header.length; i++) {
+          cframe.spayload[i] = frame.payload[i] ^ frame.mask[i % 4];
         }
         pthread_mutex_lock(&_clientmutex[me]);
-        write(fd, &cframe, sizeof(FrameHeader) + (cframe.header.mask ? 2 : 6));
+        write(fd, &cframe, sizeof(FrameHeader) + 2);
         pthread_mutex_unlock(&_clientmutex[me]);
         break;
       case FRAME_PONG:
@@ -294,6 +289,7 @@ void *_clienti(void *vargp) {
         break;
       default:
         fprintf(stderr, "Unimplemented!\n");
+        exit(EXIT_FAILURE);
         break;
     }
   }
@@ -302,6 +298,7 @@ void *_clienti(void *vargp) {
     _clientthreadO[me] = 0;
   }
   close(fd);
+  return NULL;
 }
 
 void *_server(void *vargp) {
@@ -352,7 +349,7 @@ void *_server(void *vargp) {
       }
       if (!_clientthreadI[i]) {
         long arg = ((long)i << 32) | client_fd;
-        printf("Connecting client #%d...\n", i);
+        printf("Connecting client #%d...\n\n", i);
         pthread_create(&_clientthreadI[i], NULL, _clienti, (void*)arg);
         success = 1;
         break;
@@ -361,6 +358,7 @@ void *_server(void *vargp) {
     if (success) printf("-------- Connection success --------\n");
     else         printf("-------- Max connections reached --------\n");
   }
+  return NULL;
 }
 
 Interface *startservice() {

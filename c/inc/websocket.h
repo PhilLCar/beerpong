@@ -42,8 +42,13 @@ typedef struct frame_header {
 #pragma pack(push, 1)
 typedef struct control_frame {
   FrameHeader header;
-  unsigned char mask[4];
-  unsigned char payload[125];
+  union {
+    unsigned char spayload[129];
+    struct {
+      unsigned char mask[4];
+      unsigned char payload[125];
+    };
+  };
 } ControlFrame;
 #pragma pack(pop)
 
@@ -51,8 +56,13 @@ typedef struct control_frame {
 typedef struct long_frame {
   FrameHeader    header;
   unsigned short length;
-  unsigned char  mask[4];
-  unsigned char  payload[(1 << 16) - 8];
+  union {
+    unsigned char spayload[(1 << 16) - 4];
+    struct {
+      unsigned char mask[4];
+      unsigned char payload[(1 << 16) - 8];
+    };
+  };
 } LongFrame;
 #pragma pack(pop)
 
