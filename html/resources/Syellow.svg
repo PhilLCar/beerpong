@@ -1,0 +1,39 @@
+<svg version="1.1"
+     baseProfile="full"
+     xmlns="http://www.w3.org/2000/svg"
+     width="400" 
+     height="600">
+  <rect x="0" y="0" width="400" height="600" fill="yellow"/>
+  <g transform="rotate(30 200 300)">
+    <ellipse cx="200" cy="300" rx="150" ry="300" stroke="white" stroke-width="15" fill="transparent"/>
+  </g>
+  <g transform="translate(80 180) scale(0.4 0.4)">
+    <g transform="rotate(-45 300 300)">
+      <circle cx="270" cy="300" r="225" stroke="black" stroke-width="100" fill="transparent"/>
+      <circle cx="300" cy="300" r="225" stroke="black" stroke-width="100" fill="transparent"/>
+      <rect    x="100"  y="250" width="400" height="100" fill="black"/>
+      <circle cx="300" cy="300" r="225" stroke="white" stroke-width="60" fill="transparent"/>
+      <rect    x="100"  y="270" width="400" height="60" fill="white"/>
+    </g>
+  </g>
+  <g transform="translate(20 20) scale(0.15 0.15)">
+    <g transform="rotate(-45 300 300)">
+      <circle cx="270" cy="300" r="225" stroke="black" stroke-width="100" fill="transparent"/>
+      <circle cx="300" cy="300" r="225" stroke="black" stroke-width="100" fill="transparent"/>
+      <rect    x="100"  y="250" width="400" height="100" fill="black"/>
+      <circle cx="300" cy="300" r="225" stroke="white" stroke-width="60" fill="transparent"/>
+      <rect    x="100"  y="270" width="400" height="60" fill="white"/>
+    </g>
+  </g>
+  <g transform="rotate(180 200 300)">
+    <g transform="translate(20 20) scale(0.15 0.15)">
+      <g transform="rotate(-45 300 300)">
+        <circle cx="270" cy="300" r="225" stroke="black" stroke-width="100" fill="transparent"/>
+        <circle cx="300" cy="300" r="225" stroke="black" stroke-width="100" fill="transparent"/>
+        <rect    x="100"  y="250" width="400" height="100" fill="black"/>
+        <circle cx="300" cy="300" r="225" stroke="white" stroke-width="60" fill="transparent"/>
+        <rect    x="100"  y="270" width="400" height="60" fill="white"/>
+      </g>
+    </g>
+  </g>
+</svg> 

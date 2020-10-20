@@ -3,6 +3,7 @@
      xmlns="http://www.w3.org/2000/svg"
      width="400" 
      height="600">
+  <rect x="0" y="0" width="400" height="600" fill="black"/>
   <g transform="skewX(-23.5) translate(130 0)">
     <path d="M200  30 A 165 270, 0, 0, 0,  35 300 L 200 300 Z" fill="red"/>
     <path d="M35  300 A 165 270, 0, 0, 0, 200 570 L 200 300 Z" fill="gold"/>
@@ -11,5 +12,27 @@
   </g>
   <g transform="rotate(30 200 300)">
     <ellipse cx="200" cy="300" rx="150" ry="300" stroke="white" stroke-width="15" fill="transparent"/>
+  </g>
+  <g transform="scale(0.15 0.15) translate(100 80)">
+    <g transform="skewX(-23.5) translate(130 0)">
+      <path d="M200  30 A 165 270, 0, 0, 0,  35 300 L 200 300 Z" fill="red"/>
+      <path d="M35  300 A 165 270, 0, 0, 0, 200 570 L 200 300 Z" fill="gold"/>
+      <path d="M200 570 A 165 270, 0, 0, 0, 365 300 L 200 300 Z" fill="#292"/>
+      <path d="M365 300 A 165 270, 0, 0, 0, 200  30 L 200 300 Z" fill="#33F"/>
+    </g>
+    <g transform="rotate(30 200 300)">
+      <ellipse cx="200" cy="300" rx="150" ry="300" stroke="white" stroke-width="15" fill="transparent"/>
+    </g>
+  </g>
+  <g transform="translate(325 495) scale(0.15 0.15)">
+    <g transform="skewX(-23.5) translate(130 0)">
+      <path d="M200  30 A 165 270, 0, 0, 0,  35 300 L 200 300 Z" fill="red"/>
+      <path d="M35  300 A 165 270, 0, 0, 0, 200 570 L 200 300 Z" fill="gold"/>
+      <path d="M200 570 A 165 270, 0, 0, 0, 365 300 L 200 300 Z" fill="#292"/>
+      <path d="M365 300 A 165 270, 0, 0, 0, 200  30 L 200 300 Z" fill="#33F"/>
+    </g>
+    <g transform="rotate(30 200 300)">
+      <ellipse cx="200" cy="300" rx="150" ry="300" stroke="white" stroke-width="15" fill="transparent"/>
+    </g>
   </g>
 </svg> 

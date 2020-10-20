@@ -1,0 +1,66 @@
+<svg version="1.1"
+     baseProfile="full"
+     xmlns="http://www.w3.org/2000/svg"
+     width="400" 
+     height="600">
+  <rect x="0" y="0" width="400" height="600" fill="red"/>
+  <g transform="rotate(30 200 300)">
+    <ellipse cx="200" cy="300" rx="150" ry="300" stroke="white" stroke-width="15" fill="transparent"/>
+  </g>
+  <g transform="translate(50 150) scale(0.5 0.5)">
+    <g transform="rotate(-40 300 300)">
+      <rect x="270.5" y="170" width="159.5" height="140.5" fill="black" />
+      <rect x="170" y="289.5" width="130.5" height="140.5" fill="black" />
+      <path d="M271 170 A 120 120, 0, 0, 0, 151 290 L 271 290 Z" fill="black"/>
+      <path d="M300 430 A 120 120, 0, 0, 0, 420 310 L 300 310 Z" fill="black"/>
+      <polygon points="400.5,120 453,120    597,240 453,360 400.5,360" fill="black" />
+      <polygon points="170.5,240 118,240 -21.68,360 118,480 170.5,480" fill="black" />
+    </g>
+    <g transform="rotate(-40 300 300)">
+      <rect x="297" y="190" width="157" height="100" fill="white" />
+      <rect x="147" y="310" width="157" height="100" fill="white" />
+      <path d="M300 190 A 100 100, 0, 0, 0, 200 290 L 300 290 Z" fill="white"/>
+      <path d="M300 410 A 100 100, 0, 0, 0, 400 310 L 300 310 Z" fill="white"/>
+      <polygon points="449.5,140  569.175,240 449.5,340" fill="white" />
+      <polygon points="150.5,260   30.825,360 150.5,460" fill="white" />
+    </g>
+  </g>
+  <g transform="scale(0.2 0.2)">
+    <g transform="rotate(-40 300 300)">
+      <rect x="270.5" y="170" width="159.5" height="140.5" fill="black" />
+      <rect x="170" y="289.5" width="130.5" height="140.5" fill="black" />
+      <path d="M271 170 A 120 120, 0, 0, 0, 151 290 L 271 290 Z" fill="black"/>
+      <path d="M300 430 A 120 120, 0, 0, 0, 420 310 L 300 310 Z" fill="black"/>
+      <polygon points="400.5,120 453,120    597,240 453,360 400.5,360" fill="black" />
+      <polygon points="170.5,240 118,240 -21.68,360 118,480 170.5,480" fill="black" />
+    </g>
+    <g transform="rotate(-40 300 300)">
+      <rect x="297" y="190" width="157" height="100" fill="white" />
+      <rect x="147" y="310" width="157" height="100" fill="white" />
+      <path d="M300 190 A 100 100, 0, 0, 0, 200 290 L 300 290 Z" fill="white"/>
+      <path d="M300 410 A 100 100, 0, 0, 0, 400 310 L 300 310 Z" fill="white"/>
+      <polygon points="449.5,140  569.175,240 449.5,340" fill="white" />
+      <polygon points="150.5,260   30.825,360 150.5,460" fill="white" />
+    </g>
+  </g>
+  <g transform="rotate(180 200 300)">
+    <g transform="scale(0.2 0.2)">
+      <g transform="rotate(-40 300 300)">
+        <rect x="270.5" y="170" width="159.5" height="140.5" fill="black" />
+        <rect x="170" y="289.5" width="130.5" height="140.5" fill="black" />
+        <path d="M271 170 A 120 120, 0, 0, 0, 151 290 L 271 290 Z" fill="black"/>
+        <path d="M300 430 A 120 120, 0, 0, 0, 420 310 L 300 310 Z" fill="black"/>
+        <polygon points="400.5,120 453,120    597,240 453,360 400.5,360" fill="black" />
+        <polygon points="170.5,240 118,240 -21.68,360 118,480 170.5,480" fill="black" />
+      </g>
+      <g transform="rotate(-40 300 300)">
+        <rect x="297" y="190" width="157" height="100" fill="white" />
+        <rect x="147" y="310" width="157" height="100" fill="white" />
+        <path d="M300 190 A 100 100, 0, 0, 0, 200 290 L 300 290 Z" fill="white"/>
+        <path d="M300 410 A 100 100, 0, 0, 0, 400 310 L 300 310 Z" fill="white"/>
+        <polygon points="449.5,140  569.175,240 449.5,340" fill="white" />
+        <polygon points="150.5,260   30.825,360 150.5,460" fill="white" />
+      </g>
+    </g>
+  </g>
+</svg> 

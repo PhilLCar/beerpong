@@ -1,0 +1,22 @@
+<svg version="1.1"
+     baseProfile="full"
+     xmlns="http://www.w3.org/2000/svg"
+     width="400" 
+     height="600">
+  <rect x="0" y="0" width="400" height="600" fill="#33F"/>
+  <g transform="skewX(-10)">
+    <text x="35" y="105" font-family="Helvetica" font-size="100" font-weight="bolder" fill="black" stroke="black" stroke-width="3">7</text>
+    <text x="40" y="100" font-family="Helvetica" font-size="100" font-weight="bolder" fill="white" stroke="black" stroke-width="3">7</text>
+  </g>
+  <g transform="rotate(180 200 300) skewX(-10)">
+    <text x="35" y="105" font-family="Helvetica" font-size="100" font-weight="bolder" fill="black" stroke="black" stroke-width="3">7</text>
+    <text x="40" y="100" font-family="Helvetica" font-size="100" font-weight="bolder" fill="white" stroke="black" stroke-width="3">7</text>
+  </g>
+  <g transform="rotate(30 200 300)">
+    <ellipse cx="200" cy="300" rx="150" ry="300" stroke="white" stroke-width="15" fill="transparent"/>
+  </g>
+  <g transform="skewX(-10)">
+    <text x="160" y="405" font-family="Helvetica" font-size="300" font-weight="bolder" fill="black" stroke="black" stroke-width="9">7</text>
+    <text x="175" y="390" font-family="Helvetica" font-size="300" font-weight="bolder" fill="white" stroke="black" stroke-width="9">7</text>
+  </g>
+</svg> 
