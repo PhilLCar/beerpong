@@ -55,8 +55,7 @@
     <script src="/js/tron.js" type="text/javascript"></script>
     <script>
       _GAME_ID = "<?php echo($id); ?>";
-      _HOST    = <?php echo($host); ?>;
-      sendCommand("INIT", null, update);
+      wakeupServer();
     </script>
   </head>
   <body onload="drawGrid()" onresize="drawGrid()" onkeydown="changeDirection(event)">

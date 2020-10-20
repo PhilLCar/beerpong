@@ -1,0 +1,196 @@
+@import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@700&display=swap');
+
+html, body {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  background-color: darkolivegreen;
+  font-family: 'Commissioner', sans-serif;
+  font-weight: bold;
+  color: gold;
+}
+
+input[type="button"] {
+  border: none;
+  rotate: 10deg;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-family: 'Commissioner', sans-serif;
+  font-size: 30px;
+  background-color: transparent;
+  color: gold;
+  text-shadow: inherit;
+}
+
+input[type="button"]:hover {
+  cursor: pointer;
+}
+
+#Help {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  height: 40px;
+  width: 40px;
+  font-size: 30px;
+  background-color: rgb(255, 37, 37);
+  border-radius: 100%;
+  text-align: center;
+}
+
+#Help:hover {
+  background-color: darkred;
+  cursor: pointer;
+}
+
+#Lang {
+  position: absolute;
+  bottom: 20px;
+  right: 60px;
+  height: 40px;
+  width: 40px;
+  font-size: 20px;
+  background-color: rgb(255, 37, 37);
+  border-radius: 100%;
+  text-align: center;
+  line-height: 35px;
+}
+
+#Lang:hover {
+  background-color: darkred;
+  cursor: pointer;
+}
+
+#Back {
+  position: absolute;
+  bottom: 20px;
+  right: 100px;
+  height: 40px;
+  width: 40px;
+  font-size: 30px;
+  background-color: rgb(255, 37, 37);
+  border-radius: 100%;
+  text-align: center;
+  line-height: 35px;
+}
+
+#Back:hover {
+  background-color: darkred;
+  cursor: pointer;
+}
+
+.button {
+  display: inline-block;
+  rotate: -30deg;
+  text-shadow:  1px  1px 0 white,
+               -1px  1px 0 white,
+                1px -1px 0 white,
+               -1px -1px 0 white,
+                2px  2px 0 black,
+               -2px  2px 0 black,
+                2px -2px 0 black,
+               -2px -2px 0 black;
+}
+
+.button:hover {
+  background-color: rgb(255, 37, 37);
+  border-radius: 50%;
+  cursor: pointer;
+  text-shadow:  1px  1px 0 white,
+               -1px  1px 0 white,
+                1px -1px 0 white,
+               -1px -1px 0 white,
+                2px  2px 0 black,
+               -2px  2px 0 black,
+                2px -2px 0 black,
+               -2px -2px 0 black,
+                1px  3px 0 black,
+               -3px  3px 0 black,
+                1px -1px 0 black,
+               -3px -1px 0 black,
+                0px  4px 0 black,
+               -4px  4px 0 black,
+                0px  0px 0 black,
+               -4px  0px 0 black,
+               -1px  5px 0 black,
+               -5px  5px 0 black,
+               -1px  1px 0 black,
+               -5px  1px 0 black,
+               -2px  6px 0 black,
+               -6px  6px 0 black,
+               -2px  2px 0 black,
+               -6px  2px 0 black,
+                3px  3px 0 white,
+               -3px  3px 0 white,
+                3px -3px 0 white,
+               -3px -3px 0 white,
+                2px  4px 0 white,
+               -4px  4px 0 white,
+                2px -2px 0 white,
+               -4px -2px 0 white,
+                1px  5px 0 white,
+               -5px  5px 0 white,
+                1px -1px 0 white,
+               -5px -1px 0 white,
+               -2px  6px 0 white,
+               -6px  6px 0 white,
+               -2px  0px 0 white,
+               -6px  0px 0 white,
+               -3px  7px 0 white,
+               -7px  7px 0 white,
+               -3px  1px 0 white,
+               -7px  1px 0 white;
+}
+
+#MainMenu {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  text-align: center;
+}
+
+#Title {
+  display: block;
+  position: relative;
+  width: 300px;
+  height: auto;
+  margin: auto;
+  margin-top: 30px;
+  margin-bottom: 100px;
+}
+/*
+.uno {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+}
+
+.unoContainer {
+  position: relative;
+  width: 100%;
+  margin: auto;
+  margin-top: 30px;
+  padding-bottom: 62.5%;
+  text-align: center;
+}
+
+.unoCircle {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  border-radius: 50%;
+  background-color: red;
+  rotate: -30deg;
+}
+
+.unoText {
+  rotate: 10deg;
+} */

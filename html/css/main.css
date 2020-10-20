@@ -4,6 +4,10 @@
 @import url(https://fonts.googleapis.com/css?family=Comic+Neue&display=swap);
 @import url(https://fonts.googleapis.com/css?family=Alata&display=swap);
 @import url(https://fonts.googleapis.com/css2?family=Roboto&display=swap);
+@font-face {
+    font-family: 'Tron';
+    src: url('/fonts/Tron.ttf') format('truetype'); /* Chrome 4+, Firefox 3.5, Opera 10+, Safari 3—5 */
+} 
 
 body {
     background-color: #222;
@@ -99,4 +103,21 @@ h1 {
 #Dice:hover {
     cursor: pointer;
     background-color: brown;
+}
+
+#Tron {
+    padding-bottom: 25px;
+    font-size: 100px;
+    width: 100%;
+    color: rgba(255, 255, 255, 0.2);
+    background-color: black;
+    font-family: 'Tron', sans-serif;
+    text-shadow: 0px 0px 5px #0BF;
+    line-height: 110px;
+}
+
+#Tron:hover {
+    color: #0BF;
+    cursor: pointer;
+    text-shadow: 0px 0px 10px #0BF;
 }

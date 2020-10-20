@@ -12,43 +12,18 @@ var _ATOBOTTOM;
 var _VTERRAIN;
 var _VTERRAIN_START;
 var _GAME_ID;
-var _HOST;
-var _MYTRON;
 var _COLORS = [ "", "magenta", "lime", "orangered", "yellow", "darkmagenta", "darkgreen", "darkred", "darkgoldenrod" ];
 var _SPECTATE = false;
 var _CELL_SIZE;
-var _RIGHT = 0;
-var _LEFT  = 1;
-var _DOWN  = 2;
-var _UP    = 3;
-var _NEXT = [];
-var _DEAD = false;
-var _CLOCK_STARTED = false;
-
-function sendCommand(command, args, callback) {
-  var xhttp = new XMLHttpRequest();
-  var post = "GameID=" + _GAME_ID + "&Command=" + command;
-
-  if (args) {
-    for (arg in args) {
-      post += `&${arg}=${args[arg]}`;
-    }
-  }
-  
-  xhttp.timeout = 8000;
-  xhttp.onreadystatechange = async function() {
-    if (this.readyState == 4 && this.status == 200) {
-      // good answer
-      callback(this.responseText);
-    } else if (this.readyState == 4) {
-      // wrong answer
-      alert("Unknown error " + this.responseText + "!");
-    }
-  };
-  xhttp.open("POST", "database.php", true);
-  xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-  xhttp.send(post);
-}
+var _RIGHT = 3;
+var _LEFT  = 2;
+var _DOWN  = 1;
+var _UP    = 0;
+var _SOCKET;
+var _STATUS = null;
+var _ID_BYTES;
+var _ME    = null;
+var _CLEAR = true;
 
 function showJoin() {
   document.getElementsByName("GameID")[0].hidden = false;
@@ -122,6 +97,7 @@ function togglePlaying() {
   else                 _PLAYING.pause();
 }
 
+
 function drawGrid() {
   var gridSize = window.innerHeight / (_GRID_RES - 1);
   var nvlines  = Math.floor(window.innerWidth / gridSize) + 1;
@@ -172,8 +148,70 @@ function drawGrid() {
 
 // GAME LOGIC
 ////////////////////////////////////////////////////////////////////////////////////////////
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+var UPDATE_STANDARD = 0;
+var UPDATE_FULL     = 1;
+var UPDATE_ASSIGN   = 2;
+
+function sendCommand(byte1, byte2) {
+  var message = new Uint8Array(6);
+  for (var i = 0; i < 4; i++) message[i] = _ID_BYTES[i];
+  message[4] = byte1;
+  message[5] = byte2;
+  _SOCKET.send(message);
+}
+
+function update(data) {
+  if (_STATUS == null) {
+    _STATUS = [];
+    for (var i = 1; i <= 4; i++) _STATUS.push(data[i]);
+    sendCommand(0xFF, 0xFF);
+  } else {
+    if (data[0] == UPDATE_STANDARD) {
+      var c = true;
+      for (var i = 0; i < 4; i++) {
+        if ((data[1 + i] &~ 0x30) > 1) { c = false; break; }
+      }
+      if (c) clear();
+      for (var i = 0; i < 4; i++) {
+        var status = data[1 + i];
+        if (!(status & 1)) continue;
+        var x      = data[5 + 2 * i];
+        var y      = data[6 + 2 * i];
+        if (status & 0x40) continue;
+        if ((x == 0xFF) || (y == 0xFF)) continue;
+        var cell   = data[13 + i];
+        var prog   = cell & 0x20;
+        var dcell  = document.getElementById("T" + y + "L" + x);
+        var dhead  = document.getElementById("Head" + i);
+
+        _STATUS[i] = status;
+        _CLEAR     = false;
+        
+        dhead.style.left = x * _CELL_SIZE + "px";
+        dhead.style.top  = y * _CELL_SIZE + "px";
+        dhead.hidden     = false;
+        if (status & 0x8) {
+          die(dhead, dcell, (status >> 4) & 0x3, i, prog);
+        } else {
+          if (prog) {
+            dcell.setAttribute("color", "white");
+            var eyes = dhead.getElementsByClassName("eye");
+            eyes[0].style.backgroundColor = "blue";
+            eyes[1].style.backgroundColor = "blue";
+          } else dcell.setAttribute("color", _COLORS[i + 1]);
+          turnHead(dhead, (status >> 4) & 0x3);
+        }
+      }
+    }
+    if (data[0] == UPDATE_ASSIGN) {
+      _ME = data[1];
+      var grid = document.getElementById("Board");
+      grid.style.border = "1px solid " + _COLORS[_ME + 1];
+      grid.style.boxShadow = "0px 0px 5px " + _COLORS[_ME + 1];
+      for (var line of document.getElementsByClassName("hline")) line.style.borderColor = _COLORS[_ME + 1];
+      for (var line of document.getElementsByClassName("vline")) line.style.borderColor = _COLORS[_ME + 1];
+    }
+  }
 }
 
 function turnHead(head, dir) {
@@ -223,184 +261,77 @@ function turnHead(head, dir) {
   }
 }
 
-function update(info) {
-  if (info) {
-    var data = info.split(';');
-    if (data.length == 1) { // ready update
-      var ready = data[0];
-      var i;
-      var allReady = true;
-      for (i = 0; i < 4; i++) {
-        var r = ready >> (i * 8); 
-        if (r & 0xFF && !(r & 0x2)) {
-          allReady = false;
-          break;
-        }
-      }
-      if (_HOST && allReady && i > 0 && !_CLOCK_STARTED) { // temporary should be > 1
-        clock(0);
-      }
-    } else {
-      var ready = data[_GRID_SIZE * 4];
-      var n, k;
-      for (var i = 0; i < 4; i++) {
-        var r = ready >> (i * 8); 
-        if (r & 0xFF && !(r & 0x4)) {
-          k = i;
-          n++;
-          break;
-        }
-      }
-      //if (n <= 1) { endGame(k); return; }
-      var initial_update = data.length > _GRID_SIZE * 4 + 1;
-      for (var i = 0; i < _GRID_SIZE; i++) {
-        for (var j = 0; j < _GRID_SIZE; j++) {
-          var cellValue = (data[4 * i + Math.floor(j / 8)] >> ((j % 8) * 4)) & 0xF;
-          var cell      = document.getElementById("T" + i + "L" + j);
-          var head  = cellValue & 8;
-          var color = cellValue & 7;
-          if (!((ready >> ((color - 1) * 8)) & 0x4)) {
-            if (head) {
-              var dir  = ready >> ((color - 1) * 8 + 4) & 0xF;
-              var head = document.getElementById("Head" + (color - 1));
-              if (initial_update) {
-                head.hidden = false;
-                head.style.top    = _CELL_SIZE * i + "px";
-                head.style.left   = _CELL_SIZE * j + "px";
-                cell.setAttribute("color", _COLORS[color]);
-              } else {
-                _NEXT.push({
-                  id:   color - 1,
-                  head: head,
-                  dir:  dir,
-                  i:    i,
-                  j:    j,
-                  die: false
-                });
-              }
-              turnHead(head, dir);
-            } else {
-              cell.setAttribute("color", _COLORS[color]);
-            }
-          }
-        }
-      }
-      if (!initial_update) eat();
-    }
-    if (initial_update) {
-      var r = data[_GRID_SIZE * 4 + 1];
-      if (r != -1) _MYTRON = r;
+function clear() {
+  if (_CLEAR) return;
+  for (var i = 0; i < _GRID_SIZE; i++) {
+    for (var j = 0; j < _GRID_SIZE; j++) {
+      document.getElementById("T" + i + "L"  + j).setAttribute("color", "");
     }
   }
-  sendCommand("UPDATE", null, update);
-}
-
-async function clock(stop) {
-  if (stop != 1) {
-    _CLOCK_STARTED = true;
-    await sleep(100);
-    sendCommand("CLOCK", null, clock);
-  } else {
-    _CLOCK_STARTED = false;
+  for (var i = 0; i < 4; i++) {
+    var head = document.getElementById("Head" + i);
+    head.hidden = true;
+    var eye1 = head.getElementsByClassName("eye00")[0];
+    var eye2 = head.getElementsByClassName("eye11")[0];
+    var eye3 = head.getElementsByClassName("eye01")[0];
+    var eye4 = head.getElementsByClassName("eye10")[0];
+    var eye5 = head.getElementsByClassName("eye02")[0];
+    var eye6 = head.getElementsByClassName("eye20")[0];
+    eye1.hidden = false;
+    eye2.hidden = false;
+    eye3.hidden = true;
+    eye4.hidden = true;
+    eye5.hidden = true;
+    eye6.hidden = true;
   }
+  _CLEAR = true;
 }
 
 function changeDirection(e) {
-  if (_MYTRON != "S" && !_DEAD) {
-    var head = document.getElementById("Head" + _MYTRON);
+  if (_ME != 0xFF ) {
+    var mystatus = _STATUS[_ME];
+    var bits     =   mystatus &= ~0x30;
+    var turn     =  (bits     &   0x07) == bits;
+    var done     =   bits     &   0x80;
+    var reset    =   bits     &   0x40;
+    if (bits == 1) { mystatus |=  0x02; turn = true; }
     switch(e.keyCode) {
       case 37: // left
-        turnHead(head, _LEFT);
-        sendCommand("TURN", { MyTron: _MYTRON, Dir: _LEFT}, function(){})
+        if (turn) sendCommand(_ME, mystatus | (_LEFT << 4));
         break;
       case 38: // up
-        turnHead(head, _UP);
-        sendCommand("TURN", { MyTron: _MYTRON, Dir: _UP}, function(){})
+        if (turn) sendCommand(_ME, mystatus | (_UP << 4));
         break;
       case 39:// right
-        turnHead(head, _RIGHT);
-        sendCommand("TURN", { MyTron: _MYTRON, Dir: _RIGHT}, function(){})
+        if (turn) sendCommand(_ME, mystatus | (_RIGHT << 4));
         break;
       case 40: // down
-        turnHead(head, _DOWN);
-        sendCommand("TURN", { MyTron: _MYTRON, Dir: _DOWN}, function(){})
+        if (turn) sendCommand(_ME, mystatus | (_DOWN << 4));
+        break;
+      case 13: // reset
+        if (done && !reset) sendCommand(_ME, mystatus | (1 << 6));
+        break;
+      case 80: // new progam
+        sendCommand(0xFF, 0x0A);
         break;
     }
   }
 }
 
-function eat() {
-  if (!_NEXT.length) return;
-  if (_HOST) sendCommand("RESET_HEADS", null, eat2);
-}
-
-function eat2(nothing) {
-  for (var next1 of _NEXT) {
-    for (var next2 of _NEXT) {
-      if (next1 == next2) continue;
-      if (next1.i == next2.i && next1.j == next2.j) {
-        die(next1);
-        die(next2);
-        if (_HOST) {
-          sendCommand("DIE", { ID: next1.id, Y: next1.i, X: next1.j }, function(){});
-          sendCommand("DIE", { ID: next1.id, Y: next2.i, X: next2.j }, function(){});
-        }
-      }
-    }
-  }
-  for (var next of _NEXT) {
-    if (next.die) continue;
-    switch (next.dir) {
-      case _LEFT:  next.j--; break;
-      case _RIGHT: next.j++; break;
-      case _UP:    next.i--; break;
-      case _DOWN:  next.i++; break;
-    }
-    if (next.i < 0 || next.i >= _GRID_SIZE || next.j < 0 || next.j >= _GRID_SIZE) {
-      if (next.i < 0) next.i++;
-      if (next.i >= _GRID_SIZE) next.i--;
-      if (next.j < 0) next.j++;
-      if (next.j >= _GRID_SIZE) next.j--;
-      die(next);
-      if (_HOST) {
-        sendCommand("DIE", { ID: next.id, Y: next.i, X: next.j }, function(){});
-      }
-    } else {
-      next.head.style.top    = _CELL_SIZE * next.i + "px";
-      next.head.style.left   = _CELL_SIZE * next.j + "px";
-      var nextCell = document.getElementById("T" + next.i + "L" + next.j);
-      if (nextCell.getAttribute("color") != "") {
-        die(next);
-        if (_HOST) {
-          sendCommand("DIE", { ID: next.id, Y: next.i, X: next.j }, function(){});
-        }
-      } else {
-        nextCell.setAttribute("color", _COLORS[next.id + 1]);
-        if (_HOST) {
-          sendCommand("EAT", { ID: next.id, Y: next.i, X: next.j }, function(){});
-        }
-      }
-    }
-  }
-  _NEXT = [];
-}
-
-function die(next) {
-  if (next.id == _MYTRON) _DEAD = true;
-  next.die = true;
-  var eye1 = next.head.getElementsByClassName("eye00")[0];
-  var eye2 = next.head.getElementsByClassName("eye11")[0];
-  var eye3 = next.head.getElementsByClassName("eye01")[0];
-  var eye4 = next.head.getElementsByClassName("eye10")[0];
-  var eye5 = next.head.getElementsByClassName("eye02")[0];
-  var eye6 = next.head.getElementsByClassName("eye20")[0];
+function die(head, cell, dir, id, prog) {
+  var eye1 = head.getElementsByClassName("eye00")[0];
+  var eye2 = head.getElementsByClassName("eye11")[0];
+  var eye3 = head.getElementsByClassName("eye01")[0];
+  var eye4 = head.getElementsByClassName("eye10")[0];
+  var eye5 = head.getElementsByClassName("eye02")[0];
+  var eye6 = head.getElementsByClassName("eye20")[0];
   eye1.hidden = true;
   eye2.hidden = true;
   eye3.hidden = false;
   eye4.hidden = false;
   eye5.hidden = false;
   eye6.hidden = false;
-  switch (next.dir) {
+  switch (dir) {
     case _RIGHT:
       eye3.style = "";
       eye4.style = "";
@@ -458,45 +389,72 @@ function die(next) {
       eye6.style.left   = 0.15 * _CELL_SIZE - 2 + "px";
       break;
   }
-  document.getElementById("T" + next.i + "L" + next.j).setAttribute("color", _COLORS[next.id + 5]);
+  if (prog) {
+    cell.setAttribute("color", "blue");
+  } else cell.setAttribute("color", _COLORS[id + 5]);
 }
 
 // SOCKETS
 ////////////////////////////////////////////////////////////////////////////
-var socket = null;
-try {
-    // Connexion vers un serveur HTTP
-    // prennant en charge le protocole WebSocket ("ws://").
-    socket = new WebSocket("ws://localhost:8000");
-} catch (exception) {
-    console.error(exception);
+_SOCKET = null;
+
+function wakeupServer() {
+  var xhttp = new XMLHttpRequest();
+  
+  xhttp.timeout = 1000;
+  xhttp.onreadystatechange = async function() {
+    if (this.readyState == 4 && this.status == 200) {
+      // good answer
+      startSocketConnection();
+      console.log(this.responseText);
+    } else if (this.readyState == 4) {
+      // wrong answer
+      alert("Unknown error!");
+    }
+  };
+  xhttp.open("GET", "wakeup.php", true);
+  xhttp.send();
 }
 
-// Récupération des erreurs.
-// Si la connexion ne s'établie pas,
-// l'erreur sera émise ici.
-socket.onerror = function(error) {
-    console.error(error);
-};
+function startSocketConnection() {
+  try {
+      // Connexion vers un serveur HTTP
+      // prennant en charge le protocole WebSocket ("ws://").
+      var sockaddr = window.location.hostname;
+      _SOCKET = new WebSocket("ws://" + sockaddr + ":8000");
+  } catch (exception) {
+      alert("Failed to connect to server...");
+      window.location = "/tron.php";
+  }
 
-// Lorsque la connexion est établie.
-socket.onopen = function(event) {
-    console.log("Connexion établie.");
+  // Récupération des erreurs.
+  // Si la connexion ne s'établie pas,
+  // l'erreur sera émise ici.
+  _SOCKET.onerror = function(error) {
+      // alert(error.content);
+      // window.location = "/tron";
+  };
 
-    // Lorsque la connexion se termine.
-    this.onclose = function(event) {
-        console.log("Connexion terminé.");
-    };
+  // Lorsque la connexion est établie.
+  _SOCKET.onopen = function(event) {
+      console.log("Connexion établie.");
 
-    // Lorsque le serveur envoi un message.
-    this.onmessage = function(event) {
-        console.log("Message:", event.data);
-    };
+      // Lorsque la connexion se termine.
+      this.onclose = function(event) {
+          console.log("Connexion terminée.");
+          console.log(event.reason);
+          window.location = "/tron";
+      };
 
-    // Envoi d'un message vers le serveur.
-    this.send("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB");
-    // var test = new Uint8Array([ 65, 76, 76, 79 ])
-    // this.binaryType = "arrayBuffer";
-    // this.send(test);
-    // alert("yeah!");
-};
+      // Lorsque le serveur envoi un message.
+      this.onmessage = function(event) {
+        var data = new Uint8Array(event.data);
+        update(data);
+      };
+      
+      this.binaryType = "arraybuffer";
+      var enc = new TextEncoder();
+      _ID_BYTES = enc.encode(_GAME_ID);
+      this.send(_ID_BYTES);
+  };
+}

@@ -34,6 +34,7 @@ typedef struct status {
       unsigned int dead      : 1;
       unsigned int direction : 2;
       unsigned int approve   : 1;
+      unsigned int done      : 1;
     };
   };
 } Status;
@@ -44,8 +45,10 @@ typedef struct cell {
   union {
     char value;
     struct {
-      unsigned int player : 4;
-      unsigned int head   : 1;
+      unsigned int player  : 4;
+      unsigned int head    : 1;
+      unsigned int program : 1;
+      unsigned int team    : 2;
     };
   };
 } Cell;
