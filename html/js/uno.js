@@ -55,8 +55,19 @@ function sleep(ms) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////
+function showJoin() {
+  var inputs = document.getElementsByTagName("form")[0].getElementsByTagName("input");
+  inputs[0].hidden = false;
+  inputs[1].hidden = false;
+}
+
 async function getUserName() {
   var question;
+  var tmp = getCookie("UserID");
+  if (tmp) {
+    _USERID = tmp;
+    _USERNM = getCookie("UserName");
+  }
   while (_USERID == -1) {
     if (getCookie("Language") == "FR") question = "Entrez votre nom:";
     else                               question = "Enter your name:";
@@ -66,6 +77,8 @@ async function getUserName() {
     promise.then(value => _USERID = value);
     await promise;
   }
+  document.cookie = "UserID="   + _USERID;
+  document.cookie = "UserName=" + _USERNM;
   sendCommand("UPDATE", { Immediate: true }, update);
 }
 
@@ -76,8 +89,9 @@ function update(info) {
     var i  = 0;
     _STATE = data[i++];
     _TURN  = data[i++];
+    _NUP   = data[i++];
     _CARDS = [];
-    while (data[i++] != 'U') {
+    while (data[i++] != 'U' && i < data.length) {
       _CARDS.push({
         CardID: data[i++],
         UserID: data[i++],
@@ -92,11 +106,11 @@ function update(info) {
         HideCards: data[i++]
       })
     }
-    if (n != _USERS.length) {
+    if (nu != _USERS.length) {
       displayUsers();
     }
   }
-  sendCommand("UPDATE", null, update);
+  sendCommand("UPDATE", { RequestUpdate: _NUP }, update);
 }
 
 function fitTable() {
@@ -110,5 +124,15 @@ function fitTable() {
 }
 
 function displayUsers() {
-
+  var td = document.getElementById("TableDefs");
+  var tt = document.getElementById("TableTransform");
+  var sector = Math.PI * 2 / _USERS.length;
+  td.innerHTML = "";
+  tt.innerHTML = "";
+  for (var i = 0; i < _USERS.length; i++) {
+    td.innerHTML += `<path id="CurvedPath" d="M 0 150 Q 325 50 650 150 "/>`
+    tt.innerHTML += `<text font-size="54" x="325" y="50"  text-anchor="middle"  fill="gold" font-family="Commissioner">`
+                 +  `<textPath id='MyMessage' xlink:href="#CurvedPath">THIS TEXT IS CURVED</textPath>`
+                 +  `</text>`;
+  }
 }

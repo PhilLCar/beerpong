@@ -176,3 +176,49 @@ input[type="button"]:hover {
   z-index: 10;
   border-radius: 50%;
 }
+
+#MainMenu form {
+  margin-top: 100px;
+}
+
+input[type="text"] {
+  border-radius: 10px;
+  border: none;
+  background-color: rgb(255, 37, 37);
+  color: gold;
+  font-size: 30px;
+  font-weight: bolder;
+  margin: 20px;
+  padding: 10px;
+  max-width: 150px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+input[type="text"]:hover {
+  background-color: darkred;
+}
+
+input[type="submit"] {
+  background-color: gold;
+  border-radius: 10px;
+  border: none;
+  font-size: 30px;
+  font-weight: bolder;
+  padding: 10px;
+  color: black;
+  text-shadow:  1px  1px 0 white,
+               -1px  1px 0 white,
+                1px -1px 0 white,
+               -1px -1px 0 white;
+}
+
+input[type="submit"]:hover {
+  cursor: pointer;
+  background-color: rgb(255, 37, 37);
+}
+
+#Table svg {
+  width: 100%;
+  height: 100%;
+}

@@ -31,7 +31,7 @@
       if (!$result->num_rows) {
         header("Location: /uno?error=1");
       }
-      if ($result["GameState"]) {
+      if ($result->fetch_assoc()["GameState"]) {
         header("Location: /uno?error=4");
       }
     }
@@ -56,7 +56,12 @@
   <body onload="fitTable()" onresize="fitTable()">
     <div id="GameID"><?php echo($id); ?></div>
     <div id="Table">
-
+      <svg width="600" height="600" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <defs id="TableDefs">
+        </defs>
+        <g id="TableTransform" transform="">
+        </g>
+      </svg>
     </div>
   </body>
 </html>
