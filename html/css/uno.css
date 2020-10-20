@@ -6,7 +6,7 @@ html, body {
   bottom: 0px;
   left: 0px;
   right: 0px;
-  background-color: darkolivegreen;
+  background-color: darkgreen;
   font-family: 'Commissioner', sans-serif;
   font-weight: bold;
   color: gold;
@@ -162,35 +162,17 @@ input[type="button"]:hover {
   margin-top: 30px;
   margin-bottom: 100px;
 }
-/*
-.uno {
+
+#GameID {
   position: absolute;
-  top: 0px;
-  bottom: 0px;
-  left: 0px;
-  right: 0px;
+  width: fit-content;
+  right: 20px;
+  font-size: 50px;
 }
 
-.unoContainer {
-  position: relative;
-  width: 100%;
-  margin: auto;
-  margin-top: 30px;
-  padding-bottom: 62.5%;
-  text-align: center;
-}
-
-.unoCircle {
+#Table {
   position: absolute;
-  top: 0px;
-  bottom: 0px;
-  left: 0px;
-  right: 0px;
+  background-color: sienna;
+  z-index: 10;
   border-radius: 50%;
-  background-color: red;
-  rotate: -30deg;
 }
-
-.unoText {
-  rotate: 10deg;
-} */
