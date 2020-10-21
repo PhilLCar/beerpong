@@ -26,6 +26,27 @@
   $conn = mysqli_connect($servername, $username, $password, $database);
   if ($conn) {
     switch ($_POST["Command"]) {
+      case "INIT":
+        $dp = 0;
+        for ($i = 0; $i < 112; $i++) {
+          if ((($i % 14) == 0) && $i >= 56) continue;
+          $sql = "INSERT INTO deck (GameID, CardID) VALUES ('" . $_POST["GameID"] . "', " . $i . ")";
+          $conn->query($sql);
+        }
+        $cards = $conn->query("SELECT * FROM deck  WHERE GameID='" . $_POST["GameID"] . "' ORDER BY RAND()");
+        while ($row = $cards->fetch_assoc()) {
+          $conn->query("UPDATE deck SET DeckPosition=" . $dp++ . " WHERE CardID=" . $row["CardID"] . " AND GameID='" . $row["GameID"] . "'");
+        }
+        $cards = $conn->query("SELECT * FROM deck  WHERE GameID='" . $_POST["GameID"] . "' ORDER BY -DeckPosition");
+        $users = $conn->query("SELECT * FROM users WHERE GameID='" . $_POST["GameID"] . "'");
+        while ($user = $users->fetch_assoc()) {
+          for ($i = 0; $i < 7; $i++) {
+            $card = $cards->fetch_assoc();
+            $conn->query("UPDATE deck SET DeckPosition=NULL, OwnerID=" . $user["UserID"] . " WHERE CardID=" . $card["CardID"] . " AND GameID='" . $card["GameID"] . "'");
+          }
+        }
+        $conn->query("UPDATE games SET GameState=1, RequestUpdate=RequestUpdate+1 WHERE GameID='" . $_POST["GameID"] . "'");
+        break;
       case "GET_USER_ID":
         $conn->query("LOCK TABLES users, games WRITE");
         $sql = "INSERT INTO users (GameID, UserName) VALUES ('" . rawurlencode($_POST["GameID"]) . "', '" . rawurlencode($_POST["UserName"]) . "')";
