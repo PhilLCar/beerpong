@@ -1,0 +1,18 @@
+<svg version="1.1"
+     baseProfile="full"
+     xmlns="http://www.w3.org/2000/svg"
+     width="400" 
+     height="600">
+  <rect x="0" y="0" width="400" height="600" fill="black"/>
+  <g transform="rotate(30 200 300)">
+    <ellipse cx="200" cy="300" rx="150" ry="300" stroke="red" stroke-width="15" fill="red"/>
+  </g>
+  <g transform="translate(30 30) rotate(-20 200 300)">
+    <text x="185" y="315" text-anchor="middle" font-family="Helvetica" font-size="180" font-weight="bolder" fill="black" stroke="black" stroke-width="9">UNO</text>
+    <text x="205" y="305" text-anchor="middle" font-family="Helvetica" font-size="180" font-weight="bolder" fill="black" stroke="black" stroke-width="3">UNO</text>
+    <text x="205" y="295" text-anchor="middle" font-family="Helvetica" font-size="180" font-weight="bolder" fill="black" stroke="black" stroke-width="3">UNO</text>
+    <text x="195" y="305" text-anchor="middle" font-family="Helvetica" font-size="180" font-weight="bolder" fill="black" stroke="black" stroke-width="3">UNO</text>
+    <text x="195" y="295" text-anchor="middle" font-family="Helvetica" font-size="180" font-weight="bolder" fill="black" stroke="black" stroke-width="3">UNO</text>
+    <text x="200" y="300" text-anchor="middle" font-family="Helvetica" font-size="180" font-weight="bolder" fill="gold"  stroke="white" stroke-width="3">UNO</text>
+  </g>
+</svg> 

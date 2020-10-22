@@ -45,6 +45,8 @@
             $conn->query("UPDATE deck SET DeckPosition=NULL, OwnerID=" . $user["UserID"] . " WHERE CardID=" . $card["CardID"] . " AND GameID='" . $card["GameID"] . "'");
           }
         }
+        $card = $cards->fetch_assoc();
+        $conn->query("UPDATE deck SET DeckPosition=-1 WHERE CardID=" . $card["CardID"] . " AND GameID='" . $card["GameID"] . "'");
         $conn->query("UPDATE games SET GameState=1, RequestUpdate=RequestUpdate+1 WHERE GameID='" . $_POST["GameID"] . "'");
         break;
       case "GET_USER_ID":

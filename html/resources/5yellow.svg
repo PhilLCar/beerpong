@@ -3,7 +3,7 @@
      xmlns="http://www.w3.org/2000/svg"
      width="400" 
      height="600">
-  <rect x="0" y="0" width="400" height="600" fill="yellow"/>
+  <rect x="0" y="0" width="400" height="600" fill="gold"/>
   <g transform="skewX(-10)">
     <text x="35" y="105" font-family="Helvetica" font-size="100" font-weight="bolder" fill="black" stroke="black" stroke-width="3">5</text>
     <text x="40" y="100" font-family="Helvetica" font-size="100" font-weight="bolder" fill="white" stroke="black" stroke-width="3">5</text>

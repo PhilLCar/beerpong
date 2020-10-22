@@ -3,7 +3,7 @@
      xmlns="http://www.w3.org/2000/svg"
      width="400" 
      height="600">
-  <rect x="0" y="0" width="400" height="600" fill="yellow"/>
+  <rect x="0" y="0" width="400" height="600" fill="gold"/>
   <g transform="rotate(30 200 300)">
     <ellipse cx="200" cy="300" rx="150" ry="300" stroke="white" stroke-width="15" fill="transparent"/>
   </g>

@@ -10,6 +10,8 @@ html, body {
   font-family: 'Commissioner', sans-serif;
   font-weight: bold;
   color: gold;
+  margin: 0px;
+  overflow: hidden;
 }
 
 [hidden] {
@@ -186,8 +188,11 @@ input[type="button"]:hover {
 #Table {
   position: absolute;
   background-color: sienna;
-  z-index: 10;
+  z-index: 5;
   border-radius: 50%;
+  background-image: url(/resources/wood.jpg);
+  background-size: contain;
+  box-shadow: 0 10px 10px black;
 }
 
 #MainMenu form {
@@ -238,4 +243,62 @@ input[type="submit"]:hover {
 
 #Distribute {
   position: absolute;
+}
+
+.card {
+  position: absolute;
+  background-color: black;
+  border-color: white;
+  border-style: solid;
+  overflow: hidden;
+}
+
+.card img {
+  width: 100%;
+  height: 100%;
+}
+
+#Cards {
+  pointer-events: none;
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  z-index: 10;
+}
+
+#Fan {
+  position: absolute;
+  bottom: 0px;
+  left: 20%;
+  right: 20%;
+  height: 30%;
+}
+
+.mine {
+  pointer-events: all;
+}
+
+#Deck:hover, .mine:hover {
+  cursor: pointer;
+  border-color: grey;
+}
+
+#ShowHideButton {
+  position: absolute;
+  right: 10px;
+  bottom: 100px;
+}
+
+#UnoButton {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+}
+
+#SignalButton {
+  position: absolute;
+  left: 10px;
+  bottom: 100px;
 }

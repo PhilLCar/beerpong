@@ -10,6 +10,7 @@ CREATE TABLE games (
   GameID                VARCHAR(4)                   NOT NULL                    PRIMARY KEY,
   GameState             INTEGER                      NOT NULL                    DEFAULT 0,
   Turn                  INTEGER                      NOT NULL                    DEFAULT 0,
+  DeckColor             INTEGER                                                  DEFAULT NULL,
   RequestUpdate         INTEGER                      NOT NULL                    DEFAULT 0
 );
 
@@ -24,8 +25,8 @@ CREATE TABLE users (
 CREATE TABLE deck (
   GameID                VARCHAR(4)                   NOT NULL,
   CardID                INTEGER                      NOT NULL,
-  OwnerID               INTEGER                      DEFAULT NULL,
-  DeckPosition          INTEGER                      DEFAULT NULL,
+  OwnerID               INTEGER                                                  DEFAULT NULL,
+  DeckPosition          INTEGER                                                  DEFAULT NULL,
   PRIMARY KEY           (GameID, CardID),
   FOREIGN KEY           (GameID)                     REFERENCES                  games(GameID),
   FOREIGN KEY           (OwnerID)                    REFERENCES                  users(UserID)
