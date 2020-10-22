@@ -4,11 +4,13 @@
     $show = "VOIR";
     $hide = "CACHER";
     $sig  = "SIGNALER";
+    $pick = "PIGE:";
   } else {
     $dist = "DISTRIBUTE!";
     $show = "SHOW";
     $hide = "HIDE";
     $sig  = "SIGNAL";
+    $pick = "STACK:";
   }
 
   if ($_COOKIE["GameID"]) {
@@ -101,7 +103,7 @@
         <g id="TableTransform" transform="">
         </g>
       </svg>
-      <div id="Deck" class="card" hidden="true">
+      <div id="Deck" class="card" hidden="true" onclick="pick()">
         <img src="/resources/back.svg"/>
       </div>
       <div id="PlayDeck" class="card" hidden="true">
@@ -115,13 +117,17 @@
       </div>
     </div>
     <div id="ShowHideButton" value="1" alternate="<?php echo($hide); ?>" class="button">
-      <input type="button" value="<?php echo($show) ?>" onclick="showHide()"/>
+      <input type="button" value="<?php echo($show) ?>" onclick="showHide(true)"/>
     </div>
-    <div id="UnoButton" class="button">
+    <div id="UnoButton" class="button" onclick="uno()">
       <input type="button" value="UNO"/>
     </div>
-    <div id="SignalButton" class="button">
+    <div id="SignalButton" class="button" onclick="signal()">
       <input type="button" value="<?php echo($sig) ?>"/>
+    </div>
+    <div id="Pick" hidden="true">
+      <div id="PickTitle"><?php echo($pick); ?></div>
+      <div id="PickNumber">8</div>
     </div>
   </body>
 </html>

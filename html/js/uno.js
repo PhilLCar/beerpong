@@ -4,17 +4,20 @@ var _USERID = -1;
 var _SDELAY = 70000;
 var _TURN   = 0;
 var _STATE  = 0;
-var _PREVC  = [];
 var _CARDS  = [];
 var _USERS  = [];
 var _NUSER  = null;
 var _NUP    = null;
 var _HANDO  = false;
+var _STATEO = false;
 var _ANIM   = false;
 var _ANIMMS = 25;
 var _BRATIO = 14.6667;
 var _TILT   = 10 * Math.PI / 180;
 var _OUTPRC = 0.4;
+var _COLOR  = null;
+var _STACK  = 0;
+var _CW     = true;
 var _CID    = [
   "/resources/0red.svg",
   "/resources/1red.svg",
@@ -85,7 +88,7 @@ var _CID    = [
   "/resources/Sred.svg",
   "/resources/Rred.svg",
   "/resources/2cardsred.svg",
-  "/resources/multi.svg",
+  "/resources/4cards.svg",
   null,
   "/resources/1yellow.svg",
   "/resources/2yellow.svg",
@@ -99,7 +102,7 @@ var _CID    = [
   "/resources/Syellow.svg",
   "/resources/Ryellow.svg",
   "/resources/2cardsyellow.svg",
-  "/resources/multi.svg",
+  "/resources/4cards.svg",
   null,
   "/resources/1green.svg",
   "/resources/2green.svg",
@@ -113,7 +116,7 @@ var _CID    = [
   "/resources/Sgreen.svg",
   "/resources/Rgreen.svg",
   "/resources/2cardsgreen.svg",
-  "/resources/multi.svg",
+  "/resources/4cards.svg",
   null,
   "/resources/1blue.svg",
   "/resources/2blue.svg",
@@ -127,8 +130,14 @@ var _CID    = [
   "/resources/Sblue.svg",
   "/resources/Rblue.svg",
   "/resources/2cardsblue.svg",
-  "/resources/multi.svg"
+  "/resources/4cards.svg"
 ];
+
+function mod(base, modulo) {
+  var m = base % modulo;
+  if (m < 0) m += modulo;
+  return m;
+}
 
 // https://www.w3schools.com/js/js_cookies.asp
 function getCookie(cname) {
@@ -215,22 +224,27 @@ async function getUserName() {
 function update(info) {
   if (info) {
     var data = info.split(';');
-    var nu = _USERS.length;
     var rf = false;
     var i  = 0;
     var ps = _STATE;
     var pt = _TURN;
     var pn = _NUP;
+    var pc = _CARDS;
+    var pu = _USERS;
     _STATE = data[i++];
     _TURN  = data[i++];
     _NUP   = data[i++];
-    if (pn !== null) {
-      if (ps != _STATE) animateState();
-      if (pt != _TURN)  animateTurn();
+    _CW    = data[i++];
+    _COLOR = data[i++];
+    _STACK = data[i++];
+    if (_STACK != 0) {
+      document.getElementById("Pick").hidden = false;
+      document.getElementById("PickNumber").innerHTML = _STACK;
+    } else {
+      document.getElementById("Pick").hidden = true;
     }
     if (data[i++] == 'C') {
       document.getElementById("Distribute").hidden = true;
-      _PREVC = _CARDS;
       _CARDS = [];
       while (data[i] != 'U' && i < data.length) {
         _CARDS.push({
@@ -250,15 +264,43 @@ function update(info) {
         _USERS.push({
           UserID: data[i++],
           UserName: decodeURIComponent(data[i++]),
-          HideCards: data[i++]
+          HideCards: data[i++],
+          Uno: data[i++],
+          Signal: data[i++]
         })
       }
-      if (nu != _USERS.length) {
+      if (pu.length != _USERS.length) {
         displayUsers();
       }
     }
     if (rf) {
       displayCards();
+      if (_USERS[_NUSER].HideCards != document.getElementById("ShowHideButton").getAttribute("value")) {
+        showHide(false);
+      }
+    }
+    if (pn !== null) {
+      if (ps != _STATE) _STATEO = animateState();
+      if (pt != _TURN)  animateTurn(mod(_TURN, _USERS.length));
+    }
+    if (pu.length) {
+      for (var i = 0; i < _USERS.length; i++) {
+        if (i == _NUSER) continue;
+        if (pu[i].HideCards != _USERS[i].HideCards) animateFan(i, _USERS[i].HideCards);
+        if (pu[i].Uno       != _USERS[i].Uno)       animateUno(i);
+        if (pu[i].Signal    != _USERS[i].Signal)    animateSig(i);
+      }
+    }
+    if (pc.length) {
+      for (var i = 0; i < _CARDS.length; i++) {
+        if (pc[i].DeckPosition != _CARDS[i].DeckPosition) {
+          if (_CARDS[i].DeckPosition == "") {
+            animateCardFromDeck(_CARDS[i].UserID);
+          } else if (_CARDS[i].DeckPosition < 0) {
+            animateCardToPDeck(_CARDS[i].CardID);
+          }
+        }
+      }
     }
   }
   sendCommand("UPDATE", { RequestUpdate: _NUP }, update);
@@ -299,19 +341,20 @@ function displayUsers() {
                + `</filter>`;
   tt.innerHTML = "";
   for (var i = 0; i < _USERS.length; i++) {
-    var fill   = "gold";
-    var filter = "";
-    if ((_STATE == 1) && ((_TURN % _USERS.length) == i)) {
-      fill   = "white";
-      filter = `<text x="${Math.PI * 280 / _USERS.length}" font-size="40" text-anchor="middle" fill="#FF7" font-family="Commissioner" style="filter: url(#glow)">`
-             + `<textPath id="User${i}" xlink:href="#Path${i}">${_USERS[(i + _NUSER) % _USERS.length].UserName}</textPath>`
-             + `</text>`;
+    var fill    = "gold";
+    var opacity = "0"
+    if ((_STATE == 1) && (mod(_TURN, _USERS.length) == i)) {
+      fill    = "white";
+      opacity = "1";
     }
     td.innerHTML += `<path id="Path${i}" d="M ${300 + Math.sin(sector * -i - sector / 2) * 280} ${300 + Math.cos(sector * -i - sector / 2) * 280} A 280 280, 0, 0, 0 `
                  +  `${300 + Math.sin(sector * -i + sector / 2) * 280} ${300 + Math.cos(sector * -i + sector / 2) * 280}"/>`
-    tt.innerHTML += filter
-                 +  `<text x="${Math.PI * 280 / _USERS.length}" font-size="40" text-anchor="middle" fill="${fill}" font-family="Commissioner">`
-                 +  `<textPath id="User${i}" xlink:href="#Path${i}">${_USERS[(i + _NUSER) % _USERS.length].UserName}</textPath>`
+    tt.innerHTML += `<text id="Filter${i}" class="filter" x="${Math.PI * 280 / _USERS.length}" font-size="40" text-anchor="middle" `
+                 +  `fill="#FF7" fill-opacity="${opacity}" font-family="Commissioner" style="filter: url(#glow)">`
+                 +  `<textPath xlink:href="#Path${i}">${_USERS[(i + _NUSER) % _USERS.length].UserName}</textPath>`
+                 +  `</text>`
+                 +  `<text id="User${i}" x="${Math.PI * 280 / _USERS.length}" font-size="40" text-anchor="middle" fill="${fill}" font-family="Commissioner">`
+                 +  `<textPath xlink:href="#Path${i}">${_USERS[(i + _NUSER) % _USERS.length].UserName}</textPath>`
                  +  `</text>`;
   }
   var ty = t.clientHeight / 600;
@@ -327,8 +370,8 @@ function displayDeck() {
   var width;
   var bottom;
   var bshadow = "";
-  deck.hidden = !_CARDS.length;
   for (var card of _CARDS) if (card.DeckPosition != "" && card.DeckPosition >= 0) deckSize++;
+  deck.hidden = deckSize == 0;
   tableSize = document.getElementById("Table").getBoundingClientRect();
   width  = tableSize.width / 4 / (1 + 2 / _BRATIO);
   bwidth = width / _BRATIO;
@@ -354,6 +397,7 @@ function displayPDeck() {
   var bottom;
   var bshadow = "";
   for (var card of _CARDS) if (card.DeckPosition != "" && card.DeckPosition < 0) deckSize++;
+  deck.hidden = deckSize == 0;
   tableSize = document.getElementById("Table").getBoundingClientRect();
   width  = tableSize.width / 4 / (1 + 2 / _BRATIO);
   bwidth = width / _BRATIO;
@@ -371,6 +415,7 @@ function displayPDeck() {
 }
 
 function displayCards() {
+  var hidden = document.getElementById("ShowHideButton").getAttribute("value") == "1";
   displayDeck();
   displayPDeck();
   if (!_CARDS.length) return;
@@ -382,6 +427,10 @@ function displayCards() {
   var sector   = Math.PI * 2 / _USERS.length;
   for (var i = 0; i < _USERS.length; i++) {
     var ncards = 0;
+    var n      = 0;
+    if (!hidden) {
+      for (var c of _CARDS) if (c.UserID == _USERS[i].UserID) ncards++;
+    }
     for (var c of _CARDS) {
       if (c.UserID != _USERS[i].UserID) continue;
       var finalAngle = sector * (i - _NUSER);
@@ -389,10 +438,16 @@ function displayCards() {
       var finalX     = tablepos.left + tablepos.width  / 2 - Math.sin(finalAngle) * (tablepos.width  / 2 + 0.2 * tablepos.height) - finalW /    2 - finalW / _BRATIO;
       var finalY     = tablepos.top  + tablepos.height / 2 + Math.cos(finalAngle) * (tablepos.height / 2 + 0.2 * tablepos.height) - finalW * 0.75 - finalW / _BRATIO;
       var card;
+      var created = false;
       while (!(card = document.getElementById(`Card${c.CardID}`))) {
-        cards.innerHTML += `<div id="Card${c.CardID}" class="card${i == _NUSER ? " mine" : ""}" onclick="select(this)"><img src="/resources/back.svg"/></div>`;
+        created = true;
+        cards.innerHTML += `<div id="Card${c.CardID}" class="card${i == _NUSER ? " mine" : ""}" onclick="select(this)">`
+                        +  `<img src="${hidden || i != _NUSER ? "/resources/back.svg" : _CID[c.CardID]}"/></div>`;
       }
-      card.style.zIndex = i == _NUSER ? ncards++ : -1;
+      if (created) {
+        if (hidden) card.style.zIndex = i == _NUSER ? n++ : -1;
+        else        card.style.zIndex = i == _NUSER ? ncards - ++n : -1;
+      }
       card.style.width  = finalW + "px";
       card.style.height = 1.5 * finalW + "px";
       card.style.left   = finalX + "px";
@@ -407,8 +462,55 @@ function displayCards() {
     min = c.DeckPosition;
     cid = c.CardID;
   }
-  pdeck.hidden = false;
   pdeck.getElementsByTagName("img")[0].src = _CID[cid];
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+function select(card) {
+  if (mod(_TURN, _USERS.length) != _NUSER) {
+    if (getCookie("Language") == "FR") alert("Ce n'est pas votre tour!");
+    else                               alert("It's not your turn!");
+    return;
+  }
+  var cid = card.id.substring(4);
+  animateCardToPDeck(cid);
+  sendCommand("PLAY", { CardID: cid }, function(){});
+}
+
+function pick() {
+  if (mod(_TURN, _USERS.length) != _NUSER) {
+    if (getCookie("Language") == "FR") alert("Ce n'est pas votre tour!");
+    else                               alert("It's not your turn!");
+    return;
+  }
+  animateCardFromDeck(_NUSER);
+  sendCommand("PICK", null, function(){});
+}
+
+function uno() {
+
+  sendCommand("UNO", null, function(){});
+}
+
+function signal() {
+
+  sendCommand("SIG", null, function(){});
+}
+
+function showHide(toserver) {
+  var button = document.getElementById("ShowHideButton");
+  var input = button.getElementsByTagName("input")[0];
+  var text  = button.getAttribute("alternate");
+  if (button.getAttribute("value") == "1") {
+    animateFlip(true);
+    button.setAttribute("value", "0");
+  } else {
+    animateFlip(false);
+    button.setAttribute("value", "1");
+  }
+  button.setAttribute("alternate", input.value);
+  input.value = text;
+  if (toserver) sendCommand("SWHD", null, function(){});
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -500,6 +602,7 @@ async function animateState() {
     pdeck.getElementsByTagName("img")[0].src = _CID[cid];
     animationMask(false);
   }
+  _STATEO = false;
 }
 
 async function animateOpenHand() {
@@ -510,7 +613,7 @@ async function animateOpenHand() {
   var final = [];
   for (var i = 0; i < cards.length; i++) {
     var card = cards[i];
-    var ang  = _TILT * (i - (cards.length - 1) / 2);
+    var ang  = _TILT * (i - (cards.length - 1) / 2) / ((cards.length - 1) / 2);
     final.push({
       A0: 0,
       A1: ang,
@@ -564,7 +667,6 @@ async function animateCloseHand() {
     });
   }
   for (var i = 0, anim = 5; i <= anim; i++) {
-    var left = anim - i;
     for (var j = 0; j < cards.length; j++) {
       var target = final[j];
       var card = cards[j];
@@ -672,21 +774,6 @@ async function animateFlip(visible) {
   animationMask(false);
 }
 
-function showHide() {
-  var button = document.getElementById("ShowHideButton");
-  var input = button.getElementsByTagName("input")[0];
-  var text  = button.getAttribute("alternate");
-  if (button.getAttribute("value") == "1") {
-    animateFlip(true);
-    button.setAttribute("value", "0");
-  } else {
-    animateFlip(false);
-    button.setAttribute("value", "1");
-  }
-  button.setAttribute("alternate", input.value);
-  input.value = text;
-}
-
 async function animateFan(nuser, open) {
   animationMask(true);
   var table  = document.getElementById("Table").getBoundingClientRect();
@@ -720,16 +807,165 @@ async function animateFan(nuser, open) {
       var y  = final.Y0 + (final.Y1 - final.Y0) * k / anim;
       final.C.style.left   = x + "px";
       final.C.style.top    = y + "px";
-      await sleep(1);
     }
+    await sleep(_ANIMMS);
   }
   animationMask(false);
 }
 
-function animateCardToPDeck(cid) {
+async function animateCardToPDeck(cid) {
+  animationMask(true);
+  var deck   = document.getElementById("PlayDeck");
+  var deckr  = deck.getBoundingClientRect();
+  var card   = document.getElementById("Card" + cid);
+  var img    = card.getElementsByTagName("img")[0];
+  var hidden = img.src.includes("/resources/back.svg");
 
+  var A0 = parseFloat(card.style.transform.substring(7));
+  var X0 = parseFloat(card.style.left);
+  var Y0 = parseFloat(card.style.top);
+  var W0 = parseFloat(card.style.width);
+  
+  var A1 = 0;
+  var X1 = deckr.left + parseFloat(deck.style.borderWidth);
+  var Y1 = deckr.top  + parseFloat(deck.style.borderWidth);
+  var W1 = parseFloat(deck.style.width);
+
+  for (var i = 0, anim = 10; i <= anim; i++) {
+    var width = W0 + (W1 - W0) * i / anim;
+    var wm    = hidden ? (i - anim / 2) / (anim / 2) : 1;
+    card.style.transform = `rotate(${A0 + (A1 - A0) * i / anim}rad)`;
+    card.style.left = X0 + (X1 - X0) * i / anim + "px";
+    card.style.top  = Y0 + (Y1 - Y0) * i / anim + "px";
+    card.style.width  = width * wm + "px";
+    if (hidden && i == Math.floor(anim / 2)) {
+      img.src = _CID[cid];
+    }
+    card.style.height = 1.5 * width + "px";
+    card.style.borderWidth  = width / _BRATIO * wm + "px";
+    card.style.borderRadius = 2 * width / _BRATIO + "px";
+    await sleep(_ANIMMS);
+  }
+  deck.getElementsByTagName("img")[0].src = _CID[cid];
+  card.parentNode.removeChild(card);
+  var min = 0;
+  var index;
+  for (var i = 0; i < _CARDS.length; i++) {
+    var c = _CARDS[i];
+    if (c.DeckPosition < min) min = c.DeckPosition;
+    if (c.CardID == cid) index = i;
+  }
+  _CARDS[index].DeckPosition = min - 1;
+  displayPDeck();
+  animationMask(false);
 }
 
-function animateCardFromDeck(user, cid) {
-  
+async function animateCardFromDeck(user) {
+  animationMask(true);
+  var hidden     = document.getElementById("ShowHideButton").getAttribute("value") == "1";
+  var cards      = document.getElementById("Cards");
+  var deck       = document.getElementById("Deck");
+  var deckpos    = deck.getBoundingClientRect();
+  var tablepos   = document.getElementById("Table").getBoundingClientRect();
+  var sector     = Math.PI * 2 / _USERS.length;
+  var finalAngle = sector * (user - _NUSER);
+  var startW     = deckpos.width;
+  var finalW     = 0.6 * startW;
+  var startX     = deckpos.left;
+  var startY     = deckpos.top;
+  var finalX     = tablepos.left + tablepos.width  / 2 - Math.sin(finalAngle) * (tablepos.width  / 2 + 0.2 * tablepos.height) - finalW / 2    - finalW / _BRATIO;
+  var finalY     = tablepos.top  + tablepos.height / 2 + Math.cos(finalAngle) * (tablepos.height / 2 + 0.2 * tablepos.height) - finalW * 0.75 - finalW / _BRATIO;
+  var card;
+  var cid;
+  var n   = 0;
+  var l   = 0;
+  var min = 112;
+  for (var i = 0; i < _CARDS.length; i++) {
+    var c = _CARDS[i];
+    if (c.DeckPosition != "" && c.DeckPosition >= 0 && c.DeckPosition < min) {
+      min = c.DeckPosition;
+      n = i;
+      l++;
+    }
+  }
+  if (l == 1) deck.hidden = true;
+  _CARDS[n].UserID       = _USERS[user].UserID;
+  _CARDS[n].DeckPosition = "";
+  cid = _CARDS[n].CardID;
+  cards.innerHTML += `<div id="Card${cid}" class="card${user == _NUSER ? " mine" : ""}" onclick="select(this)"><img src="/resources/back.svg"/></div>`;
+  card = document.getElementById(`Card${cid}`);
+  if (hidden) {
+    card.style.zIndex = user == _NUSER ? document.getElementsByClassName("mine").length - 1 : -1;
+  } else {
+    card.style.zIndex = -1;
+    for (mine of document.getElementsByClassName("mine")) {
+      mine.style.zIndex = parseInt(mine.style.zIndex) + 1;
+    }
+  }
+  for (var k = 0, anim = 10; k <= anim; k++) {
+    var wm = !hidden ? (k - anim / 2) / (anim / 2) : 1;
+    var a  = finalAngle * k / anim;
+    var x  = startX + (finalX - startX) * k / anim;
+    var y  = startY + (finalY - startY) * k / anim;
+    var w  = startW + (finalW - startW) * k / anim;
+    var h  = 1.5 * w;
+    var bw = wm * w / _BRATIO;
+    if (!hidden && k == Math.floor(anim / 2)) {
+      card.getElementsByTagName("img")[0].src = _CID[cid];
+    }
+    card.style.width  = wm * w + "px";
+    card.style.height = h  + "px";
+    card.style.left   = x + "px";
+    card.style.top    = y + "px";
+    card.style.borderWidth = bw + "px";
+    card.style.borderRadius = 2 * bw + "px";
+    card.style.transform = `rotate(${a}rad)`;
+    await sleep(_ANIMMS);
+  }
+  if (l == 1) animateFlipDeck();
+  else        displayDeck();
+  animationMask(false);
+}
+
+async function animateTurn(user) {
+  if (_STATEO) await _STATEO;
+  var white = [ 0xFF, 0xFF, 0xFF ];
+  var gold  = [ 0xFF, 0xD7, 0x00 ];
+  var filters = document.getElementsByClassName("filter");
+  var fo, fn;
+  for (var filter of filters) {
+    if (filter.getAttribute("fill-opacity") != "0") fo = filter;
+    if (filter.id == "Filter" + user)               fn = filter;
+  }
+  var o = document.getElementById("User" + fo.id.substring(6));
+  var n = document.getElementById("User" + user);
+  for (var k = 0, anim = 10; k <= anim; k++) {
+    var opacity = k / anim;
+    var ocolor = "#";
+    var ncolor = "#";
+    for (var i = 0; i < 3; i++) {
+      var diff = white[i] - gold[i];
+      var ot = "0" + Math.round(gold[i] + (anim - k) / anim * diff).toString(16);
+      var nt = "0" + Math.round(gold[i] + k / anim * diff).toString(16);
+      ocolor += ot.substring(ot.length - 2);
+      ncolor += nt.substring(nt.length - 2);
+    }
+    o.setAttribute("fill", ocolor);
+    n.setAttribute("fill", ncolor);
+    fo.setAttribute("fill-opacity", 1 - opacity);
+    fn.setAttribute("fill-opacity", opacity);
+    await sleep(_ANIMMS);
+  }
+}
+
+function animateUno() {
+  /// TODO
+}
+
+function animateSig() {
+  /// TODO
+}
+
+function animateFlipDeck() {
+  /// TODO
 }

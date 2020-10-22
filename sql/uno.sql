@@ -10,7 +10,9 @@ CREATE TABLE games (
   GameID                VARCHAR(4)                   NOT NULL                    PRIMARY KEY,
   GameState             INTEGER                      NOT NULL                    DEFAULT 0,
   Turn                  INTEGER                      NOT NULL                    DEFAULT 0,
+  Clockwise             BOOLEAN                      NOT NULL                    DEFAULT TRUE,
   DeckColor             INTEGER                                                  DEFAULT NULL,
+  PickStack             INTEGER                      NOT NULL                    DEFAULT 0,
   RequestUpdate         INTEGER                      NOT NULL                    DEFAULT 0
 );
 
@@ -20,6 +22,7 @@ CREATE TABLE users (
   UserName              VARCHAR(512)                 NOT NULL,
   HideCards             BOOLEAN                      NOT NULL                    DEFAULT FALSE,
   Uno                   BOOLEAN                      NOT NULL                    DEFAULT FALSE,
+  Signal                BOOLEAN                      NOT NULL                    DEFAULT FALSE,
   FOREIGN KEY           (GameID)                     REFERENCES                  games(GameID)
 );
 
