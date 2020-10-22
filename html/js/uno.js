@@ -384,7 +384,7 @@ function displayCards() {
     var ncards = 0;
     for (var c of _CARDS) {
       if (c.UserID != _USERS[i].UserID) continue;
-      var finalAngle = sector * (_NUSER - i);
+      var finalAngle = sector * (i - _NUSER);
       var finalW     = 0.6 * deckpos.width;
       var finalX     = tablepos.left + tablepos.width  / 2 - Math.sin(finalAngle) * (tablepos.width  / 2 + 0.2 * tablepos.height) - finalW /    2 - finalW / _BRATIO;
       var finalY     = tablepos.top  + tablepos.height / 2 + Math.cos(finalAngle) * (tablepos.height / 2 + 0.2 * tablepos.height) - finalW * 0.75 - finalW / _BRATIO;
@@ -392,7 +392,7 @@ function displayCards() {
       while (!(card = document.getElementById(`Card${c.CardID}`))) {
         cards.innerHTML += `<div id="Card${c.CardID}" class="card${i == _NUSER ? " mine" : ""}" onclick="select(this)"><img src="/resources/back.svg"/></div>`;
       }
-      card.style.zIndex = ncards++;
+      card.style.zIndex = i == _NUSER ? ncards++ : -1;
       card.style.width  = finalW + "px";
       card.style.height = 1.5 * finalW + "px";
       card.style.left   = finalX + "px";
@@ -423,7 +423,7 @@ async function animateState() {
     animationMask(true);
     for (var i = 0; i < 7; i++) {
       for (var j = 0; j < _USERS.length; j++) {
-        var finalAngle = sector * (_NUSER - j);
+        var finalAngle = sector * (j - _NUSER);
         var startW     = deckpos.width;
         var finalW     = 0.6 * startW;
         var startX     = deckpos.left;
@@ -444,7 +444,7 @@ async function animateState() {
         }
         cards.innerHTML += `<div id="Card${cid}" class="card${j == _NUSER ? " mine" : ""}" onclick="select(this)"><img src="/resources/back.svg"/></div>`;
         card = document.getElementById(`Card${cid}`);
-        card.style.zIndex = i;
+        card.style.zIndex = j == _NUSER ? i : -1;
         for (var k = 0, anim = 10; k <= anim; k++) {
           var a  = finalAngle * k / anim;
           var x  = startX + (finalX - startX) * k / anim;
@@ -685,4 +685,51 @@ function showHide() {
   }
   button.setAttribute("alternate", input.value);
   input.value = text;
+}
+
+async function animateFan(nuser, open) {
+  animationMask(true);
+  var table  = document.getElementById("Table").getBoundingClientRect();
+  var sector = Math.PI * 2 / _USERS.length;
+  var ang    = sector * (nuser - _NUSER);
+  var cards  = [];
+  var finals = [];
+  for (var c of _CARDS) if (c.UserID == _USERS[nuser].UserID) cards.push(c);
+  for (var i = 0; i < cards.length; i++) {
+    var c          = cards[i];
+    var card       = document.getElementById("Card" + c.CardID);
+    var width      = parseFloat(card.style.width);
+    finals.push({
+      C:  card,
+      X0: parseFloat(card.style.left),
+      Y0: parseFloat(card.style.top),
+      X1: table.left + table.width  / 2 - Math.sin(ang) * (table.width  / 2 + 0.2 * table.height) - width / 2    - width / _BRATIO,
+      Y1: table.top  + table.height / 2 + Math.cos(ang) * (table.height / 2 + 0.2 * table.height) - width * 0.75 - width / _BRATIO
+    });
+    if (open) {
+      var fanwidth = Math.min(table.height * Math.PI / _USERS.length, 2 * width);
+      var distance = (i - (cards.length - 1) / 2) / ((cards.length - 1) / 2) * fanwidth / 2;
+      finals[i].X1 += Math.cos(ang) * distance;
+      finals[i].Y1 += Math.sin(ang) * distance;
+    }
+  }
+  for (var k = 0, anim = 5; k <= anim; k++) {
+    for (var i = 0; i < finals.length; i++) {
+      var final = finals[i];
+      var x  = final.X0 + (final.X1 - final.X0) * k / anim;
+      var y  = final.Y0 + (final.Y1 - final.Y0) * k / anim;
+      final.C.style.left   = x + "px";
+      final.C.style.top    = y + "px";
+      await sleep(1);
+    }
+  }
+  animationMask(false);
+}
+
+function animateCardToPDeck(cid) {
+
+}
+
+function animateCardFromDeck(user, cid) {
+  
 }

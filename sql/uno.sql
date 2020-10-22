@@ -19,6 +19,7 @@ CREATE TABLE users (
   GameID                VARCHAR(4)                   NOT NULL,
   UserName              VARCHAR(512)                 NOT NULL,
   HideCards             BOOLEAN                      NOT NULL                    DEFAULT FALSE,
+  Uno                   BOOLEAN                      NOT NULL                    DEFAULT FALSE,
   FOREIGN KEY           (GameID)                     REFERENCES                  games(GameID)
 );
 
