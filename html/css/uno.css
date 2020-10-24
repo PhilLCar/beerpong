@@ -20,7 +20,7 @@ html, body {
 
 input[type="button"] {
   border: none;
-  rotate: 10deg;
+  transform: rotate(10deg);
   padding-top: 10px;
   padding-bottom: 10px;
   font-family: 'Commissioner', sans-serif;
@@ -88,8 +88,9 @@ input[type="button"]:hover {
 }
 
 .button {
+  pointer-events: all;
   display: inline-block;
-  rotate: -30deg;
+  transform: rotate(-30deg);
   text-shadow:  1px  1px 0 white,
                -1px  1px 0 white,
                 1px -1px 0 white,
@@ -309,4 +310,115 @@ input[type="submit"]:hover {
   bottom: 10px;
   text-align: center;
   font-size: 25px;
+}
+
+.infoBubble {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100px;
+  height: 75px;
+}
+
+.bubbleText {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 100px;
+  height: 50px;
+  z-index: 1;
+  color: gold;
+  background: linear-gradient(white, lightgrey);
+  text-align: center;
+  text-shadow: 1px  1px 0 black,
+              -1px  1px 0 black,
+              -1px -1px 0 black,
+               1px -1px 0 black;
+  /* border: 2px solid black; */
+  border-radius: 20px;
+  font-size: 30px;
+  line-height: 47.5px;
+}
+
+.bubbleTail {
+  position: absolute;
+  top: 66%;
+  left: 37.5%;
+  z-index: 2;
+}
+
+#Color {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+}
+
+#ColorPicker {
+  width: 410px;
+  height: 100px;
+  margin: auto;
+  margin-top: 200px;
+  border: 3px solid white;
+  border-radius: 40px;
+  background-color: black;
+}
+
+#CRed {
+  display: inline-block;
+  background-color: red;
+  width: 80px;
+  height: 80px;
+  margin: 10px;
+  border-radius: 100%;
+}
+
+#CRed:hover {
+  cursor: pointer;
+  background-color: darkred;
+}
+
+#CYellow {
+  display: inline-block;
+  background-color: gold;
+  width: 80px;
+  height: 80px;
+  margin: 10px;
+  border-radius: 100%;
+}
+
+#CYellow:hover {
+  cursor: pointer;
+  background-color: darkgoldenrod;
+}
+
+#CGreen {
+  display: inline-block;
+  background-color: green;
+  width: 80px;
+  height: 80px;
+  margin: 10px;
+  border-radius: 100%;
+}
+
+#CGreen:hover {
+  cursor: pointer;
+  background-color: darkgreen;
+}
+
+#CBlue {
+  display: inline-block;
+  background-color: royalblue;
+  width: 80px;
+  height: 80px;
+  margin: 10px;
+  border-radius: 100%;
+}
+
+#CBlue:hover {
+  cursor: pointer;
+  background-color: darkblue;
 }

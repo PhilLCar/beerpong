@@ -112,10 +112,17 @@
     </div>
     <div id="AnimationMask" hidden="true">
     </div>
+    <div id="Color" hidden="true">
+      <div id="ColorPicker">
+        <div id="CRed"    onclick="color(0)"></div>
+        <div id="CYellow" onclick="color(1)"></div>
+        <div id="CGreen"  onclick="color(2)"></div>
+        <div id="CBlue"   onclick="color(3)"></div>
+      </div>
+    </div>
     <div id="Cards">
       <div id="Fan">
       </div>
-    </div>
     <div id="ShowHideButton" value="1" alternate="<?php echo($hide); ?>" class="button">
       <input type="button" value="<?php echo($show) ?>" onclick="showHide(true)"/>
     </div>

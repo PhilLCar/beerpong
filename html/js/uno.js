@@ -243,7 +243,8 @@ function update(info) {
     } else {
       document.getElementById("Pick").hidden = true;
     }
-    if (data[i++] == 'C') {
+    if (data[i] == 'C') {
+      i++;
       document.getElementById("Distribute").hidden = true;
       _CARDS = [];
       while (data[i] != 'U' && i < data.length) {
@@ -257,8 +258,9 @@ function update(info) {
         rf = true;
       }
     }
-    if (data[i++] == 'U') {
-      _USERS = []
+    if (data[i] == 'U') {
+      i++;
+      _USERS = [];
       while (i < data.length) {
         if (data[i] == _USERID) _NUSER = _USERS.length;
         _USERS.push({
@@ -278,26 +280,33 @@ function update(info) {
       if (_USERS[_NUSER].HideCards != document.getElementById("ShowHideButton").getAttribute("value")) {
         showHide(false);
       }
+      for (var i = 0; i < _USERS.length; i++) {
+        if (i != _NUSER) animateFan(i, _USERS[i].HideCards == "0");
+      }
     }
     if (pn !== null) {
       if (ps != _STATE) _STATEO = animateState();
       if (pt != _TURN)  animateTurn(mod(_TURN, _USERS.length));
     }
-    if (pu.length) {
+    if (pu.length == _USERS.length) {
       for (var i = 0; i < _USERS.length; i++) {
         if (i == _NUSER) continue;
-        if (pu[i].HideCards != _USERS[i].HideCards) animateFan(i, _USERS[i].HideCards);
+        if (pu[i].HideCards != _USERS[i].HideCards) animateFan(i, _USERS[i].HideCards == "0");
         if (pu[i].Uno       != _USERS[i].Uno)       animateUno(i);
         if (pu[i].Signal    != _USERS[i].Signal)    animateSig(i);
       }
     }
     if (pc.length) {
+      var deckFlipped = false;
       for (var i = 0; i < _CARDS.length; i++) {
         if (pc[i].DeckPosition != _CARDS[i].DeckPosition) {
           if (_CARDS[i].DeckPosition == "") {
             animateCardFromDeck(_CARDS[i].UserID);
           } else if (_CARDS[i].DeckPosition < 0) {
             animateCardToPDeck(_CARDS[i].CardID);
+          } else if (!deckFlipped && pc[i].DeckPosition == -_CARDS[i].DeckPosition) {
+            animateFlipDeck();
+            deckFlipped = true;
           }
         }
       }
@@ -343,18 +352,18 @@ function displayUsers() {
   for (var i = 0; i < _USERS.length; i++) {
     var fill    = "gold";
     var opacity = "0"
-    if ((_STATE == 1) && (mod(_TURN, _USERS.length) == i)) {
+    if ((_STATE == 1) && (mod(_TURN, _USERS.length) == (i + _NUSER) % _USERS.length)) {
       fill    = "white";
       opacity = "1";
     }
-    td.innerHTML += `<path id="Path${i}" d="M ${300 + Math.sin(sector * -i - sector / 2) * 280} ${300 + Math.cos(sector * -i - sector / 2) * 280} A 280 280, 0, 0, 0 `
+    td.innerHTML += `<path id="Path${(i + _NUSER) % _USERS.length}" d="M ${300 + Math.sin(sector * -i - sector / 2) * 280} ${300 + Math.cos(sector * -i - sector / 2) * 280} A 280 280, 0, 0, 0 `
                  +  `${300 + Math.sin(sector * -i + sector / 2) * 280} ${300 + Math.cos(sector * -i + sector / 2) * 280}"/>`
-    tt.innerHTML += `<text id="Filter${i}" class="filter" x="${Math.PI * 280 / _USERS.length}" font-size="40" text-anchor="middle" `
+    tt.innerHTML += `<text id="Filter${(i + _NUSER) % _USERS.length}" class="filter" x="${Math.PI * 280 / _USERS.length}" font-size="40" text-anchor="middle" `
                  +  `fill="#FF7" fill-opacity="${opacity}" font-family="Commissioner" style="filter: url(#glow)">`
-                 +  `<textPath xlink:href="#Path${i}">${_USERS[(i + _NUSER) % _USERS.length].UserName}</textPath>`
+                 +  `<textPath xlink:href="#Path${(i + _NUSER) % _USERS.length}">${_USERS[(i + _NUSER) % _USERS.length].UserName}</textPath>`
                  +  `</text>`
-                 +  `<text id="User${i}" x="${Math.PI * 280 / _USERS.length}" font-size="40" text-anchor="middle" fill="${fill}" font-family="Commissioner">`
-                 +  `<textPath xlink:href="#Path${i}">${_USERS[(i + _NUSER) % _USERS.length].UserName}</textPath>`
+                 +  `<text id="User${(i + _NUSER) % _USERS.length}" x="${Math.PI * 280 / _USERS.length}" font-size="40" text-anchor="middle" fill="${fill}" font-family="Commissioner">`
+                 +  `<textPath xlink:href="#Path${(i + _NUSER) % _USERS.length}">${_USERS[(i + _NUSER) % _USERS.length].UserName}</textPath>`
                  +  `</text>`;
   }
   var ty = t.clientHeight / 600;
@@ -466,15 +475,40 @@ function displayCards() {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-function select(card) {
+function color(c) {
+  _COLOR = c;
+  document.getElementById("Color").hidden = true;
+}
+
+async function select(card) {
   if (mod(_TURN, _USERS.length) != _NUSER) {
     if (getCookie("Language") == "FR") alert("Ce n'est pas votre tour!");
     else                               alert("It's not your turn!");
     return;
   }
   var cid = card.id.substring(4);
+  var min = 0;
+  var dcid = 0;
+  for (var c of _CARDS) {
+    if (c.DeckPosition < min) {
+      min = c.DeckPosition;
+      dcid = c.CardID;
+    }
+  }
+  if (Math.floor(cid / 4) == Math.floor(dcid) || (cid % 14 == 13) || (cid % 14) == (dcid % 14)) {
+    if (cid % 14 == 13) {
+      document.getElementById("Color").hidden = false;
+      while (!document.getElementById("Color").hidden) {
+        await sleep(100);
+      }
+    }
+  } else {
+    if (getCookie("Language") == "FR") alert("Vous ne pouvez pas jouer cette carte!");
+    else                               alert("You can't play this card!");
+    return;
+  }
   animateCardToPDeck(cid);
-  sendCommand("PLAY", { CardID: cid }, function(){});
+  sendCommand("PLAY", { CardID: cid, Color: _COLOR }, function(){});
 }
 
 function pick() {
@@ -488,12 +522,10 @@ function pick() {
 }
 
 function uno() {
-
   sendCommand("UNO", null, function(){});
 }
 
 function signal() {
-
   sendCommand("SIG", null, function(){});
 }
 
@@ -516,6 +548,7 @@ function showHide(toserver) {
 ///////////////////////////////////////////////////////////////////////////////////////////////
 async function animateState() {
   if (_STATE == 1) { // Start of game
+    displayDeck();
     var cards    = document.getElementById("Cards");
     var deck     = document.getElementById("Deck");
     var pdeck    = document.getElementById("PlayDeck");
@@ -565,44 +598,60 @@ async function animateState() {
         }
       }
     }
-    //////////////////
-    cards.innerHTML += `<div id="AnimCard" class="card"><img src="/resources/back.svg"/></div>`;
-    var card = document.getElementById("AnimCard");
-    var refX       = tablepos.left;
-    var refY       = tablepos.top;
-    var startX     = parseFloat(deck.style.left);
-    var startY     = parseFloat(deck.style.top)
-    var finalX     = parseFloat(pdeck.style.left);
-    var finalY     = parseFloat(pdeck.style.top);
-    var startW     = parseFloat(pdeck.style.width);
-    var cid;
-    card.style.height = pdeck.style.height;
-    card.style.borderWidth = pdeck.style.borderWidth;
-    card.style.borderRadius = pdeck.style.borderRadius;
-
-    for (var c of _CARDS) if (c.DeckPosition == -1) {
-      cid = c.CardID;
-      break;
-    }
-
-    for (var k = 0, anim = 10; k <= anim; k++) {
-      var y  = startY + (finalY - startY) * k / anim;
-      var x  = startX + (finalX - startX) * k / anim;
-      var w  = startW * Math.abs((k - anim / 2) / (anim / 2));
-      if (k == Math.floor(anim / 2)) card.innerHTML = `<img src="${_CID[cid]}"/>`;
-      card.style.width  = w + "px";
-      card.style.left   = refX + x + "px";
-      card.style.top    = refY + y + "px";
-      card.style.borderLeftWidth  = w / _BRATIO + "px";
-      card.style.borderRightWidth = w / _BRATIO + "px";
-      await sleep(_ANIMMS);
-    }
-    pdeck.hidden = false;
-    card.hidden  = true;
-    pdeck.getElementsByTagName("img")[0].src = _CID[cid];
+    animateTurnFirst();
+    animateTurn(mod(_TURN, _USERS.length));
     animationMask(false);
   }
+  for (var i = 0; i < _USERS.length; i++) {
+    if (i != _NUSER) animateFan(i, true)
+    else             showHide(false);
+  }
   _STATEO = false;
+}
+
+async function animateTurnFirst() {
+  var deck  = document.getElementById("Deck");
+  var pdeck = document.getElementById("PlayDeck");
+  var cards = document.getElementById("Cards");
+  var tablepos = document.getElementById("Table").getBoundingClientRect();
+  var card;
+  //////////////////
+  while (!(card = document.getElementById("AnimCard"))) {
+    cards.innerHTML += `<div id="AnimCard" class="card"><img src="/resources/back.svg"/></div>`;
+  }
+  var refX       = tablepos.left;
+  var refY       = tablepos.top;
+  var startX     = parseFloat(deck.style.left);
+  var startY     = parseFloat(deck.style.top)
+  var finalX     = parseFloat(pdeck.style.left);
+  var finalY     = parseFloat(pdeck.style.top);
+  var startW     = parseFloat(pdeck.style.width);
+  var cid;
+  card.hidden = false;
+  card.style.height = pdeck.style.height;
+  card.style.borderWidth = pdeck.style.borderWidth;
+  card.style.borderRadius = pdeck.style.borderRadius;
+
+  for (var c of _CARDS) if (c.DeckPosition == -1) {
+    cid = c.CardID;
+    break;
+  }
+
+  for (var k = 0, anim = 10; k <= anim; k++) {
+    var y  = startY + (finalY - startY) * k / anim;
+    var x  = startX + (finalX - startX) * k / anim;
+    var w  = startW * Math.abs((k - anim / 2) / (anim / 2));
+    if (k == Math.floor(anim / 2)) card.innerHTML = `<img src="${_CID[cid]}"/>`;
+    card.style.width  = w + "px";
+    card.style.left   = refX + x + "px";
+    card.style.top    = refY + y + "px";
+    card.style.borderLeftWidth  = w / _BRATIO + "px";
+    card.style.borderRightWidth = w / _BRATIO + "px";
+    await sleep(_ANIMMS);
+  }
+  card.hidden  = true;
+  displayPDeck();
+  pdeck.getElementsByTagName("img")[0].src = _CID[cid];
 }
 
 async function animateOpenHand() {
@@ -932,12 +981,13 @@ async function animateTurn(user) {
   var white = [ 0xFF, 0xFF, 0xFF ];
   var gold  = [ 0xFF, 0xD7, 0x00 ];
   var filters = document.getElementsByClassName("filter");
-  var fo, fn;
+  var fo = null, fn;
   for (var filter of filters) {
     if (filter.getAttribute("fill-opacity") != "0") fo = filter;
     if (filter.id == "Filter" + user)               fn = filter;
   }
-  var o = document.getElementById("User" + fo.id.substring(6));
+  var o = null;
+  if (fo) o = document.getElementById("User" + fo.id.substring(6));
   var n = document.getElementById("User" + user);
   for (var k = 0, anim = 10; k <= anim; k++) {
     var opacity = k / anim;
@@ -950,22 +1000,131 @@ async function animateTurn(user) {
       ocolor += ot.substring(ot.length - 2);
       ncolor += nt.substring(nt.length - 2);
     }
-    o.setAttribute("fill", ocolor);
+    if (fo) o.setAttribute("fill", ocolor);
     n.setAttribute("fill", ncolor);
-    fo.setAttribute("fill-opacity", 1 - opacity);
+    if (fo) fo.setAttribute("fill-opacity", 1 - opacity);
     fn.setAttribute("fill-opacity", opacity);
     await sleep(_ANIMMS);
   }
 }
 
-function animateUno() {
-  /// TODO
+async function animateUno(user) {
+  if (document.getElementById("UnoBubble" + user)) return;
+  var cards = document.getElementById("Cards");
+  cards.innerHTML += `<div id="UnoBubble${user}" class="infoBubble">`
+                  +  `<div class="bubbleText">UNO!</div>`
+                  +  `<svg class="bubbleTail" width="25" height="25" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
+                  +  `<polygon points="5,0 25,0 2,25" fill="lightgrey"/>`
+                  +  `</svg></div></div>`
+  var bubble = document.getElementById("UnoBubble" + user);
+  var table  = document.getElementById("Table").getBoundingClientRect();
+  var angle  = Math.PI * 2 / _USERS.length * (user - _NUSER);
+
+  bubble.style.left = table.left + table.width  / 2 - Math.sin(angle) * table.width  / 2.2 - 40 + "px";
+  bubble.style.top  = table.top  + table.height / 2 + Math.cos(angle) * table.height / 2.2 - 75 + "px";
+
+  for (var i = 0, anim = 10; i <= anim; i++) {
+    var a = 6 * Math.PI / anim * i;
+    bubble.style.transform = `rotate(${Math.sin(a) * (anim - i) / anim * 0.2}rad)`;
+    await sleep(_ANIMMS);
+  }
+  await sleep(2000);
+  bubble.parentElement.removeChild(bubble);
 }
 
-function animateSig() {
-  /// TODO
+async function animateSig(user) {
+  if (document.getElementById("SigBubble" + user)) return;
+  var cards = document.getElementById("Cards");
+  cards.innerHTML += `<div id="SigBubble${user}" class="infoBubble">`
+                  +  `<div class="bubbleText">HA!</div>`
+                  +  `<svg class="bubbleTail" width="25" height="25" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
+                  +  `<polygon points="5,0 25,0 2,25" fill="lightgrey"/>`
+                  +  `</svg></div></div>`
+  var bubble = document.getElementById("SigBubble" + user);
+  var table  = document.getElementById("Table").getBoundingClientRect();
+  var angle  = Math.PI * 2 / _USERS.length * (user - _NUSER);
+
+  bubble.style.left = table.left + table.width  / 2 - Math.sin(angle) * table.width  / 2.2 - 40 + "px";
+  bubble.style.top  = table.top  + table.height / 2 + Math.cos(angle) * table.height / 2.2 - 75 + "px";
+
+  for (var i = 0, anim = 10; i <= anim; i++) {
+    var a = 6 * Math.PI / anim * i;
+    bubble.style.transform = `rotate(${Math.sin(a) * (anim - i) / anim * 0.2}rad)`;
+    await sleep(_ANIMMS);
+  }
+  await sleep(2000);
+  bubble.parentElement.removeChild(bubble);
 }
 
-function animateFlipDeck() {
-  /// TODO
+async function animateFlipDeck() {
+  animationMask(true);
+  var cards = document.getElementById("Cards");
+  var pdeck = document.getElementById("PlayDeck");
+  var tableSize = document.getElementById("Table").getBoundingClientRect()
+  var card;
+  var deckSize  = 0;
+  var tableSize;
+  var bottom;
+  var bshadow = "";
+  var min = 0;
+  var cid = 0;
+  while (!(card = document.getElementById("AnimCard"))) {
+    cards.innerHTML += `<div id="AnimCard" class="card"><img src="/resources/back.svg"/></div>`;
+  }
+  for (var c of _CARDS){
+    if (c.DeckPosition < min) {
+      min = c.DeckPosition;
+      cid = c.CardID;
+    }
+    if (c.DeckPosition != "" && c.DeckPosition < 0) {
+      deckSize++;
+      c.DeckPosition = -c.DeckPosition - 2;
+    }
+  }
+  pdeck.hidden = true;
+  card.hidden  = false;
+  card.getElementsByTagName("img")[0].src = _CID[cid];
+  card.style.height = pdeck.style.height;
+  card.style.width  = pdeck.style.width;
+  card.style.top    = parseFloat(pdeck.style.top) + tableSize.top + "px";
+  card.style.left   = parseFloat(pdeck.style.left) + tableSize.left + "px";
+  card.style.borderRadius = pdeck.style.borderRadius;
+  card.style.borderWidth  = pdeck.style.borderWidth;
+  bottom = Math.floor(deckSize / 108 * 4 * parseFloat(pdeck.style.width) / _BRATIO)
+  for (var i = 0; i < bottom; i++) {
+    bshadow += `0 ${i}px 0 ${i % 2 ? 'white' : 'black'}, `;
+  }
+  card.style.boxShadow = bshadow.substring(0, bshadow.length - 2);
+
+  var startX = parseFloat(card.style.left);
+  var finalX = tableSize.width / 4 / (1 + 2 / _BRATIO) + tableSize.left;
+  var startW = parseFloat(card.style.width);
+
+  for (var k = 0, anim = 10; k <= anim; k++) {
+    var w = startW * Math.abs(k - anim / 2) / (anim / 2);
+    card.style.left  = startX + (finalX - startX) * k / anim + "px";
+    card.style.width = w + "px";
+    card.style.borderLeftWidth  = w / _BRATIO + "px";
+    card.style.borderRightWidth = w / _BRATIO + "px";
+    if (k == Math.floor(anim / 2)) {
+      card.getElementsByTagName("img")[0].src = "/resources/back.svg";
+    }
+    bshadow = "";
+    if (k <= Math.floor(anim / 2)) {
+      for (var i = 0; i < bottom; i++) {
+        bshadow += `${i * k / (anim / 2)}px ${i}px 0 ${i % 2 ? 'white' : 'black'}, `;
+      }
+    } else {
+      for (var i = 0; i < bottom; i++) {
+        bshadow += `${i * -(anim - k) / (anim / 2)}px ${i}px 0 ${i % 2 ? 'white' : 'black'}, `;
+      }
+    }
+    card.style.boxShadow = bshadow.substring(0, bshadow.length - 2);
+
+    await sleep(_ANIMMS);
+  }
+
+  displayDeck();
+  animateTurnFirst();
+  animationMask(false);
 }

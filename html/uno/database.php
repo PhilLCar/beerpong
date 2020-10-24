@@ -14,7 +14,7 @@
     $sql = "SELECT * FROM users WHERE GameID='" . $_POST["GameID"] . "'";
     $result = $conn->query($sql);
     while ($row = $result->fetch_assoc()) {
-      echo(";" . $row["UserID"] . ";" . $row["UserName"] . ";" . $row["HideCards"] . ";" . $row["Uno"] . ";" . $row["Signal"]);
+      echo(";" . $row["UserID"] . ";" . $row["UserName"] . ";" . $row["HideCards"] . ";" . $row["Uno"] . ";" . $row["Sig"]);
     }
   }
 
@@ -95,6 +95,16 @@
           }
         }
         if ($i < 120 || !empty($_POST["Immediate"])) printGameInfo($conn);
+        break;
+      case "PLAY":
+        break;
+      case "PICK":
+        break;
+      case "UNO":
+        break;
+      case "SIG":
+        break;
+      case "SWHD":
         break;
       default:
         break;

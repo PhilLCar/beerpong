@@ -22,7 +22,7 @@ CREATE TABLE users (
   UserName              VARCHAR(512)                 NOT NULL,
   HideCards             BOOLEAN                      NOT NULL                    DEFAULT FALSE,
   Uno                   BOOLEAN                      NOT NULL                    DEFAULT FALSE,
-  Signal                BOOLEAN                      NOT NULL                    DEFAULT FALSE,
+  Sig                   BOOLEAN                      NOT NULL                    DEFAULT FALSE,
   FOREIGN KEY           (GameID)                     REFERENCES                  games(GameID)
 );
 
