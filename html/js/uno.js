@@ -251,7 +251,7 @@ function update(info) {
         _CARDS.push({
           CardID: data[i++],
           UserID: data[i++],
-          DeckPosition: data[i++]
+          DeckPosition: data[i++] == "" ? null : parseInt(data[i - 1])
         });
       }
       if (_CARDS.length && pn === null) {
@@ -291,17 +291,19 @@ function update(info) {
     if (pu.length == _USERS.length) {
       for (var i = 0; i < _USERS.length; i++) {
         if (i == _NUSER) continue;
-        if (pu[i].HideCards != _USERS[i].HideCards) animateFan(i, _USERS[i].HideCards == "0");
-        if (pu[i].Uno       != _USERS[i].Uno)       animateUno(i);
-        if (pu[i].Signal    != _USERS[i].Signal)    animateSig(i);
+        if (pu[i].HideCards != _USERS[i].HideCards)                            animateFan(i, _USERS[i].HideCards == "0");
+        if (pu[i].Uno       != _USERS[i].Uno && _USERS[i].Uno == "1")          animateUno(i);
+        if (pu[i].Signal    != _USERS[i].Signal && _USERS[i].Signal == "1")    animateSig(i);
       }
     }
     if (pc.length) {
       var deckFlipped = false;
       for (var i = 0; i < _CARDS.length; i++) {
         if (pc[i].DeckPosition != _CARDS[i].DeckPosition) {
-          if (_CARDS[i].DeckPosition == "") {
-            animateCardFromDeck(_CARDS[i].UserID);
+          if (_CARDS[i].DeckPosition === null) {
+            var user = 0;
+            for (user = 0; user < _USERS.length; user++) if (_USERS[user].UserID == _CARDS[i].UserID) break;
+            animateCardFromDeck(user, _CARDS[i].CardID);
           } else if (_CARDS[i].DeckPosition < 0) {
             animateCardToPDeck(_CARDS[i].CardID);
           } else if (!deckFlipped && pc[i].DeckPosition == -_CARDS[i].DeckPosition) {
@@ -379,7 +381,7 @@ function displayDeck() {
   var width;
   var bottom;
   var bshadow = "";
-  for (var card of _CARDS) if (card.DeckPosition != "" && card.DeckPosition >= 0) deckSize++;
+  for (var card of _CARDS) if (card.DeckPosition !== null && card.DeckPosition >= 0) deckSize++;
   deck.hidden = deckSize == 0;
   tableSize = document.getElementById("Table").getBoundingClientRect();
   width  = tableSize.width / 4 / (1 + 2 / _BRATIO);
@@ -405,7 +407,7 @@ function displayPDeck() {
   var width;
   var bottom;
   var bshadow = "";
-  for (var card of _CARDS) if (card.DeckPosition != "" && card.DeckPosition < 0) deckSize++;
+  for (var card of _CARDS) if (card.DeckPosition !== null && card.DeckPosition < 0) deckSize++;
   deck.hidden = deckSize == 0;
   tableSize = document.getElementById("Table").getBoundingClientRect();
   width  = tableSize.width / 4 / (1 + 2 / _BRATIO);
@@ -424,7 +426,7 @@ function displayPDeck() {
 }
 
 function displayCards() {
-  var hidden = document.getElementById("ShowHideButton").getAttribute("value") == "1";
+  var hidden = i != _NUSER || document.getElementById("ShowHideButton").getAttribute("value") == "1";
   displayDeck();
   displayPDeck();
   if (!_CARDS.length) return;
@@ -451,11 +453,11 @@ function displayCards() {
       while (!(card = document.getElementById(`Card${c.CardID}`))) {
         created = true;
         cards.innerHTML += `<div id="Card${c.CardID}" class="card${i == _NUSER ? " mine" : ""}" onclick="select(this)">`
-                        +  `<img src="${hidden || i != _NUSER ? "/resources/back.svg" : _CID[c.CardID]}"/></div>`;
+                        +  `<img src="${hidden ? "/resources/back.svg" : _CID[c.CardID]}"/></div>`;
       }
       if (created) {
-        if (hidden) card.style.zIndex = i == _NUSER ? n++ : -1;
-        else        card.style.zIndex = i == _NUSER ? ncards - ++n : -1;
+        if (hidden) card.style.zIndex = i == _NUSER ? n++ : -(++n);
+        else        card.style.zIndex = ncards - ++n;
       }
       card.style.width  = finalW + "px";
       card.style.height = 1.5 * finalW + "px";
@@ -467,7 +469,7 @@ function displayCards() {
     }
   }
   var min = 0;
-  for (var c of _CARDS) if (c.DeckPosition !== "" && c.DeckPosition < min) {
+  for (var c of _CARDS) if (c.DeckPosition !== null && c.DeckPosition < min) {
     min = c.DeckPosition;
     cid = c.CardID;
   }
@@ -495,7 +497,8 @@ async function select(card) {
       dcid = c.CardID;
     }
   }
-  if (Math.floor(cid / 4) == Math.floor(dcid) || (cid % 14 == 13) || (cid % 14) == (dcid % 14)) {
+  if (((Math.floor(cid / 14) % 4) == _COLOR || _COLOR == "" || (cid % 14 == 13) || (cid % 14) == (dcid % 14)) && 
+      (_STACK == "0" || ((cid % 14) == 13 && cid >= 56) || (cid % 14) == 12)) {
     if (cid % 14 == 13) {
       document.getElementById("Color").hidden = false;
       while (!document.getElementById("Color").hidden) {
@@ -507,7 +510,6 @@ async function select(card) {
     else                               alert("You can't play this card!");
     return;
   }
-  animateCardToPDeck(cid);
   sendCommand("PLAY", { CardID: cid, Color: _COLOR }, function(){});
 }
 
@@ -517,7 +519,6 @@ function pick() {
     else                               alert("It's not your turn!");
     return;
   }
-  animateCardFromDeck(_NUSER);
   sendCommand("PICK", null, function(){});
 }
 
@@ -830,7 +831,13 @@ async function animateFan(nuser, open) {
   var ang    = sector * (nuser - _NUSER);
   var cards  = [];
   var finals = [];
-  for (var c of _CARDS) if (c.UserID == _USERS[nuser].UserID) cards.push(c);
+  for (var c of document.getElementsByClassName("card")) {
+    var id = c.id.substring(4);
+    for (var cc of _CARDS) if (cc.CardID == id) {
+      if (cc.UserID == _USERS[nuser].UserID) cards.push(cc);
+      break;
+    }
+  }
   for (var i = 0; i < cards.length; i++) {
     var c          = cards[i];
     var card       = document.getElementById("Card" + c.CardID);
@@ -864,6 +871,7 @@ async function animateFan(nuser, open) {
 
 async function animateCardToPDeck(cid) {
   animationMask(true);
+  var hidden = document.getElementById("ShowHideButton").getAttribute("value") == "1";
   var deck   = document.getElementById("PlayDeck");
   var deckr  = deck.getBoundingClientRect();
   var card   = document.getElementById("Card" + cid);
@@ -904,14 +912,38 @@ async function animateCardToPDeck(cid) {
     if (c.DeckPosition < min) min = c.DeckPosition;
     if (c.CardID == cid) index = i;
   }
-  _CARDS[index].DeckPosition = min - 1;
+  var nmine = document.getElementsByClassName("mine").length;
+  var indices = [];
+  for (var i = 0; i < _USERS.length; i++) indices.push(0);
+  for (var c of document.getElementsByClassName("card")) {
+    var ccid = c.id.substring(4);
+    var cuid;
+    for (var cc of _CARDS) {
+      if (cc.CardID == ccid) {
+        cuid = cc.UserID;
+      }
+    }
+    if (cuid == _USERS[_NUSER].UserID) {
+      if (hidden) {
+        c.zIndex = nmine - ++indices[_NUSER];
+      } else {
+        c.zIndex = indices[_NUSER]++;
+      }
+    } else {
+      var i;
+      for (i = 0; i < _USERS.length; i++) {
+        if (_USERS[i].UserID == cuid) break;
+      }
+      c.zIndex = -(++indices[i]);
+    }
+  }
   displayPDeck();
   animationMask(false);
 }
 
-async function animateCardFromDeck(user) {
+async function animateCardFromDeck(user, cid) {
   animationMask(true);
-  var hidden     = document.getElementById("ShowHideButton").getAttribute("value") == "1";
+  var hidden     = user != _NUSER || document.getElementById("ShowHideButton").getAttribute("value") == "1";
   var cards      = document.getElementById("Cards");
   var deck       = document.getElementById("Deck");
   var deckpos    = deck.getBoundingClientRect();
@@ -925,26 +957,16 @@ async function animateCardFromDeck(user) {
   var finalX     = tablepos.left + tablepos.width  / 2 - Math.sin(finalAngle) * (tablepos.width  / 2 + 0.2 * tablepos.height) - finalW / 2    - finalW / _BRATIO;
   var finalY     = tablepos.top  + tablepos.height / 2 + Math.cos(finalAngle) * (tablepos.height / 2 + 0.2 * tablepos.height) - finalW * 0.75 - finalW / _BRATIO;
   var card;
-  var cid;
-  var n   = 0;
-  var l   = 0;
-  var min = 112;
-  for (var i = 0; i < _CARDS.length; i++) {
-    var c = _CARDS[i];
-    if (c.DeckPosition != "" && c.DeckPosition >= 0 && c.DeckPosition < min) {
-      min = c.DeckPosition;
-      n = i;
-      l++;
-    }
-  }
-  if (l == 1) deck.hidden = true;
-  _CARDS[n].UserID       = _USERS[user].UserID;
-  _CARDS[n].DeckPosition = "";
-  cid = _CARDS[n].CardID;
   cards.innerHTML += `<div id="Card${cid}" class="card${user == _NUSER ? " mine" : ""}" onclick="select(this)"><img src="/resources/back.svg"/></div>`;
   card = document.getElementById(`Card${cid}`);
   if (hidden) {
-    card.style.zIndex = user == _NUSER ? document.getElementsByClassName("mine").length - 1 : -1;
+    var z = 0;
+    if (user != _NUSER) {
+      for (var c of _CARDS) {
+        if (c.UserID == _USERS[user].UserID) z++;
+      }
+    }
+    card.style.zIndex = user == _NUSER ? document.getElementsByClassName("mine").length - 1 : -z;
   } else {
     card.style.zIndex = -1;
     for (mine of document.getElementsByClassName("mine")) {
@@ -971,8 +993,10 @@ async function animateCardFromDeck(user) {
     card.style.transform = `rotate(${a}rad)`;
     await sleep(_ANIMMS);
   }
-  if (l == 1) animateFlipDeck();
-  else        displayDeck();
+  var n = 0;
+  for (var c of _CARDS) if (c.DeckPosition !== null && c.DeckPosition < 0) n++;
+  if (n > 1) displayDeck();
+  animateFan(user, _USERS[user].HideCards == "0");
   animationMask(false);
 }
 
@@ -1010,13 +1034,15 @@ async function animateTurn(user) {
 
 async function animateUno(user) {
   if (document.getElementById("UnoBubble" + user)) return;
-  var cards = document.getElementById("Cards");
-  cards.innerHTML += `<div id="UnoBubble${user}" class="infoBubble">`
-                  +  `<div class="bubbleText">UNO!</div>`
-                  +  `<svg class="bubbleTail" width="25" height="25" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
-                  +  `<polygon points="5,0 25,0 2,25" fill="lightgrey"/>`
-                  +  `</svg></div></div>`
-  var bubble = document.getElementById("UnoBubble" + user);
+  var cards  = document.getElementById("Cards");
+  var bubble = document.createElement("div");
+  bubble.id = "UnoBubble" + user;
+  bubble.className = "infoBubble";
+  bubble.innerHTML = `<div class="bubbleText">UNO!</div>`
+                   + `<svg class="bubbleTail" width="25" height="25" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
+                   + `<polygon points="5,0 25,0 2,25" fill="lightgrey"/>`
+                   + `</svg>`;
+  cards.appendChild(bubble);
   var table  = document.getElementById("Table").getBoundingClientRect();
   var angle  = Math.PI * 2 / _USERS.length * (user - _NUSER);
 
@@ -1029,18 +1055,21 @@ async function animateUno(user) {
     await sleep(_ANIMMS);
   }
   await sleep(2000);
+  bubble = document.getElementById("SigBubble" + user);
   bubble.parentElement.removeChild(bubble);
 }
 
 async function animateSig(user) {
   if (document.getElementById("SigBubble" + user)) return;
-  var cards = document.getElementById("Cards");
-  cards.innerHTML += `<div id="SigBubble${user}" class="infoBubble">`
-                  +  `<div class="bubbleText">HA!</div>`
-                  +  `<svg class="bubbleTail" width="25" height="25" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
-                  +  `<polygon points="5,0 25,0 2,25" fill="lightgrey"/>`
-                  +  `</svg></div></div>`
-  var bubble = document.getElementById("SigBubble" + user);
+  var cards  = document.getElementById("Cards");
+  var bubble = document.createElement("div");
+  bubble.id = "SigBubble" + user;
+  bubble.className = "infoBubble";
+  bubble.innerHTML = `<div class="bubbleText">HA!</div>`
+                   + `<svg class="bubbleTail" width="25" height="25" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
+                   + `<polygon points="5,0 25,0 2,25" fill="lightgrey"/>`
+                   + `</svg>`;
+  cards.appendChild(bubble);
   var table  = document.getElementById("Table").getBoundingClientRect();
   var angle  = Math.PI * 2 / _USERS.length * (user - _NUSER);
 
@@ -1053,6 +1082,7 @@ async function animateSig(user) {
     await sleep(_ANIMMS);
   }
   await sleep(2000);
+  bubble = document.getElementById("SigBubble" + user);
   bubble.parentElement.removeChild(bubble);
 }
 
@@ -1076,9 +1106,8 @@ async function animateFlipDeck() {
       min = c.DeckPosition;
       cid = c.CardID;
     }
-    if (c.DeckPosition != "" && c.DeckPosition < 0) {
+    if (c.DeckPosition !== null && c.DeckPosition < 0) {
       deckSize++;
-      c.DeckPosition = -c.DeckPosition - 2;
     }
   }
   pdeck.hidden = true;

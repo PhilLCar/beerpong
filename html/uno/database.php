@@ -19,7 +19,7 @@
   }
 
   function updateGameState($conn, $cid) {
-    $conn->query("UPDATE games SET DeckColor=" . (floor($cid / 14) % 2) . " WHERE GameID='" . $_POST["GameID"] . "'");
+    $conn->query("UPDATE games SET DeckColor=" . (floor($cid / 14) % 4) . " WHERE GameID='" . $_POST["GameID"] . "'");
     if (($cid % 14) == 10) {        // skip
       $result = $conn->query("SELECT Clockwise FROM games WHERE GameID='" . $_POST["GameID"] . "'")->fetch_assoc();
       $sql = "";
@@ -30,14 +30,34 @@
       }
       $conn->query($sql);
     } else if (($cid % 14) == 11) { // reverse
-      $conn->query("UPDATE games SET Clockwise=!Clockwise WHERE GameID='" . $_POST["GameID"] . "'");
+      $conn->query("UPDATE games SET Clockwise=NOT Clockwise WHERE GameID='" . $_POST["GameID"] . "'");
     } else if (($cid % 14) == 12) { // +2
       $conn->query("UPDATE games SET PickStack=PickStack+2 WHERE GameID='" . $_POST["GameID"] . "'");
     } else if ((($cid % 14) == 13)) {
       if ($cid < 56) {              // multi
         $conn->query("UPDATE games SET DeckColor=NULL WHERE GameID='" . $_POST["GameID"] . "'");
       } else {                      // +4
-        $conn->query("UPDATE games SET DeckColor=NULL, PickStack=PickStack+2 WHERE GameID='" . $_POST["GameID"] . "'");
+        $conn->query("UPDATE games SET DeckColor=NULL, PickStack=PickStack+4 WHERE GameID='" . $_POST["GameID"] . "'");
+      }
+    }
+  }
+
+  function pick($conn, $userid, $turn) {
+    $result = $conn->query("SELECT * FROM deck WHERE DeckPosition IS NOT NULL AND DeckPosition>=0 AND GameID='" . $_POST["GameID"] . "' ORDER BY DeckPosition");
+    $card = $result->fetch_assoc();
+    $conn->query("UPDATE deck SET OwnerID=" . $userid . ", DeckPosition=NULL WHERE CardID=" . $card["CardID"] . " AND GameID='" . $_POST["GameID"] . "'");
+    if ($result->num_rows <= 1) {
+      $conn->query("UPDATE deck SET DeckPosition=-DeckPosition-2 WHERE DeckPosition IS NOT NULL AND GameID='" . $_POST["GameID"] . "'");
+    }
+    $conn->query("UPDATE users SET Uno=FALSE WHERE UserID=" . $userid);
+    $conn->query("UPDATE users SET Sig=FALSE WHERE GameID='" . $_POST["GameID"] . "'");
+    if ($turn) {
+      $game = $conn->query("SELECT * FROM games WHERE GameID='" . $_POST["GameID"] . "'")->fetch_assoc();
+      if ($game["PickStack"] == 0) {
+        $conn->query("UPDATE games SET RequestUpdate=RequestUpdate+1, Turn=Turn+1 WHERE GameID='" . $_POST["GameID"] . "' AND Clockwise");
+        $conn->query("UPDATE games SET RequestUpdate=RequestUpdate+1, Turn=Turn-1 WHERE GameID='" . $_POST["GameID"] . "' AND NOT Clockwise");
+      } else {
+        $conn->query("UPDATE games SET PickStack=PickStack-1, RequestUpdate=RequestUpdate+1 WHERE GameID='" . $_POST["GameID"] . "'");
       }
     }
   }
@@ -97,14 +117,47 @@
         if ($i < 120 || !empty($_POST["Immediate"])) printGameInfo($conn);
         break;
       case "PLAY":
+        $pos = $conn->query("SELECT * FROM deck WHERE GameID='" . $_POST["GameID"] ."' AND DeckPosition IS NOT NULL AND DeckPosition<0")->num_rows + 1;
+        $conn->query("UPDATE deck SET OwnerID=NULL, DeckPosition=-" . $pos . " WHERE CardID=" . $_POST["CardID"] . " AND GameID='" . $_POST["GameID"] . "'");
+        updateGameState($conn, $_POST["CardID"]);
+        if (($_POST["CardID"] % 14) == 13) {
+          $conn->query("UPDATE games SET DeckColor=" . $_POST["Color"]);
+        }
+        $conn->query("UPDATE games SET RequestUpdate=RequestUpdate+1, Turn=Turn+1 WHERE GameID='" . $_POST["GameID"] . "' AND Clockwise");
+        $conn->query("UPDATE games SET RequestUpdate=RequestUpdate+1, Turn=Turn-1 WHERE GameID='" . $_POST["GameID"] . "' AND NOT Clockwise");
         break;
       case "PICK":
+        pick($conn, $_POST["UserID"], true);
         break;
       case "UNO":
+        $ncards = $conn->query("SELECT * FROM deck WHERE OwnerID=" . $_POST["UserID"])->num_rows;
+        if ($ncards == 1) {
+          $conn->query("UPDATE users SET Uno=TRUE WHERE UserID=" . $_POST["UserID"]);
+        } else {
+          pick($conn, $_POST["UserID"], false);
+        }
+        $conn->query("UPDATE games SET RequestUpdate=RequestUpdate+1 WHERE GameID='" . $_POST["GameID"] . "'");
         break;
       case "SIG":
+        $success = false;
+        $users = $conn->query("SELECT * FROM users WHERE GameID='" . $_POST["GameID"] ."'");
+        while ($user = $users->fetch_assoc()) {
+          $ncards = $conn->query("SELECT * FROM deck WHERE OwnerID=" . $user["UserID"])->num_rows;
+          if ($ncards == 1) {
+            pick($conn, $user["UserID"], false);
+            $success = true;
+          }
+        }
+        if ($success) {
+          $conn->query("UPDATE users SET Sig=TRUE WHERE UserID=" . $_POST["UserID"]);
+        } else {
+          pick($conn, $_POST["UserID"], false);
+        }
+        $conn->query("UPDATE games SET RequestUpdate=RequestUpdate+1 WHERE GameID='" . $_POST["GameID"] . "'");
         break;
       case "SWHD":
+        $conn->query("UPDATE users SET HideCards=NOT HideCards WHERE UserID=" . $_POST["UserID"]);
+        $conn->query("UPDATE games SET RequestUpdate=RequestUpdate+1 WHERE GameID='" . $_POST["GameID"] . "'");
         break;
       default:
         break;
