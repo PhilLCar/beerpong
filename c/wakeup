@@ -1,8 +1,11 @@
 #! /usr/bin/env bash
 
+# To create tronserver run:
+# gcc -Itron/inc -Iutils/inc tron/src/* utils/src/* -lpthread -lcrypto -o tronserver
+
 # https://stackoverflow.com/questions/20162678/linux-script-to-check-if-process-is-running-and-act-on-the-result
 
-pidof webserver >/dev/null
+pidof tronserver >/dev/null
 if [[ $? -ne 0 ]] ; then
-        /var/www/c/webserver &
+        /var/www/c/tronserver &
 fi

@@ -6,13 +6,11 @@
       "command": "/usr/bin/gcc",
       "args": [
         "-g",
-        "-Iinc",
-        "src/*",
-        "main.c",
-        "-lpthread",
-        "-lcrypto",
+        "-Iphilipont/inc",
+        "philipont/src/*",
+        "-lm",
         "-o",
-        "webserver"
+        "philipontserver"
       ],
       "options": {
         "cwd": "${workspaceFolder}/c"

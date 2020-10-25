@@ -306,7 +306,7 @@ function update(info) {
             animateCardFromDeck(user, _CARDS[i].CardID);
           } else if (_CARDS[i].DeckPosition < 0) {
             animateCardToPDeck(_CARDS[i].CardID);
-          } else if (!deckFlipped && pc[i].DeckPosition == -_CARDS[i].DeckPosition) {
+          } else if (!deckFlipped && pc[i].DeckPosition > 0 && _CARDS[i].DeckPosition < 0) {
             animateFlipDeck();
             deckFlipped = true;
           }
@@ -1055,7 +1055,7 @@ async function animateUno(user) {
     await sleep(_ANIMMS);
   }
   await sleep(2000);
-  bubble = document.getElementById("SigBubble" + user);
+  bubble = document.getElementById("UnoBubble" + user);
   bubble.parentElement.removeChild(bubble);
 }
 
