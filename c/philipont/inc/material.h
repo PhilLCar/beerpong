@@ -32,6 +32,6 @@ typedef struct material {
   double max_subunit;
 } Material;
 
-extern Material materials[16];
+extern const Material materials[16];
 
 #endif

@@ -1,5 +1,5 @@
-#ifndef WORLD_H
-#define WORLD_H
+#ifndef PHILIPONT_H
+#define PHILIPONT_H
 
 #include <vec3D.h>
 #include <websocket.h>

@@ -5,9 +5,61 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
+#include <stdlib.h>
 
 const size_t  BUFFER_SIZE = 1 << 16;
 const char   *SAVE_PATH   = "./philipont/levels/";
+const Env     PRESETS[4] = {
+  // Earth
+  { 1.2, 0.5, { 10, 0, 10 }, { 0, -9.82, 0 } },
+  // Earth
+  { 1.2, 0.5, { 10, 0, 10 }, { 0, -9.82, 0 } },
+  // Earth
+  { 1.2, 0.5, { 10, 0, 10 }, { 0, -9.82, 0 } },
+  // Earth
+  { 1.2, 0.5, { 10, 0, 10 }, { 0, -9.82, 0 } }
+};
+
+Level *newLevel(int lid, int uid, char *name, char *designer) {
+  Level *level = malloc(sizeof(Level));
+
+}
+
+void initTerrain(Level *level, double waterLevel, double terrainSizeX, double terrainSizeZ, double terrainRes) {
+  int nX = floor(terrainSizeX / terrainRes);
+  int nZ = floor(terrainSizeZ / terrainRes);
+
+  level->waterLevel   = waterLevel;
+  level->terrainSizeX = terrainSizeX;
+  level->terrainSizeZ = terrainSizeZ;
+  level->terrainRes   = terrainRes;
+  level->terrain      = malloc(nX * nZ * sizeof(Vec3D));
+
+  for (int i = 0; i < nX; i++) {
+    for (int j = 0; j < nZ; j++) {
+      int X = ((double)i - (double)nX / 2.0) / (double)nX * terrainSizeX;
+      int Z = ((double)j - (double)nZ / 2.0) / (double)nZ * terrainSizeZ;
+      level->terrain[i + j * nX] = V3D(X, 0, Z);
+    }
+  }
+}
+
+void initRoad(Level *level, int roadSegments) {
+  level->roadSegments = roadSegments;
+  level->road         = malloc(roadSegments * 4 * sizeof(Vec3D));
+}
+
+void initEnvironment(Level *level, int preset) {
+  level->skin          = preset;
+  level->atmoDensity   = PRESETS[preset].atmoDensity;
+  level->humidity      = PRESETS[preset].humidity;
+  level->windSpeed     = PRESETS[preset].windSpeed;;
+  level->gravity       = PRESETS[preset].gravity;;
+}
+
+void initBridge() {
+
+}
 
 int saveLevel(Level *level, char auth[32]) {
   char buffer[BUFFER_SIZE];
@@ -67,25 +119,24 @@ int saveLevel(Level *level, char auth[32]) {
     int nX     = floor(level->terrainSizeX / level->terrainRes);
     int nZ     = floor(level->terrainSizeZ / level->terrainRes);
     int offset = 0;
-    for (int j = 0; j < nZ; j++) {
+    for (int j = 0; j < nZ; j++) {
       for (int i = 0; i < nX; i++) {
         int index = i + j * nX;
         if ((index - offset + 1) * sizeof(Vec3D) > BUFFER_SIZE) {
           write(file, buffer, (index - offset) * sizeof(Vec3D));
           offset = index;
         }
-        ((Vec3D*)buffer)[index - offset] = terrain[index];
+        ((Vec3D*)buffer)[index - offset] = level->terrain[index];
       }
     }
-    write(file, buffer, (nX * nZ - offset) * sizeof(Vec3D))
+    write(file, buffer, (nX * nZ - offset) * sizeof(Vec3D));
   } { // ROAD
-    int roadVertices = level->roadSegments ? 2 * level->roadSegments + 2 : 0;
     *(int*)buffer = level->roadSegments;
     write(file, buffer, sizeof(int));
-    for (int i = 0; i < roadVertices; i++) {
+    for (int i = 0; i < level->roadSegments * 4; i++) {
       ((Vec3D*)buffer)[i] = level->road[i];
     }
-    write(file, buffer, roadVertices * sizeof(Vec3D));
+    write(file, buffer, level->roadSegments * 4 * sizeof(Vec3D));
   } // ENVIRONMENT
   *(int*)buffer = level->skin;
   write(file, buffer, sizeof(int));
@@ -93,9 +144,7 @@ int saveLevel(Level *level, char auth[32]) {
   write(file, buffer, sizeof(double));
   *(double*)buffer = level->humidity;
   write(file, buffer, sizeof(double));
-  *(double*)buffer = level->windSpeed;
-  write(file, buffer, sizeof(double));
-  *(Vec3D*)buffer = level->windDirection;
+  *(Vec3D*)buffer = level->windSpeed;
   write(file, buffer, sizeof(Vec3D));
   *(Vec3D*)buffer = level->gravity;
   write(file, buffer, sizeof(Vec3D));
@@ -127,7 +176,7 @@ Level *loadLevel(int lid, int uid) {
   sprintf(filename, "%s%08X%08X.lvl", SAVE_PATH, lid, uid);
   file = open(filename, O_RDONLY);
   if (file < 0) {
-    fprintf("Couldn't load the requested level!\n");
+    fprintf(stderr, "Couldn't load the requested level!\n");
     return NULL;
   }
 
@@ -136,7 +185,6 @@ Level *loadLevel(int lid, int uid) {
   level->lid = *(int*)buffer;
   read(file, buffer, sizeof(int));
   level->uid = *(int*)buffer;
-  level->auth = malloc(32 * sizeof(char));
   read(file, level->auth, 32);
   read(file, buffer, 256);
   level->name = malloc(strlen(buffer) * sizeof(char));
@@ -167,13 +215,11 @@ Level *loadLevel(int lid, int uid) {
       bytes -= pass;
     } while (bytes);
   } { // ROAD
-    int roadVertices;
     read(file, buffer, sizeof(int));
     level->roadSegments = *(int*)buffer;
-    roadVertices = level->roadSegments ? 2 * level->roadSegments + 2 : 0;
-    read(file, buffer, roadVertices * sizeof(Vec3D));
-    level->road = malloc(roadVertices * sizeof(Vec3D));
-    for (int i = 0; i < roadVertices; i++) {
+    read(file, buffer, level->roadSegments * 4 * sizeof(Vec3D));
+    level->road = malloc(level->roadSegments * 4 * sizeof(Vec3D));
+    for (int i = 0; i < level->roadSegments * 4; i++) {
       level->road[i] = ((Vec3D*)buffer)[i];
     }
   } // ENVIRONEMENT
@@ -183,16 +229,14 @@ Level *loadLevel(int lid, int uid) {
   level->atmoDensity = *(double*)buffer;
   read(file, buffer, sizeof(double));
   level->humidity = *(double*)buffer;
-  read(file, buffer, sizeof(double));
-  level->windSpeed = *(double*)buffer;
   read(file, buffer, sizeof(Vec3D));
-  level->windDirection = *(Vec3D*)buffer;
+  level->windSpeed = *(Vec3D*)buffer;
   read(file, buffer, sizeof(Vec3D));
   level->gravity = *(Vec3D*)buffer;
   // BRIDGE NODES
   read(file, buffer, sizeof(int));
   level->nodes_size = *(int*)buffer;
-  for (level->nodes_cap = 1; level->nodes_cap < level->nodes_size; level->nodes_cap <<= 1);
+  for (level->nodes_cap = 256; level->nodes_cap < level->nodes_size; level->nodes_cap <<= 1);
   level->nodes = malloc(level->nodes_cap * sizeof(Node));
   for (int i = 0; i < level->nodes_size; i++) {
     size_t size;
@@ -206,12 +250,22 @@ Level *loadLevel(int lid, int uid) {
   // BRIDGE LINKS
   read(file, buffer, sizeof(int));
   level->links_size = *(int*)buffer;
-  for (level->links_cap = 1; level->links_cap < level->links_size; level->links_cap <<= 1);
+  for (level->links_cap = 256; level->links_cap < level->links_size; level->links_cap <<= 1);
   level->links = malloc(level->links_cap * sizeof(Link));
   read(file, buffer, level->links_size * sizeof(Link));
   for (int i = 0; i < level->links_size; i++) {
-    level->link[i] = ((Link*)buffer)[i];
+    level->links[i] = ((Link*)buffer)[i];
   }
   close(file);
   return 0;
+}
+
+void freeLevel(Level *level) {
+  free(level->name);
+  free(level->designer);
+  free(level->terrain);
+  free(level->road);
+  free(level->nodes);
+  free(level->links);
+  free(level);
 }

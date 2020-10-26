@@ -52,8 +52,7 @@ typedef struct level {
   int     skin;
   double  atmoDensity;
   double  humidity;
-  double  windSpeed;
-  Vec3D   windDirection;
+  Vec3D   windSpeed;
   Vec3D   gravity;
   // BRIDGE
   int     nodes_size;
@@ -64,8 +63,21 @@ typedef struct level {
   Link   *links;
 } Level;
 
-int    newLevel(/*TODO: ARGS*/);
-int    saveLevel(Level *level);
+typedef struct env {
+  double  atmoDensity;
+  double  humidity;
+  Vec3D   windSpeed;
+  Vec3D   gravity;
+} Env;
+
+extern const Env PRESETS[4];
+
+Level *newLevel(int lid, int uid, char *name, char *designer);
+void   initTerrain(Level *level, double waterLevel, double terrainSizeX, double terrainSizeZ, double terrainRes);
+void   initRoad(Level *level, int roadSegments);
+void   initEnvironment(Level *level, int preset);
+void   initBridge();
+int    saveLevel(Level *level, char auth[32]);
 Level *loadLevel(int lid, int uid);
 void   freeLevel(Level *level);
 
