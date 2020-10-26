@@ -1,6 +1,10 @@
 #ifndef VEC3D_H
 #define VEC3D_H
 
+#define _X 0
+#define _Y 1
+#define _Z 2
+
 typedef struct vec3D {
   union {
     double V[3];

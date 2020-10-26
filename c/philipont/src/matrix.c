@@ -108,7 +108,7 @@ double MXSn(Matrix *m, int *sigma, int depth, int *parity) {
       det += MXSn(m, sigma, depth - 1, parity);
       if (i == depth - 1) break;
       *parity = -*parity;
-      swap = sigma[depth - 1];
+      swap             = sigma[depth - 1];
       sigma[depth - 1] = sigma[with];
       sigma[with]      = swap;
     }
