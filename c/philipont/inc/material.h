@@ -20,6 +20,7 @@
 
 typedef struct material {
   double density;
+  double thickness;
   double price;
   double compression_max;
   double tension_max;
