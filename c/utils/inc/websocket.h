@@ -6,15 +6,15 @@
 #define WS_MAX_CONN            32
 #define WS_CHECK_PREIOD_MS  15000
 
-#define COM_BUFFERS_SIZE 16384
+#define COM_BUFFERS_SIZE 1 << 16
 
-#define FRAME_MAX_SIZE 32768
-#define FRAME_CONTINUE   0x0
-#define FRAME_TEXT       0x1
-#define FRAME_BINARY     0x2
-#define FRAME_CLOSE      0x8
-#define FRAME_PING       0x9
-#define FRAME_PONG       0xA
+#define FRAME_MAX_SIZE 1 << 16
+#define FRAME_CONTINUE     0x0
+#define FRAME_TEXT         0x1
+#define FRAME_BINARY       0x2
+#define FRAME_CLOSE        0x8
+#define FRAME_PING         0x9
+#define FRAME_PONG         0xA
 
 typedef struct interface {
   int out_ptr;
@@ -74,6 +74,9 @@ typedef struct frame {
   unsigned int  length;
   unsigned char payload[FRAME_MAX_SIZE];
 } Frame;
+
+void mempush(Interface *dest, const void *src, const size_t size);
+void mempull(void *dest, const Interface *src, int *from, const size_t size);
 
 Interface *startservice();
 void       stopservice();

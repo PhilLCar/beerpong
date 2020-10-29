@@ -22,7 +22,12 @@ const Env     PRESETS[4] = {
 
 Level *newLevel(int lid, int uid, char *name, char *designer) {
   Level *level = malloc(sizeof(Level));
-
+  level->lid = lid;
+  level->uid = uid;
+  level->name     = malloc((strlen(name)     + 1) * sizeof(char));
+  level->designer = malloc((strlen(designer) + 1) * sizeof(char));
+  strcpy(level->name,     name);
+  strcpy(level->designer, designer);
 }
 
 void initTerrain(Level *level, double waterLevel, double terrainSizeX, double terrainSizeZ, double terrainRes) {
@@ -57,8 +62,9 @@ void initEnvironment(Level *level, int preset) {
   level->gravity       = PRESETS[preset].gravity;;
 }
 
-void initBridge() {
-
+void initBridge(Level *level) {
+  level->nodes = newList(sizeof(Node));
+  level->links = newList(sizeof(Link));
 }
 
 int saveLevel(Level *level, char auth[32]) {
@@ -149,20 +155,49 @@ int saveLevel(Level *level, char auth[32]) {
   *(Vec3D*)buffer = level->gravity;
   write(file, buffer, sizeof(Vec3D));
   // BRIDGE NODES
-  *(int*)buffer = level->nodes_size;
-  write(file, buffer, sizeof(int));
-  for (int i = 0; i < level->nodes_size; i++) {
-    size_t size = sizeof(Node) - (NODE_MAX_LINK - level->nodes[i].nlinks) * sizeof(Link*);
-    *(Node*)buffer = level->nodes[i];
-    write(file, buffer, size);
+  {
+    int i = 0;
+    int sizeOfNodeWOLinks = sizeof(Node) - NODE_MAX_LINK * sizeof(Link*);
+    *(int*)buffer = sizeOf(level->nodes);
+    write(file, buffer, sizeof(int));
+    for (List *l = level->nodes->next; l; l = l->next) {
+      Node *n = l->content;
+      int bytes = sizeOfNodeWOLinks + n->nlinks * sizeof(int);
+      if (i + bytes > BUFFER_SIZE) {
+        write(file, buffer, i);
+        i = 0;
+      }
+      memcpy(&buffer[i], n, sizeOfNodeWOLinks);
+      for (int j = 0; j < n->nlinks; j++) {
+        int index = i + sizeOfNodeWOLinks + j * sizeof(int);
+        *(int*)&buffer[index] = indexOf(level->links, n->links[j]);
+      }
+      i += bytes;
+    }
+    write(file, buffer, i);
   }
   // BRIDGE LINKS
-  *(int*)buffer = level->links_size;
-  write(file, buffer, sizeof(int));
-  for (int i = 0; i < level->links_size; i++) {
-    ((Link*)buffer)[i] = level->links[i];
+  {
+    int i = 0;
+    int sizeOfLinkWONodes = sizeof(Link) - LINK_MAX_NODE * sizeof(Node*);
+    *(int*)buffer = sizeOf(level->links);
+    write(file, buffer, sizeof(int));
+    for (List *l = level->links->next; l; l = l->next) {
+      Link *n = l->content;
+      if (i + sizeof(Link) > BUFFER_SIZE) {
+        write(file, buffer, i);
+        i = 0;
+      }
+      memcpy(&buffer[i], n, sizeOfLinkWONodes);
+      for (int j = 0; j < LINK_MAX_NODE; j++) {
+        int index = i + sizeOfLinkWONodes + j * sizeof(int);
+        if (n->nodes[j]) *(int*)&buffer[index] = indexOf(level->nodes, n->nodes[j]);
+        else             *(int*)&buffer[index] = -1;
+      }
+      i += sizeof(Link);
+    }
+    write(file, buffer, i);
   }
-  write(file, buffer, level->links_size * sizeof(Link));
   close(file);
   return 0;
 }
@@ -234,27 +269,45 @@ Level *loadLevel(int lid, int uid) {
   read(file, buffer, sizeof(Vec3D));
   level->gravity = *(Vec3D*)buffer;
   // BRIDGE NODES
-  read(file, buffer, sizeof(int));
-  level->nodes_size = *(int*)buffer;
-  for (level->nodes_cap = 256; level->nodes_cap < level->nodes_size; level->nodes_cap <<= 1);
-  level->nodes = malloc(level->nodes_cap * sizeof(Node));
-  for (int i = 0; i < level->nodes_size; i++) {
-    size_t size;
+  {
+    int size;
+    int sizeOfNodeWOLinks = sizeof(Node) - NODE_MAX_LINK * sizeof(Link*);
+    level->nodes = newList(sizeof(Node));
     read(file, buffer, sizeof(int));
-    level->nodes[i].nlinks = *(int*)buffer;
-    size = sizeof(Node) - (NODE_MAX_LINK - level->nodes[i].nlinks) * sizeof(Link*) - sizeof(int);
-    read(file, buffer, size);
-    memset((char*)&level->nodes[i].links, 0, NODE_MAX_LINK * sizeof(Link*));
-    memcpy((char*)&level->nodes[i] + sizeof(int), buffer, size);
+    size = *(int*)buffer;
+    for (int i = 0; i < size; i++) {
+      read(file, buffer, sizeOfNodeWOLinks);
+      read(file, &buffer[sizeOfNodeWOLinks], ((Node*)buffer)->nlinks * sizeof(int));
+      push(level->nodes, buffer);
+    }
+    for (List *l = level->nodes->next; l; l = l->next) {
+      int   indices[NODE_MAX_LINK];
+      Node *n = l->content;
+      memcpy(indices, n->links, NODE_MAX_LINK * sizeof(int));
+      for (int i = 0; i < n->nlinks; i++) {
+        n->links[i] = at(level->nodes, indices[i]);
+      }
+    }
   }
   // BRIDGE LINKS
-  read(file, buffer, sizeof(int));
-  level->links_size = *(int*)buffer;
-  for (level->links_cap = 256; level->links_cap < level->links_size; level->links_cap <<= 1);
-  level->links = malloc(level->links_cap * sizeof(Link));
-  read(file, buffer, level->links_size * sizeof(Link));
-  for (int i = 0; i < level->links_size; i++) {
-    level->links[i] = ((Link*)buffer)[i];
+  {
+    int size;
+    int sizeOfLinkWONodes = sizeof(Link) - LINK_MAX_NODE * sizeof(Node*);
+    level->links = newList(sizeof(Link));
+    read(file, buffer, sizeof(int));
+    size = *(int*)buffer;
+    for (int i = 0; i < size; i++) {
+      read(file, buffer, sizeOfLinkWONodes + LINK_MAX_NODE * sizeof(int));
+      push(level->links, buffer);
+    }
+    for (List *l = level->links->next; l; l = l->next) {
+      int   indices[LINK_MAX_NODE];
+      Link *n = l->content;
+      memcpy(indices, n->nodes, LINK_MAX_NODE * sizeof(int));
+      for (int i = 0; i < LINK_MAX_NODE; i++) {
+        n->nodes[i] = at(level->links, indices[i]);
+      }
+    }
   }
   close(file);
   return 0;

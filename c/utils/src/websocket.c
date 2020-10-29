@@ -125,6 +125,7 @@ void *_cliento(void *vargp) {
     if (lastpos != _interface.out_ptr && *id) {
       pthread_mutex_lock(&_interface.out_lock);
       int size = _interface.out_ptr - lastpos;
+      int last = 1;
       if (size < 0) size += COM_BUFFERS_SIZE;
       do {
         short length;
@@ -142,11 +143,15 @@ void *_cliento(void *vargp) {
           ((char*)&uid)[i] = _interface.out[lastpos];
           lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
         }
+        if (length < 0) {
+          length = -length;
+          last   = 0;
+        }
         length -= sizeof(short) + 2 * sizeof(int);
         if (*id == gid && (fd == uid || uid == -1)) {
           if (length < 126) { // use a cframe
             memset(&cframe.header, 0, sizeof(FrameHeader));
-            cframe.header.end  = 1;
+            cframe.header.end  = last;
             cframe.header.mask = 0;
             cframe.header.length = length;
             cframe.header.opcode = FRAME_BINARY;
@@ -159,7 +164,7 @@ void *_cliento(void *vargp) {
             pthread_mutex_unlock(&_clientmutex[me]);
           } else {
             memset(&lframe.header, 0, sizeof(FrameHeader));
-            lframe.header.end  = 1;
+            lframe.header.end  = last;
             lframe.header.mask = 0;
             lframe.header.length = 126;
             lframe.header.opcode = FRAME_BINARY;
@@ -172,7 +177,7 @@ void *_cliento(void *vargp) {
             write(fd, &lframe, length + 4);
             pthread_mutex_unlock(&_clientmutex[me]);
           }
-        } else lastpos = (lastpos + length);
+        } else lastpos = (lastpos + length) % COM_BUFFERS_SIZE;
         size -= length + sizeof(short) + 2 * sizeof(int);
       } while (size > 0);
       if (lastpos != _interface.out_ptr) {
@@ -187,9 +192,10 @@ void *_cliento(void *vargp) {
 }
 
 void *_clienti(void *vargp) {
-  int          me = (long)vargp >> 32;
-  int          fd = (long)vargp & 0xFFFFFFFF;
-  unsigned int id = 0;
+  int          me  = (long)vargp >> 32;
+  int          fd  = (long)vargp & 0xFFFFFFFF;
+  unsigned int id  = 0;
+  int          cop = 0;
   Frame        frame;
   ControlFrame cframe;
 
@@ -231,14 +237,34 @@ void *_clienti(void *vargp) {
     read(fd, frame.payload, frame.length);
     pthread_mutex_unlock(&_clientmutex[me]);
     switch (frame.header.opcode) {
+      case FRAME_CONTINUE:
+        switch(cop) {
+          case FRAME_TEXT:
+            goto CASE_FRAME_TEXT;
+            break;
+          case FRAME_BINARY:
+            goto CASE_FRAME_BINARY;
+            break;
+          default:
+            fprintf(stderr, "Received a continued frame without previous opcode!\n");
+            break;
+        }
+        break;
       case FRAME_TEXT:
+      CASE_FRAME_TEXT:
+        if (!frame.header.end) cop = FRAME_TEXT;
+        else                   cop = 0;
         printf("Message received: %s\n", frame.payload);
         break;
       case FRAME_BINARY:
+      CASE_FRAME_BINARY:
+        if (!frame.header.end) cop = FRAME_TEXT;
+        else                   cop = 0;
         // Update the inputs
         pthread_mutex_lock(&_interface.in_lock);
-        int ptr        = _interface.in_ptr;
-        int chunk_size = frame.length + sizeof(short) + sizeof(int);
+        int   ptr        = _interface.in_ptr;
+        short chunk_size = frame.length + sizeof(short) + sizeof(int);
+        if (cop) chunk_size = - chunk_size;
         for (int i = 0; i < sizeof(short); i++) {
           _interface.in[ptr] = ((char*)&chunk_size)[i];
           ptr = (ptr + 1) % COM_BUFFERS_SIZE;
@@ -359,6 +385,40 @@ void *_server(void *vargp) {
     else         printf("-------- Max connections reached --------\n");
   }
   return NULL;
+}
+
+void mempush(Interface *dest, const void *src, const size_t size) {
+  size_t stop1 = dest->out_ptr + size;
+  size_t stop2 = 0;
+  size_t size1 = size;
+  if (stop1 >= COM_BUFFERS_SIZE) {
+    stop2 = stop1 - COM_BUFFERS_SIZE;
+    stop1 = 0;
+    size1 = COM_BUFFERS_SIZE - dest->out_ptr;
+  }
+  memcpy(&dest->out[dest->out_ptr], src, size1);
+  dest->out_ptr = stop1;
+  if (stop2) {
+    memcpy(&dest->out[0], src + size1, stop2);
+    dest->out_ptr = stop2;
+  }
+}
+
+void mempull(void *dest, const Interface *src, int *from, const size_t size) {
+  size_t stop1 = *from + size;
+  size_t stop2 = 0;
+  size_t size1 = size;
+  if (stop1 >= COM_BUFFERS_SIZE) {
+    stop2 = stop1 - COM_BUFFERS_SIZE;
+    stop1 = 0;
+    size1 = COM_BUFFERS_SIZE - *from;
+  }
+  memcpy(dest, &src->in[*from], size1);
+  *from = stop1;
+  if (stop2) {
+    memcpy(dest, &src->in[0], stop2);
+    *from = stop2;
+  }
 }
 
 Interface *startservice() {

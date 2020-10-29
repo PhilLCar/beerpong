@@ -3,6 +3,7 @@
 
 #include <material.h>
 #include <vec3D.h>
+#include <list.h>
 
 #define SKIN_EARTH 0
 #define SKIN_MARS  1
@@ -15,10 +16,12 @@
 #define NODE_BROKEN 3
 
 #define NODE_MAX_LINK 32
+#define LINK_MAX_NODE  4
 
 typedef struct node {
-  int          nlinks;
+  int          id;
   int          type;
+  int          nlinks;
   Vec3D        position;
   Vec3D        speed;
   Vec3D        acceleration;
@@ -26,10 +29,11 @@ typedef struct node {
 } Node;
 
 typedef struct link {
+  int          id;
   int          material;
   double       length;
   double       width;
-  struct node *nodes[4];
+  struct node *nodes[LINK_MAX_NODE];
 } Link;
 
 typedef struct level {
@@ -55,12 +59,8 @@ typedef struct level {
   Vec3D   windSpeed;
   Vec3D   gravity;
   // BRIDGE
-  int     nodes_size;
-  int     nodes_cap;
-  Node   *nodes;
-  int     links_size;
-  int     links_cap;
-  Link   *links;
+  List   *nodes;
+  List   *links;
 } Level;
 
 typedef struct env {
@@ -76,7 +76,7 @@ Level *newLevel(int lid, int uid, char *name, char *designer);
 void   initTerrain(Level *level, double waterLevel, double terrainSizeX, double terrainSizeZ, double terrainRes);
 void   initRoad(Level *level, int roadSegments);
 void   initEnvironment(Level *level, int preset);
-void   initBridge();
+void   initBridge(Level *level);
 int    saveLevel(Level *level, char auth[32]);
 Level *loadLevel(int lid, int uid);
 void   freeLevel(Level *level);
