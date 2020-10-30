@@ -1,0 +1,46 @@
+html, body {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  margin: 0px;
+}
+
+input[type="button"] {
+  background-color: black;
+  color: lightgrey;
+  border: 1px solid grey;
+  border-radius: 40px;
+  margin: 23px;
+  margin-bottom: 0px;
+  width: 200px;
+  font-size: 20px;
+}
+
+input[type="button"]:hover {
+  cursor: pointer;
+  background-color: grey;
+  color: white;
+  border-color: white;
+}
+
+#Drawing {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 250px;
+  margin: 0px;
+}
+
+#ToolBar {
+  position: absolute;
+  top: 0px;
+  bottom: 0px;
+  left: calc(100% - 250px);
+  right: 0px;
+  margin: 0px;
+  border-left: 1px solid grey;
+  background-color: black;
+}

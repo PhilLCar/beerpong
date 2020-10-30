@@ -1,0 +1,22 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Test</title>
+    <link rel="stylesheet" type="text/css" href="/css/philipont.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/gl-matrix@3.0.0/gl-matrix-min.js"></script>
+    <script src="/js/utils/vec3D.js" type="text/javascript"></script>
+    <script src="/js/utils/websocket.js" type="text/javascript"></script>
+    <script src="/js/philipont/webgl.js" type="text/javascript"></script>
+    <script src="/js/philipont/philipont.js" type="text/javascript"></script>
+  </head>
+  <body onload="main()">
+    <canvas id="Drawing" onmouseup="toggleRotation(event)" onmousemove="rotate(event)">
+
+    </canvas>
+    <div id="ToolBar">
+      <input type="button" value="Connect" onclick="connect()"/>
+      <input type="button" value="Load"    onclick="load()"/>
+    </div>
+  </body>
+</html>

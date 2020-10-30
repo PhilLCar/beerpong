@@ -4,11 +4,11 @@
 #include <pthread.h>
 
 #define WS_MAX_CONN            32
-#define WS_CHECK_PREIOD_MS  15000
+#define WS_CHECK_PERIOD_US  15000
 
-#define COM_BUFFERS_SIZE 1 << 16
+#define COM_BUFFERS_SIZE 65536
 
-#define FRAME_MAX_SIZE 1 << 16
+#define FRAME_MAX_SIZE   65536
 #define FRAME_CONTINUE     0x0
 #define FRAME_TEXT         0x1
 #define FRAME_BINARY       0x2
@@ -57,10 +57,10 @@ typedef struct long_frame {
   FrameHeader    header;
   unsigned short length;
   union {
-    unsigned char spayload[(1 << 16) - 4];
+    unsigned char spayload[FRAME_MAX_SIZE - 4];
     struct {
       unsigned char mask[4];
-      unsigned char payload[(1 << 16) - 8];
+      unsigned char payload[FRAME_MAX_SIZE - 8];
     };
   };
 } LongFrame;

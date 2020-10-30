@@ -25,9 +25,11 @@ typedef struct material {
   double compression_max;
   double tension_max;
   double torsion_max;
+  double bending_max;
   double compression_factor;
   double tension_factor;
   double torsion_factor;
+  double bending_factor;
   double max_length;
   double max_subunit;
 } Material;

@@ -22,11 +22,12 @@ void deleteList(List **list) {
 void push(List *list, void *elem) {
   for (; list->next; list = list->next);
   List *tmp      = malloc(sizeof(List));
-  tmp->prev      = list->next;
+  tmp->prev      = list;
   tmp->next      = NULL;
   tmp->elem_size = list->elem_size;
   tmp->content   = malloc(tmp->elem_size);
   memcpy(tmp->content, elem, tmp->elem_size);
+  list->next = tmp;
 }
 
 void *pop(List *list) {
@@ -56,9 +57,9 @@ void insertAt(List *list, int index, void *elem) {
 void *removeAt(List *list, int index) {
   void *content = NULL;
   for (int i = -1; list->next && i < index; list = list->next, i++);
-  if (list->prev) {
-    list->prev->next = list->next;
-    list->next->prev = list->prev;
+  if (list->content) {
+    if (list->prev) list->prev->next = list->next;
+    if (list->next) list->next->prev = list->prev;
     content = list->content;
     free(list);
   }

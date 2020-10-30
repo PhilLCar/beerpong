@@ -3,7 +3,7 @@
 
 int main() {
   Interface *i = startservice();
-  connect(i);
+  philipont(i);
   stopservice();
   return 0;
 }

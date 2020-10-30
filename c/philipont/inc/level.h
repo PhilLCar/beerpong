@@ -32,17 +32,18 @@ typedef struct link {
   int          id;
   int          material;
   double       length;
-  double       width;
+  double       lstress;
+  double       rstress;
   struct node *nodes[LINK_MAX_NODE];
 } Link;
 
 typedef struct level {
   // METADATA
-  char   *name;
-  int     lid;
-  char   *designer;
-  int     uid;
-  char    auth[32];
+  char         *name;
+  unsigned int  lid;
+  char         *designer;
+  unsigned int  uid;
+  char          auth[32];
   // TERRAIN
   double  waterLevel;
   double  terrainSizeX;
@@ -72,7 +73,7 @@ typedef struct env {
 
 extern const Env PRESETS[4];
 
-Level *newLevel(int lid, int uid, char *name, char *designer);
+Level *newLevel(unsigned int lid, unsigned int uid, char *name, char *designer);
 void   initTerrain(Level *level, double waterLevel, double terrainSizeX, double terrainSizeZ, double terrainRes);
 void   initRoad(Level *level, int roadSegments);
 void   initEnvironment(Level *level, int preset);

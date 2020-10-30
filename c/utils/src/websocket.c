@@ -107,14 +107,9 @@ int handshake(int fd, int me) {
 }
 
 void *_cliento(void *vargp) {
-  long          arg1 = ((long*)vargp)[0];
-  int           me = arg1 >> 32;
-  int           fd = arg1 & 0xFFFFFFFF;
-  unsigned int *id = ((unsigned int**)vargp)[1];
-  LongFrame     lframe;
-  ControlFrame  cframe;
+  int           me = (long)vargp >> 32;
+  int           fd = (long)vargp & 0xFFFFFFFF;
   int           lastpos;
-  free(vargp);
 
   // init the last position pointer
   pthread_mutex_lock(&_interface.out_lock);
@@ -122,21 +117,16 @@ void *_cliento(void *vargp) {
   pthread_mutex_unlock(&_interface.out_lock);
 
   while (!_clientstop[me]) {
-    if (lastpos != _interface.out_ptr && *id) {
+    if (lastpos != _interface.out_ptr) {
       pthread_mutex_lock(&_interface.out_lock);
       int size = _interface.out_ptr - lastpos;
       int last = 1;
       if (size < 0) size += COM_BUFFERS_SIZE;
       do {
         short length;
-        int   gid;
         int   uid;
         for (int i = 0; i < sizeof(short); i++) {
           ((char*)&length)[i] = _interface.out[lastpos];
-          lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
-        }
-        for (int i = 0; i < sizeof(int); i++) {
-          ((char*)&gid)[i] = _interface.out[lastpos];
           lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
         }
         for (int i = 0; i < sizeof(int); i++) {
@@ -147,9 +137,10 @@ void *_cliento(void *vargp) {
           length = -length;
           last   = 0;
         }
-        length -= sizeof(short) + 2 * sizeof(int);
-        if (*id == gid && (fd == uid || uid == -1)) {
+        length -= sizeof(short) + sizeof(int);
+        if (fd == uid || uid == -1) {
           if (length < 126) { // use a cframe
+            ControlFrame cframe;
             memset(&cframe.header, 0, sizeof(FrameHeader));
             cframe.header.end  = last;
             cframe.header.mask = 0;
@@ -163,6 +154,7 @@ void *_cliento(void *vargp) {
             write(fd, &cframe, length + 2);
             pthread_mutex_unlock(&_clientmutex[me]);
           } else {
+            LongFrame lframe;
             memset(&lframe.header, 0, sizeof(FrameHeader));
             lframe.header.end  = last;
             lframe.header.mask = 0;
@@ -186,7 +178,7 @@ void *_cliento(void *vargp) {
       }
       pthread_mutex_unlock(&_interface.out_lock);
     }
-    usleep(WS_CHECK_PREIOD_MS);
+    usleep(WS_CHECK_PERIOD_US);
   }
   return NULL;
 }
@@ -194,7 +186,6 @@ void *_cliento(void *vargp) {
 void *_clienti(void *vargp) {
   int          me  = (long)vargp >> 32;
   int          fd  = (long)vargp & 0xFFFFFFFF;
-  unsigned int id  = 0;
   int          cop = 0;
   Frame        frame;
   ControlFrame cframe;
@@ -202,10 +193,7 @@ void *_clienti(void *vargp) {
   _clientstop[me] = handshake(fd, me);
 
   if (!_clientstop[me]) {
-    void *args = malloc(2 * sizeof(void*));
-    ((long*)args)[0]          = (long)vargp;
-    ((unsigned int**)args)[1] = &id;
-    pthread_create(&_clientthreadO[me], NULL, _cliento, args);
+    pthread_create(&_clientthreadO[me], NULL, _cliento, vargp);
   }
 
   while (!_clientstop[me]) {
@@ -264,7 +252,7 @@ void *_clienti(void *vargp) {
         pthread_mutex_lock(&_interface.in_lock);
         int   ptr        = _interface.in_ptr;
         short chunk_size = frame.length + sizeof(short) + sizeof(int);
-        if (cop) chunk_size = - chunk_size;
+        if (cop) chunk_size = -chunk_size;
         for (int i = 0; i < sizeof(short); i++) {
           _interface.in[ptr] = ((char*)&chunk_size)[i];
           ptr = (ptr + 1) % COM_BUFFERS_SIZE;
@@ -275,9 +263,6 @@ void *_clienti(void *vargp) {
         }
         for (int i = 0; i < frame.length; i++) {
           _interface.in[ptr] = frame.payload[i] ^ frame.mask[i % 4];
-          if (i < 4) {
-            ((char*)&id)[i] = _interface.in[ptr];
-          }
           ptr = (ptr + 1) % COM_BUFFERS_SIZE;
         }
         _interface.in_ptr = ptr;

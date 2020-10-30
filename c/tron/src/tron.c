@@ -282,10 +282,6 @@ void *play(void *vargp) {
       ptr = (ptr + 1) % COM_BUFFERS_SIZE;
     }
     for (int i = 0; i < sizeof(int); i++) {
-      interface->out[ptr] = ((char*)id)[i];
-      ptr = (ptr + 1) % COM_BUFFERS_SIZE;
-    }
-    for (int i = 0; i < sizeof(int); i++) {
       interface->out[ptr] = ((char*)&u)[i];
       ptr = (ptr + 1) % COM_BUFFERS_SIZE;
     }
@@ -312,10 +308,6 @@ void *play(void *vargp) {
             ptr = (ptr + 1) % COM_BUFFERS_SIZE;
           }
           for (int j = 0; j < sizeof(int); j++) {
-            interface->out[ptr] = ((char*)id)[j];
-            ptr = (ptr + 1) % COM_BUFFERS_SIZE;
-          }
-          for (int j = 0; j < sizeof(int); j++) {
             interface->out[ptr] = ((char*)&uids[i])[j];
             ptr = (ptr + 1) % COM_BUFFERS_SIZE;
           }
@@ -328,10 +320,6 @@ void *play(void *vargp) {
           chunk_size = sizeof(short) + 2 * sizeof(int) + sizeof(Grid) + 1;
           for (int j = 0; j < sizeof(short); j++) {
             interface->out[ptr] = ((char*)&chunk_size)[j];
-            ptr = (ptr + 1) % COM_BUFFERS_SIZE;
-          }
-          for (int j = 0; j < sizeof(int); j++) {
-            interface->out[ptr] = ((char*)id)[j];
             ptr = (ptr + 1) % COM_BUFFERS_SIZE;
           }
           for (int j = 0; j < sizeof(int); j++) {
@@ -409,7 +397,7 @@ void tron(Interface *interface) {
         if (p >= 0) ids[p] = id;
       } while (size > 0);
       if (prev_ptr != interface->in_ptr) {
-        fprintf(stderr, "Fatal synchronization error! (input buffer: dispatcher)\n");
+        fprintf(stderr, "Fatal synchronization error! (input buffer: tron dispatcher)\n");
         exit(EXIT_FAILURE);
       }
       pthread_mutex_unlock(&interface->in_lock);
@@ -427,6 +415,6 @@ void tron(Interface *interface) {
         playing = --ngames;
       }
     }
-    usleep(WS_CHECK_PREIOD_MS);
+    usleep(WS_CHECK_PERIOD_US);
   }
 }

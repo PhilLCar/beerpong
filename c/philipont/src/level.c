@@ -20,7 +20,7 @@ const Env     PRESETS[4] = {
   { 1.2, 0.5, { 10, 0, 10 }, { 0, -9.82, 0 } }
 };
 
-Level *newLevel(int lid, int uid, char *name, char *designer) {
+Level *newLevel(unsigned int lid, unsigned int uid, char *name, char *designer) {
   Level *level = malloc(sizeof(Level));
   level->lid = lid;
   level->uid = uid;
@@ -28,11 +28,12 @@ Level *newLevel(int lid, int uid, char *name, char *designer) {
   level->designer = malloc((strlen(designer) + 1) * sizeof(char));
   strcpy(level->name,     name);
   strcpy(level->designer, designer);
+  return level;
 }
 
 void initTerrain(Level *level, double waterLevel, double terrainSizeX, double terrainSizeZ, double terrainRes) {
-  int nX = floor(terrainSizeX / terrainRes);
-  int nZ = floor(terrainSizeZ / terrainRes);
+  int nX = floor(terrainSizeX / terrainRes) + 1;
+  int nZ = floor(terrainSizeZ / terrainRes) + 1;
 
   level->waterLevel   = waterLevel;
   level->terrainSizeX = terrainSizeX;
@@ -103,9 +104,9 @@ int saveLevel(Level *level, char auth[32]) {
   // since no fixed-size float standard...
   // That goes for ints and other structs as well, so #pragma pack isn't necessary
   *(int*)buffer = level->lid;
-  write(file, buffer, sizeof(int));
+  write(file, buffer, sizeof(unsigned int));
   *(int*)buffer = level->uid;
-  write(file, buffer, sizeof(int));
+  write(file, buffer, sizeof(unsigned int));
   write(file, level->auth, 32);
   memset(buffer, 0, 256);
   strcpy(buffer, level->name);
@@ -122,8 +123,8 @@ int saveLevel(Level *level, char auth[32]) {
   *(double*)buffer = level->terrainRes;
   write(file, buffer, sizeof(double));
   { // TERRAIN
-    int nX     = floor(level->terrainSizeX / level->terrainRes);
-    int nZ     = floor(level->terrainSizeZ / level->terrainRes);
+    int nX     = floor(level->terrainSizeX / level->terrainRes) + 1;
+    int nZ     = floor(level->terrainSizeZ / level->terrainRes) + 1;
     int offset = 0;
     for (int j = 0; j < nZ; j++) {
       for (int i = 0; i < nX; i++) {
@@ -216,10 +217,10 @@ Level *loadLevel(int lid, int uid) {
   }
 
   level = malloc(sizeof(Level));
-  read(file, buffer, sizeof(int));
-  level->lid = *(int*)buffer;
-  read(file, buffer, sizeof(int));
-  level->uid = *(int*)buffer;
+  read(file, buffer, sizeof(unsigned int));
+  level->lid = *(unsigned int*)buffer;
+  read(file, buffer, sizeof(unsigned int));
+  level->uid = *(unsigned int*)buffer;
   read(file, level->auth, 32);
   read(file, buffer, 256);
   level->name = malloc(strlen(buffer) * sizeof(char));
@@ -236,8 +237,8 @@ Level *loadLevel(int lid, int uid) {
   read(file, buffer, sizeof(double));
   level->terrainRes = *(double*)buffer;
   { // TERRAIN
-    int nX     = floor(level->terrainSizeX / level->terrainRes);
-    int nZ     = floor(level->terrainSizeZ / level->terrainRes);
+    int nX     = floor(level->terrainSizeX / level->terrainRes) + 1;
+    int nZ     = floor(level->terrainSizeZ / level->terrainRes) + 1;
     int index  = 0;
     int bytes  = nX * nZ;
     level->terrain = malloc(bytes * sizeof(Vec3D));
@@ -318,7 +319,7 @@ void freeLevel(Level *level) {
   free(level->designer);
   free(level->terrain);
   free(level->road);
-  free(level->nodes);
-  free(level->links);
+  deleteList(&level->nodes);
+  deleteList(&level->links);
   free(level);
 }
