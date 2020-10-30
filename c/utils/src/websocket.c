@@ -107,9 +107,10 @@ int handshake(int fd, int me) {
 }
 
 void *_cliento(void *vargp) {
-  int           me = (long)vargp >> 32;
-  int           fd = (long)vargp & 0xFFFFFFFF;
-  int           lastpos;
+  int me = (long)vargp >> 32;
+  int fd = (long)vargp & 0xFFFFFFFF;
+  int lastpos;
+  int opcode = 1;
 
   // init the last position pointer
   pthread_mutex_lock(&_interface.out_lock);
@@ -145,7 +146,7 @@ void *_cliento(void *vargp) {
             cframe.header.end  = last;
             cframe.header.mask = 0;
             cframe.header.length = length;
-            cframe.header.opcode = FRAME_BINARY;
+            cframe.header.opcode = opcode ? FRAME_BINARY : 0;
             for (int i = 0; i < length; i++) {
               cframe.spayload[i] = _interface.out[lastpos];
               lastpos = (lastpos + 1) % COM_BUFFERS_SIZE;
@@ -159,7 +160,7 @@ void *_cliento(void *vargp) {
             lframe.header.end  = last;
             lframe.header.mask = 0;
             lframe.header.length = 126;
-            lframe.header.opcode = FRAME_BINARY;
+            lframe.header.opcode = opcode ? FRAME_BINARY : 0;
             lframe.length = htons(length);
             for (int i = 0; i < length; i++) {
               lframe.spayload[i] = _interface.out[lastpos];
@@ -169,6 +170,7 @@ void *_cliento(void *vargp) {
             write(fd, &lframe, length + 4);
             pthread_mutex_unlock(&_clientmutex[me]);
           }
+          opcode = last;
         } else lastpos = (lastpos + length) % COM_BUFFERS_SIZE;
         size -= length + sizeof(short) + 2 * sizeof(int);
       } while (size > 0);

@@ -55,11 +55,6 @@ void sendLevelToInterface(Interface *interface, Level *level, int client, char a
     mempush(interface, &level->lid, sizeof(int));
     mempush(interface, &level->uid, sizeof(int));
     writtenBytes += 2 * sizeof(int);
-    length = sizeof(Node) - NODE_MAX_LINK * sizeof(Link*);
-    mempush(interface, &length, 1);
-    length = sizeof(Link) - LINK_MAX_NODE * sizeof(Node*);
-    mempush(interface, &length, 1);
-    writtenBytes += 2;
     length = strlen(level->name);
     mempush(interface, &length, sizeof(unsigned char));
     mempush(interface, level->name, length);

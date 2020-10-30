@@ -32,19 +32,19 @@ Level *newLevel(unsigned int lid, unsigned int uid, char *name, char *designer) 
 }
 
 void initTerrain(Level *level, double waterLevel, double terrainSizeX, double terrainSizeZ, double terrainRes) {
-  int nX = floor(terrainSizeX / terrainRes) + 1;
-  int nZ = floor(terrainSizeZ / terrainRes) + 1;
+  int nX = floor(terrainSizeX / terrainRes);
+  int nZ = floor(terrainSizeZ / terrainRes);
 
   level->waterLevel   = waterLevel;
   level->terrainSizeX = terrainSizeX;
   level->terrainSizeZ = terrainSizeZ;
   level->terrainRes   = terrainRes;
-  level->terrain      = malloc(nX * nZ * sizeof(Vec3D));
+  level->terrain      = malloc((nX + 1) * (nZ + 1) * sizeof(Vec3D));
 
-  for (int i = 0; i < nX; i++) {
-    for (int j = 0; j < nZ; j++) {
-      int X = ((double)i - (double)nX / 2.0) / (double)nX * terrainSizeX;
-      int Z = ((double)j - (double)nZ / 2.0) / (double)nZ * terrainSizeZ;
+  for (int i = 0; i <= nX; i++) {
+    for (int j = 0; j <= nZ; j++) {
+      double X = ((double)i - (double)nX / 2.0) / (double)nX * terrainSizeX;
+      double Z = ((double)j - (double)nZ / 2.0) / (double)nZ * terrainSizeZ;
       level->terrain[i + j * nX] = V3D(X, 0, Z);
     }
   }

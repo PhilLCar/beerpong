@@ -25,5 +25,6 @@ Vec3D   V3Dsub(Vec3D v1, Vec3D v2);
 Vec3D   V3Dmul(Vec3D v, double k);
 Vec3D   V3Ddiv(Vec3D v, double k);
 Vec3D   V3Dunit(Vec3D v);
+Vec3D   V3Dnorm(Vec3D v1, Vec3D v2, Vec3D v3);
 
 #endif

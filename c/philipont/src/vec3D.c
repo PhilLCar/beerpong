@@ -60,3 +60,7 @@ Vec3D V3Ddiv(Vec3D v, double k) {
 Vec3D V3Dunit(Vec3D v) {
   return V3Ddiv(v, V3DR(v));
 }
+
+Vec3D V3Dnorm(Vec3D v1, Vec3D v2, Vec3D v3) {
+  return V3Dunit(V3Dcrs(V3Dsub(v2, v1), V3Dsub(v3, v1)));
+}
