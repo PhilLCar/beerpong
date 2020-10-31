@@ -45,7 +45,7 @@ void initTerrain(Level *level, double waterLevel, double terrainSizeX, double te
     for (int j = 0; j <= nZ; j++) {
       double X = ((double)i - (double)nX / 2.0) / (double)nX * terrainSizeX;
       double Z = ((double)j - (double)nZ / 2.0) / (double)nZ * terrainSizeZ;
-      level->terrain[i + j * nX] = V3D(X, 0, Z);
+      level->terrain[i + j * (nX + 1)] = V3D(X, 0, Z);
     }
   }
 }

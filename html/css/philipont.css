@@ -5,6 +5,7 @@ html, body {
   left: 0px;
   right: 0px;
   margin: 0px;
+  color: lightgrey;
 }
 
 input[type="button"] {

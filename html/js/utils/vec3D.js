@@ -5,7 +5,7 @@ function V3D(X, Y, Z) {
 }
 
 function V3DR(v) {
-  return v.X*v.X + v.Y*v.Y + v.Z*v.Z*v.Z;
+  return Math.sqrt(v.X*v.X + v.Y*v.Y + v.Z*v.Z*v.Z);
 }
 
 function V3Ddot(v1, v2) {
@@ -33,4 +33,12 @@ function V3Dmul(v, k) {
 
 function V3Ddiv(v, k) {
   return new V3D(v.X / k, v.Y / k, v.Z / k);
+}
+
+function V3Dunit(v) {
+  return V3Ddiv(v, V3DR(v));
+}
+
+function V3Dnorm(v1, v2, v3) {
+  return V3Dunit(V3Dcrs(V3Dsub(v2, v1), V3Dsub(v3, v1)));
 }

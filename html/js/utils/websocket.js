@@ -103,42 +103,42 @@ WebSocketResponse.prototype.get = function(type, arrayLength = null, converter =
       break;
     case WebSocketResponse.USHORT:
       if (arrayLength === null) {
-        var tmp = new Uint16Array(this.data.subarray(this.index, this.index += 2).buffer);
+        var tmp = new Uint16Array(new Uint8Array(this.data.subarray(this.index, this.index += 2)).buffer);
         return tmp[0];
       } else {
-        return new Uint16Array(this.data.subarray(this.index, this.index += (2 * arrayLength)).buffer);
+        return new Uint16Array(new Uint8Array(this.data.subarray(this.index, this.index += (2 * arrayLength))).buffer);
       }
       break;
     case WebSocketResponse.SHORT:
       if (arrayLength == null) {
-        var tmp = new Int16Array(this.data.subarray(this.index, this.index += 2).buffer);
+        var tmp = new Int16Array(new Uint8Array(this.data.subarray(this.index, this.index += 2)).buffer);
         return tmp[0];
       } else {
-        return new Int16Array(this.data.subarray(this.index, this.index += (2 * arrayLength)).buffer);
+        return new Int16Array(new Uint8Array(this.data.subarray(this.index, this.index += (2 * arrayLength))).buffer);
       }
       break;
     case WebSocketResponse.UINT:
       if (arrayLength === null) {
-        var tmp = new Uint32Array(this.data.subarray(this.index, this.index += 4).buffer);
+        var tmp = new Uint32Array(new Uint8Array(this.data.subarray(this.index, this.index += 4)).buffer);
         return tmp[0];
       } else {
-        return new Uint32Array(this.data.subarray(this.index, this.index += (4 * arrayLength)).buffer);
+        return new Uint32Array(new Uint8Array(this.data.subarray(this.index, this.index += (4 * arrayLength))).buffer);
       }
       break;
     case WebSocketResponse.INT:
       if (arrayLength == null) {
-        var tmp = new Int32Array(this.data.subarray(this.index, this.index += 4).buffer);
+        var tmp = new Int32Array(new Uint8Array(this.data.subarray(this.index, this.index += 4)).buffer);
         return tmp[0];
       } else {
-        return new Int32Array(this.data.subarray(this.index, this.index += (4 * arrayLength)).buffer);
+        return new Int32Array(new Uint8Array(this.data.subarray(this.index, this.index += (4 * arrayLength))).buffer);
       }
       break;
     case WebSocketResponse.ULONG:
       if (arrayLength === null) {
-        var tmp = new Uint32Array(this.data.subarray(this.index, this.index += 8).buffer);
+        var tmp = new Uint32Array(new Uint8Array(this.data.subarray(this.index, this.index += 8)).buffer);
         return tmp[0] + (tmp[1] << 32);
       } else {
-        var tmp = new Uint32Array(this.data.subarray(this.index, this.index += (8 * arrayLength)).buffer);
+        var tmp = new Uint32Array(new Uint8Array(this.data.subarray(this.index, this.index += (8 * arrayLength))).buffer);
         var ret = [];
         for (var i = 0; i < arrayLength; i++) {
           var t = tmp[2 * i] + (tmp[2 * i + 1] << 32);
@@ -147,14 +147,14 @@ WebSocketResponse.prototype.get = function(type, arrayLength = null, converter =
         return ret;
       }
       break;
-    case WebSocketResponse.INT:
+    case WebSocketResponse.LONG:
       if (arrayLength === null) {
-        var tmp = new Int32Array(this.data.subarray(this.index, this.index += 8).buffer);
+        var tmp = new Int32Array(new Uint8Array(this.data.subarray(this.index, this.index += 8)).buffer);
         var t0 = tmp[0];
         if (t0 < 0) t0 = ~t0 + 1;
         return t0 + (tmp[1] << 32);
       } else {
-        var tmp = new Int32Array(this.data.subarray(this.index, this.index += (8 * arrayLength)).buffer);
+        var tmp = new Int32Array(new Uint8Array(this.data.subarray(this.index, this.index += (8 * arrayLength))).buffer);
         var ret = [];
         for (var i = 0; i < arrayLength; i++) {
           var t0 = tmp[2 * i];
@@ -167,31 +167,31 @@ WebSocketResponse.prototype.get = function(type, arrayLength = null, converter =
       break;
     case WebSocketResponse.FLOAT:
       if (arrayLength === null) {
-        var tmp = new Float32Array(this.data.subarray(this.index, this.index += 4).buffer);
+        var tmp = new Float32Array(new Uint8Array(this.data.subarray(this.index, this.index += 4)).buffer);
         return tmp[0];
       } else {
-        return new Float32Array(this.data.subarray(this.index, this.index += (4 * arrayLength)).buffer);
+        return new Float32Array(new Uint8Array(this.data.subarray(this.index, this.index += (4 * arrayLength))).buffer);
       }
       break;
     case WebSocketResponse.DOUBLE:
       if (arrayLength == null) {
-        var tmp = new Float64Array(this.data.subarray(this.index, this.index += 8).buffer);
+        var tmp = new Float64Array(new Uint8Array(this.data.subarray(this.index, this.index += 8)).buffer);
         return tmp[0];
       } else {
-        return new Float64Array(this.data.subarray(this.index, this.index += (8 * arrayLength)).buffer);
+        return new Float64Array(new Uint8Array(this.data.subarray(this.index, this.index += (8 * arrayLength))).buffer);
       }
       break;
     case WebSocketResponse.STRING:
-      var dec = new TextDecoder();
+      var dec = new TextDecoder("utf-8");
       return dec.decode(this.data.subarray(this.index, this.index += arrayLength));
       break;
     case WebSocketResponse.CUSTOM:
       if (arrayLength === null) {
-        return converter.convert(this.data.subarray(this.index, this.index += converter.typeSize));
+        return converter.convert(new Uint8Array(this.data.subarray(this.index, this.index += converter.typeSize)));
       } else {
         var tmp = [];
         for (var i = 0; i < arrayLength; i++) {
-          tmp.push(converter.convert(this.data.subarray(this.index, this.index += converter.typeSize)));
+          tmp.push(converter.convert(new Uint8Array(this.data.subarray(this.index, this.index += converter.typeSize))));
         }
         return tmp;
       }

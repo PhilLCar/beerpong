@@ -1,4 +1,5 @@
 var _SOCKET = null;
+var _LEVEL  = null;
 
 var PHILIPONT_MAGIC_ID = 0x02;
 
@@ -72,17 +73,17 @@ function parseLevel(response) {
   level.terrain      = response.get(WebSocketResponse.CUSTOM,
                                     (Math.floor(level.terrainSizeX / level.terrainRes) + 1) *
                                     (Math.floor(level.terrainSizeZ / level.terrainRes) + 1),
-                                    new Vec3DConverter());
+                                    new vec3Converter());
   // Road
   level.roadSegments = response.get(WebSocketResponse.INT);
   level.road         = response.get(WebSocketResponse.CUSTOM,
-                                    4 * level.roadSegments, new Vec3DConverter());
+                                    4 * level.roadSegments, new vec3Converter());
   // Environment
   level.skin        = response.get(WebSocketResponse.INT);
   level.atmoDensity = response.get(WebSocketResponse.DOUBLE);
   level.humidity    = response.get(WebSocketResponse.DOUBLE);
-  level.windSpeed   = response.get(WebSocketResponse.CUSTOM, null, new Vec3DConverter());
-  level.gravity     = response.get(WebSocketResponse.CUSTOM, null, new Vec3DConverter());
+  level.windSpeed   = response.get(WebSocketResponse.CUSTOM, null, new vec3Converter());
+  level.gravity     = response.get(WebSocketResponse.CUSTOM, null, new vec3Converter());
   // Bridge nodes
   level.nodes = [];
   length      = response.get(WebSocketResponse.SHORT);
@@ -91,9 +92,9 @@ function parseLevel(response) {
     node.id           = response.get(WebSocketResponse.INT);
     node.type         = response.get(WebSocketResponse.INT);
     node.nlinks       = response.get(WebSocketResponse.INT);
-    node.position     = response.get(WebSocketResponse.CUSTOM, null, new Vec3DConverter());
-    node.speed        = response.get(WebSocketResponse.CUSTOM, null, new Vec3DConverter());
-    node.acceleration = response.get(WebSocketResponse.CUSTOM, null, new Vec3DConverter());
+    node.position     = response.get(WebSocketResponse.CUSTOM, null, new vec3Converter());
+    node.speed        = response.get(WebSocketResponse.CUSTOM, null, new vec3Converter());
+    node.acceleration = response.get(WebSocketResponse.CUSTOM, null, new vec3Converter());
     node.links = [];
     for (var j = 0; j < node.nlinks && j < NODE_MAX_LINK; j++) {
       node.links.push(response.get(WebSocketResponse.SHORT));
@@ -116,6 +117,8 @@ function parseLevel(response) {
     }
     level.links.push(link);
   }
+  level.terrainColors = null;
+  return level;
 }
 
 function update(response) {
@@ -124,7 +127,8 @@ function update(response) {
       newLevel("WOOHOO!", "Phil za best", 10.0, 10.0, 0.5);
       break;
     case ACK_NEW_LEVEL:
-      parseLevel(response);
+      _LEVEL = parseLevel(response);
+      displayLevel(_LEVEL, null);
       break;
   }
 }
@@ -167,11 +171,10 @@ function connect() {
   };
 }
 
-
-function Vec3DConverter () {
+function vec3Converter() {
   this.typeSize = 3 * 8; // 3 doubles
-  this.prototype.convert = function (array) {
+  this.convert = function (array) {
     var f64 = new Float64Array(array.buffer);
-    return new V3D(f64[0], f64[1], f64[2]);
+    return glMatrix.vec3.fromValues(f64[0], f64[1], f64[2]);
   }
-};
+}
