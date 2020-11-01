@@ -117,7 +117,7 @@ function parseLevel(response) {
     }
     level.links.push(link);
   }
-  level.terrainColors = null;
+  level.colors = null;
   return level;
 }
 
@@ -128,7 +128,7 @@ function update(response) {
       break;
     case ACK_NEW_LEVEL:
       _LEVEL = parseLevel(response);
-      displayLevel(_LEVEL, null);
+      displayLevel(_LEVEL, null, null);
       break;
   }
 }

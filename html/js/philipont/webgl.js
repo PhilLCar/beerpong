@@ -2,10 +2,15 @@
  * https://developer.mozilla.org/fr/docs/Web/API/WebGL_API/Tutorial/Commencer_avec_WebGL
  */
 const terrainPresets = [{ 
-  R: { min: 0,   max: 0.1, add: 0.7 }, 
-  G: { min: 0.3, max: 0.7, add: 0.2 },
+  R: { min: 0,   max: 0.1, add: 0.8 }, 
+  G: { min: 0.3, max: 0.7, add: 0.3 },
   B: { min: 0,   max: 0.2, add: 0   } 
 }];
+const waterPreset = {
+  R: { min: 0,     max: 0.0 }, 
+  G: { min: 0,     max: 0.2 },
+  B: { min: 0.6,   max: 0.8 } 
+}
 const mat4 = glMatrix.mat4;
 const vec3 = glMatrix.vec3;
 const vec4 = glMatrix.vec4;
@@ -51,18 +56,21 @@ const fsSource = `
 var CANVAS;
 var _rotEnabled = false;
 var _modEnabled = false;
-var _modDig     = false;
+var _modDig     = true;
+var _modApply   = null;
 var _previousCoords = null;
 var _rotation    = vec3.fromValues(Math.PI / 20, 0, 0);
 var _translation = vec3.fromValues(0, 0, -6);
-var _transmax =  0;
-var _zoommax  = -6;
-var _gl = null;
+var _transmax    =  0;
+var _zoommax     = -6;
+var _gl          = null;
 var _programInfo = null;
-var _buffers = null;
+var _buffers     = null;
 var _projectMat = null;
 var _modelMat   = null;
 var _level      = null;
+var _mouseray   = null;
+var _animate    = 0;
 
 function initShaderProgram(gl, vsSource, fsSource) {
   const vertexShader   = loadShader(gl, gl.VERTEX_SHADER,   vsSource);
@@ -154,7 +162,7 @@ function drawScene(gl, programInfo, buffers, rotation, translation) {
     const stride = 0;
     const offset = 0;
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.terrain);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertices);
     gl.vertexAttribPointer(
         programInfo.attribLocations.vertexPosition,
         numComponents,
@@ -171,7 +179,7 @@ function drawScene(gl, programInfo, buffers, rotation, translation) {
     const normalize = false;
     const stride = 0;
     const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.terrainColor);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.colors);
     gl.vertexAttribPointer(
         programInfo.attribLocations.vertexColor,
         numComponents,
@@ -188,7 +196,7 @@ function drawScene(gl, programInfo, buffers, rotation, translation) {
     const normalize = false;
     const stride = 0;
     const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.terrainNormal);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normals);
     gl.vertexAttribPointer(
         programInfo.attribLocations.vertexNormal,
         numComponents,
@@ -199,7 +207,7 @@ function drawScene(gl, programInfo, buffers, rotation, translation) {
     gl.enableVertexAttribArray(
         programInfo.attribLocations.vertexNormal);
   }
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.terrainIndex);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
 
   gl.useProgram(programInfo.program);
   gl.uniformMatrix4fv(
@@ -217,7 +225,7 @@ function drawScene(gl, programInfo, buffers, rotation, translation) {
 
   {
     const vertexCount = buffers.nVertex;
-    const type = gl.UNSIGNED_SHORT;
+    const type = gl.UNSIGNED_INT;
     const offset = 0;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
@@ -229,6 +237,9 @@ function main() {
   CANVAS.setAttribute("width",  window.innerWidth - 250  + "px");
   
   const gl = CANVAS.getContext("webgl");
+  gl.getExtension('OES_element_index_uint');
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
   if (!gl) {
     alert("Impossible d'initialiser WebGL. Votre navigateur ou votre machine peut ne pas le supporter.");
@@ -257,7 +268,11 @@ function main() {
 }
 
 function mousedown(event) {
-  
+  var e = event || window.event;
+  if (e.which == 1 && _modEnabled && !_rotEnabled) {
+    _modApply = true;
+    applymod();
+  }
 }
 
 function mouseup(event) {
@@ -266,7 +281,7 @@ function mouseup(event) {
     _rotEnabled = !_rotEnabled;
     _previousCoords = null;
   } else if (e.which == 1) {
-
+    _modApply = false;
   }
 }
 
@@ -316,7 +331,35 @@ function mod(e) {
   vec3.sub(mRay, pos1, pos0);
   vec3.normalize(mRay, mRay);
 
-  displayLevel(_level, [ pos0, mRay ])
+  _mouseray = [ pos0, mRay ];
+  if (!_modApply) displayLevel(_level, _mouseray, null);
+}
+
+async function applymod() {
+  if (_modApply) {
+    displayLevel(_level, _mouseray, null)
+    await new Promise(resolve => setTimeout(resolve, 30));
+    applymod();
+  }
+}
+
+function toggleAnimation() {
+  if (_animate == 0) {
+    _animate = 1;
+    animate();
+  } else {
+    _animate = 0;
+  }
+}
+
+async function animate() {
+  var delta = 30;
+  if (_animate > 0) {
+    displayLevel(_level, null, _animate / 1000);
+    await new Promise(resolve => setTimeout(resolve, delta));
+    _animate += delta
+    animate();
+  }
 }
 
 function translateXY(event) {
@@ -359,21 +402,26 @@ function translateZ(event) {
   }
 }
 
-function displayLevel(level, mouseray) {
+function displayLevel(level, mouseray, t) {
   var modArea = 2.0;
   var nX = Math.floor(level.terrainSizeX / level.terrainRes);
   var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
   var nX1 = nX + 1;
+  var nZ1 = nZ + 1;
+  var freq = 0.5;
+  var amp  = 0.05;
   var terrain = [];
   var terrainNormals = [];
+  var water = [];
+  var waterNormals = [];
   level.mouse = null;
   for (var i = 0; i < nX; i++) {
     for (var j = 0; j < nZ; j++) {
       /////////////////////////////////////////////////
       {
-        var v1 = level.terrain[i + j * nX1];
-        var v2 = level.terrain[i + (j + 1) * nX1];
-        var v3 = level.terrain[i + 1 + j * nX1];
+        var v1 = level.terrain[i +     j      * nX1];
+        var v2 = level.terrain[i +    (j + 1) * nX1];
+        var v3 = level.terrain[i + 1 + j      * nX1];
         // top left
         terrain.push(v1[0]);
         terrain.push(v1[1]);
@@ -388,9 +436,9 @@ function displayLevel(level, mouseray) {
         terrain.push(v3[2]);
         // intersection
         if (mouseray !== null) {
-          var t = intersect(v1, v2, v3, mouseray);
-          if (t !== null) {
-            level.mouse = t;
+          var p = intersect(v1, v2, v3, mouseray);
+          if (p !== null) {
+            level.mouse = p;
           }
         }
         // normal
@@ -406,11 +454,38 @@ function displayLevel(level, mouseray) {
           terrainNormals.push(norm[1]);
           terrainNormals.push(norm[2]);
         }
+        // water
+        if (t) {
+          var y1 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i +     j      * nX1)) * amp;
+          var y2 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i +    (j + 1) * nX1)) * amp;
+          var y3 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i + 1 + j      * nX1)) * amp;
+          var u1 = vec3.fromValues(v1[0], y1, v1[2]);
+          var u2 = vec3.fromValues(v2[0], y2, v2[2]);
+          var u3 = vec3.fromValues(v3[0], y3, v3[2]);
+          water.push(u1[0]);
+          water.push(u1[1]);
+          water.push(u1[2]);
+          water.push(u2[0]);
+          water.push(u2[1]);
+          water.push(u2[2]);
+          water.push(u3[0]);
+          water.push(u3[1]);
+          water.push(u3[2]);
+          vec3.sub(a1, u2, u1);
+          vec3.sub(a2, u3, u1);
+          vec3.cross(norm, a1, a2);
+          vec3.normalize(norm, norm);
+          for (var k = 0; k < 3; k++) {
+            waterNormals.push(norm[0]);
+            waterNormals.push(norm[1]);
+            waterNormals.push(norm[2]);
+          }
+        }
       }
       /////////////////////////////////////////////////
       {
-        var v1 = level.terrain[i + 1 + j * nX1];
-        var v2 = level.terrain[i + (j + 1) * nX1];
+        var v1 = level.terrain[i + 1 +  j      * nX1];
+        var v2 = level.terrain[i +     (j + 1) * nX1];
         var v3 = level.terrain[i + 1 + (j + 1) * nX1];
         // top left
         terrain.push(v1[0]);
@@ -426,9 +501,9 @@ function displayLevel(level, mouseray) {
         terrain.push(v3[2]);
         // intersection
         if (mouseray !== null) {
-          var t = intersect(v1, v2, v3, mouseray);
-          if (t !== null) {
-            level.mouse = t;
+          var p = intersect(v1, v2, v3, mouseray);
+          if (p !== null) {
+            level.mouse = p;
           }
         }
         // normal
@@ -444,41 +519,133 @@ function displayLevel(level, mouseray) {
           terrainNormals.push(norm[1]);
           terrainNormals.push(norm[2]);
         }
+        // water
+        if (t) {
+          var y1 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i + 1 +  j      * nX1)) * amp;
+          var y2 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i +     (j + 1) * nX1)) * amp;
+          var y3 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i + 1 + (j + 1) * nX1)) * amp;
+          var u1 = vec3.fromValues(v1[0], y1, v1[2]);
+          var u2 = vec3.fromValues(v2[0], y2, v2[2]);
+          var u3 = vec3.fromValues(v3[0], y3, v3[2]);
+          water.push(u1[0]);
+          water.push(u1[1]);
+          water.push(u1[2]);
+          water.push(u2[0]);
+          water.push(u2[1]);
+          water.push(u2[2]);
+          water.push(u3[0]);
+          water.push(u3[1]);
+          water.push(u3[2]);
+          vec3.sub(a1, u2, u1);
+          vec3.sub(a2, u3, u1);
+          vec3.cross(norm, a1, a2);
+          vec3.normalize(norm, norm);
+          for (var k = 0; k < 3; k++) {
+            waterNormals.push(norm[0]);
+            waterNormals.push(norm[1]);
+            waterNormals.push(norm[2]);
+          }
+        }
       }
     }
   }
-  const terrainBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ARRAY_BUFFER, terrainBuffer);
-  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(terrain), _gl.STATIC_DRAW);
-  const terrainNormalBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ARRAY_BUFFER, terrainNormalBuffer);
-  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(terrainNormals), _gl.STATIC_DRAW);
+  if (t === null) {
+    var tl = level.terrain[0];
+    var tr = level.terrain[nX];
+    var bl = level.terrain[nZ * nX1];
+    var br = level.terrain[nX + nZ * nX1];
+    water.push(tl[0]);
+    water.push(level.waterLevel);
+    water.push(tl[2]);
+    water.push(tr[0]);
+    water.push(level.waterLevel);
+    water.push(tr[2]);
+    water.push(bl[0]);
+    water.push(level.waterLevel);
+    water.push(bl[2]);
+    water.push(br[0]);
+    water.push(level.waterLevel);
+    water.push(br[2]);
+    for (var i = 0; i < 4; i++) {
+      waterNormals.push(0);
+      waterNormals.push(1);
+      waterNormals.push(0);
+    }
+  }
+  const vertices = terrain.concat(water);
+  const normals  = terrainNormals.concat(waterNormals);
+  const vertexBuffer = _gl.createBuffer();
+  _gl.bindBuffer(_gl.ARRAY_BUFFER, vertexBuffer);
+  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(vertices), _gl.STATIC_DRAW);
+  const normalBuffer = _gl.createBuffer();
+  _gl.bindBuffer(_gl.ARRAY_BUFFER, normalBuffer);
+  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(normals), _gl.STATIC_DRAW);
+
+  if (level.mouse !== null && _modApply) {
+    const d = vec3.create();
+    for (var i = 0; i < nX1; i++) {
+      for (var j = 0; j < nZ1; j++) {
+        var v = level.terrain[i + j * nX1];
+        var l;
+        vec3.sub(d, v, level.mouse);
+        l = vec3.length(d);
+        if (l < modArea) {
+          if (_modDig) {
+            vec3.sub(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
+          } else {
+            vec3.add(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
+          }
+        }
+      }
+    }
+  }
 
   var preset = terrainPresets[level.skin];
-  if (level.terrainColors === null) {
-    level.terrainColors = [];
+  if (level.colors === null) {
+    level.colors = [];
     for (var i = 0; i < 2 * nX * nZ; i++) {
       var R = Math.random() * (preset.R.max - preset.R.min) + preset.R.min;
       var G = Math.random() * (preset.G.max - preset.G.min) + preset.G.min;
       var B = Math.random() * (preset.B.max - preset.B.min) + preset.B.min;
       for (var j = 0; j < 3; j++) {
-        level.terrainColors.push(R);
-        level.terrainColors.push(G);
-        level.terrainColors.push(B);
-        level.terrainColors.push(1.0);
+        level.colors.push(R);
+        level.colors.push(G);
+        level.colors.push(B);
+        level.colors.push(1.0);
+      }
+    }
+    for (var i = 0; i < 2 * nX * nZ; i++) {
+      var R = Math.random() * (waterPreset.R.max - waterPreset.R.min) + waterPreset.R.min;
+      var G = Math.random() * (waterPreset.G.max - waterPreset.G.min) + waterPreset.G.min;
+      var B = Math.random() * (waterPreset.B.max - waterPreset.B.min) + waterPreset.B.min;
+      for (var j = 0; j < 3; j++) {
+        level.colors.push(R);
+        level.colors.push(G);
+        level.colors.push(B);
+        level.colors.push(0.8);
       }
     }
   }
-  var terrainColors = level.terrainColors;
+  var colors;
+  if (t) {
+    colors = level.colors;
+  } else {
+    colors = level.colors.slice(0, 24 * nX * nZ);
+    for (var i = 0; i < 4; i++) {
+      colors.push(waterPreset.R.max);
+      colors.push(waterPreset.G.max);
+      colors.push(waterPreset.B.max);
+      colors.push(0.8);
+    }
+  }
   if (level.mouse !== null) {
-    terrainColors = [];
     for (var i = 0; i < nX; i++) {
       for (var j = 0; j < nZ; j++) {
         {
           {
-            var v1 = level.terrain[i + j * nX1];
-            var v2 = level.terrain[i + (j + 1) * nX1];
-            var v3 = level.terrain[i + 1 + j * nX1];
+            var v1 = level.terrain[i +     j      * nX1];
+            var v2 = level.terrain[i +    (j + 1) * nX1];
+            var v3 = level.terrain[i + 1 + j      * nX1];
             const l1 = vec3.create();
             const l2 = vec3.create();
             const l3 = vec3.create();
@@ -489,23 +656,15 @@ function displayLevel(level, mouseray) {
                 vec3.length(l2) < modArea && 
                 vec3.length(l3) < modArea) {
               for (var k = 0; k < 3; k++) {
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24]     + preset.R.add);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 1] + preset.G.add);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 2] + preset.B.add);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 3]);
-              }
-            } else {
-              for (var k = 0; k < 3; k++) {
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24]);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 1]);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 2]);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 3]);
+                colors[(i * nZ + j) * 24 + 4 * k]     += preset.R.add;
+                colors[(i * nZ + j) * 24 + 4 * k + 1] += preset.G.add;
+                colors[(i * nZ + j) * 24 + 4 * k + 2] += preset.B.add;
               }
             }
           }
           {
-            var v1 = level.terrain[i + 1 + j * nX1];
-            var v2 = level.terrain[i + (j + 1) * nX1];
+            var v1 = level.terrain[i + 1 +  j      * nX1];
+            var v2 = level.terrain[i +     (j + 1) * nX1];
             var v3 = level.terrain[i + 1 + (j + 1) * nX1];
             const l1 = vec3.create();
             const l2 = vec3.create();
@@ -517,17 +676,9 @@ function displayLevel(level, mouseray) {
                 vec3.length(l2) < modArea && 
                 vec3.length(l3) < modArea) {
               for (var k = 0; k < 3; k++) {
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 12] + preset.R.add);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 13] + preset.G.add);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 14] + preset.B.add);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 15]);
-              }
-            } else {
-              for (var k = 0; k < 3; k++) {
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 12]);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 13]);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 14]);
-                terrainColors.push(level.terrainColors[(i * nZ + j) * 24 + 15]);
+                colors[(i * nZ + j) * 24 + 4 * k + 12] += preset.R.add;
+                colors[(i * nZ + j) * 24 + 4 * k + 13] += preset.G.add;
+                colors[(i * nZ + j) * 24 + 4 * k + 14] += preset.B.add;
               }
             }
           }
@@ -535,29 +686,38 @@ function displayLevel(level, mouseray) {
       }
     }
   }
-  const terrainColorBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ARRAY_BUFFER, terrainColorBuffer);
-  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(terrainColors), _gl.STATIC_DRAW);
+  const colorBuffer = _gl.createBuffer();
+  _gl.bindBuffer(_gl.ARRAY_BUFFER, colorBuffer);
+  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(colors), _gl.STATIC_DRAW);
 
-  var terrainIndices = [];
-  for (var i = 0; i < nX * nZ; i++) {
-    terrainIndices.push(6 * i);
-    terrainIndices.push(6 * i + 1);
-    terrainIndices.push(6 * i + 2);
-    terrainIndices.push(6 * i + 3);
-    terrainIndices.push(6 * i + 4);
-    terrainIndices.push(6 * i + 5);
+  var indices = [];
+  for (var i = 0; i < 6 * nX * nZ; i++) {
+    indices.push(i);
   }
-  const terrainIndexBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, terrainIndexBuffer);
-  _gl.bufferData(_gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(terrainIndices), _gl.STATIC_DRAW);
+  var l = indices.length;
+  if (t) {
+    for (var i = l; i < l + 6 * nX * nZ; i++) {
+      indices.push(i);
+    }
+  } else {
+    indices.push(l + 2);
+    indices.push(l + 1);
+    indices.push(l + 0);
+    indices.push(l + 2);
+    indices.push(l + 3);
+    indices.push(l + 1);
+  }
+
+  const indexBuffer = _gl.createBuffer();
+  _gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  _gl.bufferData(_gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), _gl.STATIC_DRAW);
 
   _buffers = {
-    terrain:        terrainBuffer,
-    terrainColor:   terrainColorBuffer,
-    terrainNormal:  terrainNormalBuffer,
-    terrainIndex:   terrainIndexBuffer,
-    nVertex:        6 * nX * nZ
+    vertices:       vertexBuffer,
+    normals:        normalBuffer,
+    colors:         colorBuffer,
+    indices:        indexBuffer,
+    nVertex:        indices.length
   };
 
   _transmax = level.terrainSizeX / 2;
