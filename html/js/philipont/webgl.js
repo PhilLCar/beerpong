@@ -17,13 +17,14 @@ const vec4 = glMatrix.vec4;
 
 // Vertex shader
 const vsSource = `
-  attribute vec4 aVertexPosition;
-  attribute vec4 aVertexColor;
-  attribute vec3 aVertexNormal;
+  attribute vec4  aVertexPosition;
+  attribute vec4  aVertexColor;
+  attribute vec3  aVertexNormal;
 
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
   uniform mat4 uNormalMatrix;
+  uniform bool uIsLit;
 
   varying lowp  vec4 vColor;
   varying highp vec3 vLighting;
@@ -32,14 +33,18 @@ const vsSource = `
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
     vColor = aVertexColor;
 
-    highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
-    highp vec3 directionalLightColor = vec3(1, 1, 1);
-    highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
+    if (uIsLit) {
+      highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
+      highp vec3 directionalLightColor = vec3(1, 1, 1);
+      highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
 
-    highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
+      highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
 
-    highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
-    vLighting = ambientLight + (directionalLightColor * directional);
+      highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
+      vLighting = ambientLight + (directionalLightColor * directional);
+    } else {
+      vLighting = vec3(1.0, 1.0, 1.0);
+    }
   }
 `;
 
@@ -54,6 +59,7 @@ const fsSource = `
 `;
 
 const DM = new DisplayManager();
+const MODAREA = 2.0;
 
 var CANVAS;
 var _rotEnabled = false;
@@ -73,6 +79,8 @@ var _modelMat   = null;
 var _mouseray   = null;
 var _animate    = false;
 var _gridOn     = false;
+var _gridHD     = true;
+var _isLit      = false;
 
 function initShaderProgram(gl, vsSource, fsSource) {
   const vertexShader   = loadShader(gl, gl.VERTEX_SHADER,   vsSource);
@@ -224,11 +232,18 @@ function drawScene(gl, programInfo, buffers, rotation, translation) {
       programInfo.uniformLocations.normalMatrix,
       false,
       normalMatrix);
+  gl.uniform1i(programInfo.uniformLocations.isLit, _isLit);
 
-  {
-    const vertexCount = buffers.nVertex;
+  { // Draw lines first
+    const vertexCount = buffers.nVLines[0];
     const type = gl.UNSIGNED_INT;
-    const offset = 0;
+    const offset = 4 * buffers.nVLines[1];
+    gl.drawElements(gl.LINES, vertexCount, type, offset);
+  }
+  {
+    const vertexCount = buffers.nVTriangles[0];
+    const type = gl.UNSIGNED_INT;
+    const offset = 4 * buffers.nVTriangles[1];
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
   }
 }
@@ -241,7 +256,13 @@ function main() {
   const gl = CANVAS.getContext("webgl");
   gl.getExtension('OES_element_index_uint');
   gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.blendEquation(gl.FUNC_ADD);
+  gl.blendFuncSeparate(
+    gl.SRC_ALPHA,
+    gl.ONE_MINUS_SRC_ALPHA,
+    gl.ONE,
+    gl.ONE_MINUS_SRC_ALPHA
+  );
 
   if (!gl) {
     alert("Impossible d'initialiser WebGL. Votre navigateur ou votre machine peut ne pas le supporter.");
@@ -262,7 +283,8 @@ function main() {
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
       modelViewMatrix:  gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-      normalMatrix:     gl.getUniformLocation(shaderProgram, 'uNormalMatrix')
+      normalMatrix:     gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
+      isLit:            gl.getUniformLocation(shaderProgram, 'uIsLit')
     }
   };
   _gl = gl;
@@ -343,6 +365,8 @@ function DisplayManager() {
     var prot    = null;
     var ptrans  = null;
     var plvl    = null;
+    var pgrid   = _gridOn;
+    var pgHD    = _gridHD;
     var fr      = document.getElementById("Pos");
     while (true) {
       var ticks = new Date().getTime();
@@ -378,6 +402,14 @@ function DisplayManager() {
         display = true;
         plvl = this.level;
       }
+      if (pgrid != _gridOn) {
+        display = true;
+        pgrid   = _gridOn;
+      }
+      if (pgHD != _gridHD) {
+        display = true;
+        pgHD    = _gridHD;
+      }
       if (display && this.level !== null) {
         displayLevel(this.level, _mouseray, time);
       } else if (draw && this.level !== null) {
@@ -399,6 +431,10 @@ function toggleAnimation() {
 
 function toggleGrid() {
   _gridOn = !_gridOn;
+}
+
+function toggleGridHD() {
+  _gridHD = !_gridHD;
 }
 
 function translateXY(event) {
@@ -446,13 +482,16 @@ function displayLevel(level, mouseray, t) {
   var water = [];
   var waterNormals = [];
   var grid = [];
+  var gridNormals = [];
 
-  fillTerrainAndWaterArrays(level, terrain, terrainNormals, water, waterNormals, t);
-  fillGridArray(level, grid);
+  if (_gridHD) level.gridRes = level.gridSub / 2;
+  else         level.gridRes = level.gridSub;
+  fillTerrainAndWaterArrays(level, mouseray, t, terrain, terrainNormals, water, waterNormals);
+  if (_gridOn) fillGridArray(level, grid, gridNormals);
 
 
   const vertices = terrain.concat(water).concat(grid);
-  const normals  = terrainNormals.concat(waterNormals);
+  const normals  = terrainNormals.concat(waterNormals).concat(gridNormals);
   const vertexBuffer = _gl.createBuffer();
   _gl.bindBuffer(_gl.ARRAY_BUFFER, vertexBuffer);
   _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(vertices), _gl.STATIC_DRAW);
@@ -473,6 +512,7 @@ function displayLevel(level, mouseray, t) {
   }
   
   colors = fillTerrainAndWaterColorArrays(level, t);
+  if (_gridOn) appendGridColors(level, colors);
 
 
   const colorBuffer = _gl.createBuffer();
@@ -482,8 +522,11 @@ function displayLevel(level, mouseray, t) {
   // INDICES
   ///////////////////////////////////////////////////////////////////////////////
   var indices = [];
+  var nVTriangles = [ 0, 0, 0 ];
+  var nVLines = [ 0, 0, 0 ];
 
-  fillTerrainAndWaterIndices(level, indices);
+  fillTerrainAndWaterIndices(level, t, indices, nVTriangles);
+  if (_gridOn) appendGridIndices(level, indices, nVLines, nVTriangles);
 
   const indexBuffer = _gl.createBuffer();
   _gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -496,7 +539,8 @@ function displayLevel(level, mouseray, t) {
     normals:        normalBuffer,
     colors:         colorBuffer,
     indices:        indexBuffer,
-    nVertex:        indices.length
+    nVTriangles:    nVTriangles,
+    nVLines:        nVLines
   };
 
   _transmax = level.terrainSizeX / 2;
@@ -505,7 +549,7 @@ function displayLevel(level, mouseray, t) {
   drawScene(_gl, _programInfo, _buffers, _rotation, _translation);
 }
 
-function fillTerrainAndWaterArrays(level, terrain, terrainNormals, water, waterNormals, t) {
+function fillTerrainAndWaterArrays(level, mouseray, t, terrain, terrainNormals, water, waterNormals) {
   var nX = Math.floor(level.terrainSizeX / level.terrainRes);
   var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
   var nX1 = nX + 1;
@@ -650,12 +694,12 @@ function fillTerrainAndWaterArrays(level, terrain, terrainNormals, water, waterN
     var tr = level.terrain[nX];
     var bl = level.terrain[nZ * nX1];
     var br = level.terrain[nX + nZ * nX1];
-    water.push(tl[0]);
-    water.push(level.waterLevel);
-    water.push(tl[2]);
     water.push(tr[0]);
     water.push(level.waterLevel);
     water.push(tr[2]);
+    water.push(tl[0]);
+    water.push(level.waterLevel);
+    water.push(tl[2]);
     water.push(bl[0]);
     water.push(level.waterLevel);
     water.push(bl[2]);
@@ -670,8 +714,52 @@ function fillTerrainAndWaterArrays(level, terrain, terrainNormals, water, waterN
   }
 }
 
+function fillGridArray(level, grid, gridNormals) {
+  var gX = Math.floor(level.terrainSizeX / level.gridRes);
+  var e  = gX * level.gridRes / 2;
+  var s  = -e;
+  // top right corner
+  grid.push(e);
+  grid.push(e);
+  grid.push(level.gridZ);
+  // top left corner
+  grid.push(s);
+  grid.push(e);
+  grid.push(level.gridZ);
+  // bottom left corner
+  grid.push(s);
+  grid.push(s);
+  grid.push(level.gridZ);
+  // bottom right corner
+  grid.push(e);
+  grid.push(s);
+  grid.push(level.gridZ);
+  for (var i = 0; i <= gX; i++) {
+    // top line
+    grid.push(s + i * level.gridRes);
+    grid.push(e);
+    grid.push(level.gridZ);
+    // bottom line
+    grid.push(s + i * level.gridRes);
+    grid.push(s);
+    grid.push(level.gridZ);
+    // left line
+    grid.push(s);
+    grid.push(s + i * level.gridRes);
+    grid.push(level.gridZ);
+    // right line
+    grid.push(e);
+    grid.push(s + i * level.gridRes);
+    grid.push(level.gridZ);
+  }
+  for (var i = 0; i < grid.length / 3; i++) {
+    gridNormals.push(0);
+    gridNormals.push(0);
+    gridNormals.push(1);
+  }
+}
+
 function applymod(level) {
-  var modArea = 2.0;
   var nX = Math.floor(level.terrainSizeX / level.terrainRes);
   var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
   var nX1 = nX + 1;
@@ -683,11 +771,11 @@ function applymod(level) {
       var l;
       vec3.sub(d, v, level.mouse);
       l = vec3.length(d);
-      if (l < modArea) {
+      if (l < MODAREA) {
         if (_modDig) {
-          vec3.sub(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
+          vec3.sub(v, v, vec3.fromValues(0, (MODAREA - l) * 0.01, 0));
         } else {
-          vec3.add(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
+          vec3.add(v, v, vec3.fromValues(0, (MODAREA - l) * 0.01, 0));
         }
       }
     }
@@ -725,6 +813,7 @@ function setTerrainAndWaterColors(level) {
 
 function fillTerrainAndWaterColorArrays(level, t) {
   var colors;
+  var preset = terrainPresets[level.skin];
   var nX = Math.floor(level.terrainSizeX / level.terrainRes);
   var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
   var nX1 = nX + 1;
@@ -753,9 +842,9 @@ function fillTerrainAndWaterColorArrays(level, t) {
             vec3.sub(l1, v1, level.mouse);
             vec3.sub(l2, v2, level.mouse);
             vec3.sub(l3, v3, level.mouse);
-            if (vec3.length(l1) < modArea && 
-                vec3.length(l2) < modArea && 
-                vec3.length(l3) < modArea) {
+            if (vec3.length(l1) < MODAREA && 
+                vec3.length(l2) < MODAREA && 
+                vec3.length(l3) < MODAREA) {
               for (var k = 0; k < 3; k++) {
                 colors[(i * nZ + j) * 24 + 4 * k]     += preset.R.add;
                 colors[(i * nZ + j) * 24 + 4 * k + 1] += preset.G.add;
@@ -773,9 +862,9 @@ function fillTerrainAndWaterColorArrays(level, t) {
             vec3.sub(l1, v1, level.mouse);
             vec3.sub(l2, v2, level.mouse);
             vec3.sub(l3, v3, level.mouse);
-            if (vec3.length(l1) < modArea && 
-                vec3.length(l2) < modArea && 
-                vec3.length(l3) < modArea) {
+            if (vec3.length(l1) < MODAREA && 
+                vec3.length(l2) < MODAREA && 
+                vec3.length(l3) < MODAREA) {
               for (var k = 0; k < 3; k++) {
                 colors[(i * nZ + j) * 24 + 4 * k + 12] += preset.R.add;
                 colors[(i * nZ + j) * 24 + 4 * k + 13] += preset.G.add;
@@ -790,7 +879,41 @@ function fillTerrainAndWaterColorArrays(level, t) {
   return colors;
 }
 
-function fillTerrainAndWaterIndices(level, indices) {
+function appendGridColors(level, colors) {
+  var gX = Math.floor(level.terrainSizeX / level.gridRes);
+  for (var i = 0; i < 4; i++) {
+    colors.push(0);
+    colors.push(0);
+    colors.push(0);
+    colors.push(0.2);
+  }
+  for (var i = 0; i <= gX; i++) {
+    if (i % Math.floor(1 / level.gridRes) == 0) {
+      for (var j = 0; j < 4; j++) {
+        colors.push(1);
+        colors.push(1);
+        colors.push(1);
+        colors.push(1);
+      }
+    } else if (i % Math.floor(1 / level.gridSub) == 0) {
+      for (var j = 0; j < 4; j++) {
+        colors.push(0.8);
+        colors.push(0.8);
+        colors.push(0.8);
+        colors.push(1);
+      }
+    } else {
+      for (var j = 0; j < 4; j++) {
+        colors.push(0.6);
+        colors.push(0.6);
+        colors.push(0.6);
+        colors.push(1);
+      }
+    }
+  }
+}
+
+function fillTerrainAndWaterIndices(level, t, indices, nVTriangles) {
   var nX = Math.floor(level.terrainSizeX / level.terrainRes);
   var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
   for (var i = 0; i < 6 * nX * nZ; i++) {
@@ -801,14 +924,41 @@ function fillTerrainAndWaterIndices(level, indices) {
     for (var i = l; i < l + 6 * nX * nZ; i++) {
       indices.push(i);
     }
+    nVTriangles[0] = indices.length;
+    nVTriangles[2] = indices.length;
   } else {
-    indices.push(l + 2);
+    indices.push(l + 0);
     indices.push(l + 1);
+    indices.push(l + 2);
     indices.push(l + 0);
     indices.push(l + 2);
     indices.push(l + 3);
-    indices.push(l + 1);
+    nVTriangles[0] = indices.length;
+    nVTriangles[2] = indices.length - 2;
   }
+}
+
+function appendGridIndices(level, indices, nVLines, nVTriangles) {
+  var gX = Math.floor(level.terrainSizeX / level.gridRes);
+  var lt = nVTriangles[2];
+  var ll = nVLines[2];
+  indices.push(lt + 0);
+  indices.push(lt + 1);
+  indices.push(lt + 2);
+  indices.push(lt + 0);
+  indices.push(lt + 2);
+  indices.push(lt + 3);
+  lt += 4;
+  nVTriangles[2] = lt;
+  nVTriangles[0] = indices.length;
+  nVLines[1] = nVTriangles[0];
+  for (var i = 0; i <= gX; i++) {
+    indices.push(lt + ll++);
+    indices.push(lt + ll++);
+    indices.push(lt + ll++);
+    indices.push(lt + ll++);
+  }
+  nVLines[0] = ll;
 }
 
 // https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
