@@ -128,7 +128,7 @@ function update(response) {
       break;
     case ACK_NEW_LEVEL:
       _LEVEL = parseLevel(response);
-      displayLevel(_LEVEL, null, null);
+      DM.level = _LEVEL;
       break;
   }
 }

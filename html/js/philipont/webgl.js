@@ -53,6 +53,8 @@ const fsSource = `
   }
 `;
 
+const DM = new DisplayManager();
+
 var CANVAS;
 var _rotEnabled = false;
 var _modEnabled = false;
@@ -68,9 +70,9 @@ var _programInfo = null;
 var _buffers     = null;
 var _projectMat = null;
 var _modelMat   = null;
-var _level      = null;
 var _mouseray   = null;
-var _animate    = 0;
+var _animate    = false;
+var _gridOn     = false;
 
 function initShaderProgram(gl, vsSource, fsSource) {
   const vertexShader   = loadShader(gl, gl.VERTEX_SHADER,   vsSource);
@@ -265,13 +267,13 @@ function main() {
   };
   _gl = gl;
   _programInfo = programInfo;
+  DM.start();
 }
 
 function mousedown(event) {
   var e = event || window.event;
   if (e.which == 1 && _modEnabled && !_rotEnabled) {
     _modApply = true;
-    applymod();
   }
 }
 
@@ -280,9 +282,8 @@ function mouseup(event) {
   if (e.which == 2 || _rotEnabled) {
     _rotEnabled = !_rotEnabled;
     _previousCoords = null;
-  } else if (e.which == 1) {
-    _modApply = false;
   }
+  _modApply = false;
 }
 
 function mousemove(event) {
@@ -303,7 +304,6 @@ function rotate(e) {
     if (_rotation[0] <  Math.PI / 20) _rotation[0] =  Math.PI / 20;
     if (_rotation[1] >  Math.PI / 2)  _rotation[1] =  Math.PI / 2;
     if (_rotation[1] < -Math.PI / 2)  _rotation[1] = -Math.PI / 2;
-    drawScene(_gl, _programInfo, _buffers, _rotation, _translation);
   }
   _previousCoords = vec3.fromValues(e.clientY, e.clientX, 0);
 }
@@ -332,34 +332,73 @@ function mod(e) {
   vec3.normalize(mRay, mRay);
 
   _mouseray = [ pos0, mRay ];
-  if (!_modApply) displayLevel(_level, _mouseray, null);
 }
 
-async function applymod() {
-  if (_modApply) {
-    displayLevel(_level, _mouseray, null)
-    await new Promise(resolve => setTimeout(resolve, 30));
-    applymod();
+function DisplayManager() {
+  this.level = null;
+  this.start = async function() {
+    var deltams = 30;
+    var time    = null;
+    var pmray   = null;
+    var prot    = null;
+    var ptrans  = null;
+    var plvl    = null;
+    var fr      = document.getElementById("Pos");
+    while (true) {
+      var ticks = new Date().getTime();
+      var display = false;
+      var draw    = false;
+      await new Promise(resolve => setTimeout(resolve, deltams));
+      if (_animate) {
+        display = true;
+        if (time === null) time = 0;
+        else               time += deltams / 1000; 
+      } else               time = null;
+      if ((_modEnabled && _mouseray != null)   &&
+          (pmray === null                      ||
+          !vec3.equals(pmray[0], _mouseray[0]) ||
+          !vec3.equals(pmray[1], _mouseray[1]) ||
+          _modApply)) {
+        display = true;
+        pmray = [ vec3.clone(_mouseray[0]), vec3.clone(_mouseray[1]) ];
+      } else if (!_modEnabled) {
+        pmray = null;
+      }
+      if (_rotEnabled && (prot === null || !vec3.equals(prot, _rotation))) {
+        draw = true;
+        prot = vec3.clone(_rotation);
+      } else if (!_rotEnabled) {
+        prot = null;
+      }
+      if (ptrans === null || !vec3.equals(ptrans, _translation)) {
+        draw = true;
+        ptrans = vec3.clone(_translation);
+      }
+      if (plvl === null && this.level !== null) {
+        display = true;
+        plvl = this.level;
+      }
+      if (display && this.level !== null) {
+        displayLevel(this.level, _mouseray, time);
+      } else if (draw && this.level !== null) {
+        drawScene(_gl, _programInfo, _buffers, _rotation, _translation);
+      }
+      ticks = new Date().getTime() - ticks;
+      fr.innerHTML = (1000 / ticks).toFixed(1) + " FPS";
+      if (ticks > 500) {
+        console.log("The rendering function was stopped because the frame rate was too low!");
+        break;
+      }
+    }
   }
 }
 
 function toggleAnimation() {
-  if (_animate == 0) {
-    _animate = 1;
-    animate();
-  } else {
-    _animate = 0;
-  }
+  _animate = !_animate;
 }
 
-async function animate() {
-  var delta = 30;
-  if (_animate > 0) {
-    displayLevel(_level, null, _animate / 1000);
-    await new Promise(resolve => setTimeout(resolve, delta));
-    _animate += delta
-    animate();
-  }
+function toggleGrid() {
+  _gridOn = !_gridOn;
 }
 
 function translateXY(event) {
@@ -382,9 +421,6 @@ function translateXY(event) {
       _translation = vec3.fromValues(0, 0, -6);
       _rotation    = vec3.fromValues(10, 0, 0);
   }
-  if (e.keyCode >= 37 && e.keyCode <= 40 || e.keyCode == 82) {
-    drawScene(_gl, _programInfo, _buffers, _rotation, _translation);
-  }
 }
 
 function translateZ(event) {
@@ -392,29 +428,89 @@ function translateZ(event) {
   if (e.deltaY < 0) {
     if (_translation[2] - (e.deltaY / 10.0) <= -6.0) {
       _translation[2] -= e.deltaY / 10.0;
-      drawScene(_gl, _programInfo, _buffers, _rotation, _translation);
     }
   } else {
     if (_translation[2] - (e.deltaY / 10.0) > _zoommax) {
       _translation[2] -= e.deltaY / 10.0;
-      drawScene(_gl, _programInfo, _buffers, _rotation, _translation);
     }
   }
 }
 
 function displayLevel(level, mouseray, t) {
-  var modArea = 2.0;
-  var nX = Math.floor(level.terrainSizeX / level.terrainRes);
-  var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
-  var nX1 = nX + 1;
-  var nZ1 = nZ + 1;
-  var freq = 0.5;
-  var amp  = 0.05;
+  level.mouse = null;
+
+  // VERTICES
+  ///////////////////////////////////////////////////////////////////////////////
   var terrain = [];
   var terrainNormals = [];
   var water = [];
   var waterNormals = [];
-  level.mouse = null;
+  var grid = [];
+
+  fillTerrainAndWaterArrays(level, terrain, terrainNormals, water, waterNormals, t);
+  fillGridArray(level, grid);
+
+
+  const vertices = terrain.concat(water).concat(grid);
+  const normals  = terrainNormals.concat(waterNormals);
+  const vertexBuffer = _gl.createBuffer();
+  _gl.bindBuffer(_gl.ARRAY_BUFFER, vertexBuffer);
+  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(vertices), _gl.STATIC_DRAW);
+  const normalBuffer = _gl.createBuffer();
+  _gl.bindBuffer(_gl.ARRAY_BUFFER, normalBuffer);
+  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(normals), _gl.STATIC_DRAW);
+
+  if (level.mouse !== null && _modApply) {
+    applymod(level);
+  }
+
+  // COLORS
+  ///////////////////////////////////////////////////////////////////////////////
+  var colors;
+
+  if (level.colors === null) {
+    setTerrainAndWaterColors(level);
+  }
+  
+  colors = fillTerrainAndWaterColorArrays(level, t);
+
+
+  const colorBuffer = _gl.createBuffer();
+  _gl.bindBuffer(_gl.ARRAY_BUFFER, colorBuffer);
+  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(colors), _gl.STATIC_DRAW);
+
+  // INDICES
+  ///////////////////////////////////////////////////////////////////////////////
+  var indices = [];
+
+  fillTerrainAndWaterIndices(level, indices);
+
+  const indexBuffer = _gl.createBuffer();
+  _gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  _gl.bufferData(_gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), _gl.STATIC_DRAW);
+
+
+  ///////////////////////////////////////////////////////////////////////////////
+  _buffers = {
+    vertices:       vertexBuffer,
+    normals:        normalBuffer,
+    colors:         colorBuffer,
+    indices:        indexBuffer,
+    nVertex:        indices.length
+  };
+
+  _transmax = level.terrainSizeX / 2;
+  _zoommax  = -2 * level.terrainSizeZ;
+  _modEnabled = true;
+  drawScene(_gl, _programInfo, _buffers, _rotation, _translation);
+}
+
+function fillTerrainAndWaterArrays(level, terrain, terrainNormals, water, waterNormals, t) {
+  var nX = Math.floor(level.terrainSizeX / level.terrainRes);
+  var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
+  var nX1 = nX + 1;
+  var freq = 1.5;
+  var amp  = 0.05;
   for (var i = 0; i < nX; i++) {
     for (var j = 0; j < nZ; j++) {
       /////////////////////////////////////////////////
@@ -572,63 +668,68 @@ function displayLevel(level, mouseray, t) {
       waterNormals.push(0);
     }
   }
-  const vertices = terrain.concat(water);
-  const normals  = terrainNormals.concat(waterNormals);
-  const vertexBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ARRAY_BUFFER, vertexBuffer);
-  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(vertices), _gl.STATIC_DRAW);
-  const normalBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ARRAY_BUFFER, normalBuffer);
-  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(normals), _gl.STATIC_DRAW);
+}
 
-  if (level.mouse !== null && _modApply) {
-    const d = vec3.create();
-    for (var i = 0; i < nX1; i++) {
-      for (var j = 0; j < nZ1; j++) {
-        var v = level.terrain[i + j * nX1];
-        var l;
-        vec3.sub(d, v, level.mouse);
-        l = vec3.length(d);
-        if (l < modArea) {
-          if (_modDig) {
-            vec3.sub(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
-          } else {
-            vec3.add(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
-          }
+function applymod(level) {
+  var modArea = 2.0;
+  var nX = Math.floor(level.terrainSizeX / level.terrainRes);
+  var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
+  var nX1 = nX + 1;
+  var nZ1 = nZ + 1;
+  const d = vec3.create();
+  for (var i = 0; i < nX1; i++) {
+    for (var j = 0; j < nZ1; j++) {
+      var v = level.terrain[i + j * nX1];
+      var l;
+      vec3.sub(d, v, level.mouse);
+      l = vec3.length(d);
+      if (l < modArea) {
+        if (_modDig) {
+          vec3.sub(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
+        } else {
+          vec3.add(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
         }
       }
     }
   }
+}
 
+function setTerrainAndWaterColors(level) {
   var preset = terrainPresets[level.skin];
-  if (level.colors === null) {
-    level.colors = [];
-    for (var i = 0; i < 2 * nX * nZ; i++) {
-      var R = Math.random() * (preset.R.max - preset.R.min) + preset.R.min;
-      var G = Math.random() * (preset.G.max - preset.G.min) + preset.G.min;
-      var B = Math.random() * (preset.B.max - preset.B.min) + preset.B.min;
-      for (var j = 0; j < 3; j++) {
-        level.colors.push(R);
-        level.colors.push(G);
-        level.colors.push(B);
-        level.colors.push(1.0);
-      }
-    }
-    for (var i = 0; i < 2 * nX * nZ; i++) {
-      var R = Math.random() * (waterPreset.R.max - waterPreset.R.min) + waterPreset.R.min;
-      var G = Math.random() * (waterPreset.G.max - waterPreset.G.min) + waterPreset.G.min;
-      var B = Math.random() * (waterPreset.B.max - waterPreset.B.min) + waterPreset.B.min;
-      for (var j = 0; j < 3; j++) {
-        level.colors.push(R);
-        level.colors.push(G);
-        level.colors.push(B);
-        level.colors.push(0.8);
-      }
+  var nX = Math.floor(level.terrainSizeX / level.terrainRes);
+  var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
+  level.colors = [];
+  for (var i = 0; i < 2 * nX * nZ; i++) {
+    var R = Math.random() * (preset.R.max - preset.R.min) + preset.R.min;
+    var G = Math.random() * (preset.G.max - preset.G.min) + preset.G.min;
+    var B = Math.random() * (preset.B.max - preset.B.min) + preset.B.min;
+    for (var j = 0; j < 3; j++) {
+      level.colors.push(R);
+      level.colors.push(G);
+      level.colors.push(B);
+      level.colors.push(1.0);
     }
   }
+  for (var i = 0; i < 2 * nX * nZ; i++) {
+    var R = Math.random() * (waterPreset.R.max - waterPreset.R.min) + waterPreset.R.min;
+    var G = Math.random() * (waterPreset.G.max - waterPreset.G.min) + waterPreset.G.min;
+    var B = Math.random() * (waterPreset.B.max - waterPreset.B.min) + waterPreset.B.min;
+    for (var j = 0; j < 3; j++) {
+      level.colors.push(R);
+      level.colors.push(G);
+      level.colors.push(B);
+      level.colors.push(0.8);
+    }
+  }
+}
+
+function fillTerrainAndWaterColorArrays(level, t) {
   var colors;
-  if (t) {
-    colors = level.colors;
+  var nX = Math.floor(level.terrainSizeX / level.terrainRes);
+  var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
+  var nX1 = nX + 1;
+  if (t) { // optimizable
+    colors = Array.from(level.colors);
   } else {
     colors = level.colors.slice(0, 24 * nX * nZ);
     for (var i = 0; i < 4; i++) {
@@ -686,11 +787,12 @@ function displayLevel(level, mouseray, t) {
       }
     }
   }
-  const colorBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ARRAY_BUFFER, colorBuffer);
-  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(colors), _gl.STATIC_DRAW);
+  return colors;
+}
 
-  var indices = [];
+function fillTerrainAndWaterIndices(level, indices) {
+  var nX = Math.floor(level.terrainSizeX / level.terrainRes);
+  var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
   for (var i = 0; i < 6 * nX * nZ; i++) {
     indices.push(i);
   }
@@ -707,24 +809,6 @@ function displayLevel(level, mouseray, t) {
     indices.push(l + 3);
     indices.push(l + 1);
   }
-
-  const indexBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  _gl.bufferData(_gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), _gl.STATIC_DRAW);
-
-  _buffers = {
-    vertices:       vertexBuffer,
-    normals:        normalBuffer,
-    colors:         colorBuffer,
-    indices:        indexBuffer,
-    nVertex:        indices.length
-  };
-
-  _transmax = level.terrainSizeX / 2;
-  _zoommax  = -2 * level.terrainSizeZ;
-  _modEnabled = true;
-  _level = level;
-  drawScene(_gl, _programInfo, _buffers, _rotation, _translation);
 }
 
 // https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
