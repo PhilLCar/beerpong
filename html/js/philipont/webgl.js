@@ -1,6 +1,158 @@
 /* Most of the code below is strongly inspired by (or straight out copied from):
  * https://developer.mozilla.org/fr/docs/Web/API/WebGL_API/Tutorial/Commencer_avec_WebGL
  */
+// Vertex shader
+const shadowVertexSRC = `
+  attribute vec4 aVertexPosition;
+
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
+
+  void main() {
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  }
+`;
+
+const finalVertexSRC = `
+  attribute vec4  aVertexPosition;
+  attribute vec4  aVertexColor;
+  attribute vec3  aVertexNormal;
+
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
+  uniform mat4 uNormalMatrix;
+  uniform bool uIsLit;
+  uniform vec3 uSunLocation;
+  uniform mat4 uShadowTransform;
+
+  varying lowp  vec4 vColor;
+  varying highp vec3 vLighting;
+  varying highp vec3 vShadowCoord;
+
+  void main(void) {
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+    vColor = aVertexColor;
+
+    if (uIsLit) {
+      highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
+      highp vec3 directionalLightColor = vec3(1, 1, 1);
+      highp vec3 directionalVector = normalize(uSunLocation);
+
+      highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
+
+      highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
+      vLighting    = ambientLight + (directionalLightColor * directional);
+      vShadowCoord = (uShadowTransform * aVertexPosition).xyz;
+    } else {
+      vLighting    = vec3(1.0, 1.0, 1.0);
+      vShadowCoord = vec3(-1, 0, 0);
+    }
+  }
+`;
+
+// #include "Common.cg"    
+// vertout main(float4 gl_Vertex : POSITION,    
+//              uniform float4x4 gl_ModelViewProjectionMatrix,
+//              uniform float3 v3CameraPos,     // The camera's current position
+//              uniform float3 v3LightDir,      // Direction vector to the light source    
+//              uniform float3 v3InvWavelength, // 1 / pow(wavelength, 4) for RGB    
+//              uniform float fCameraHeight,    // The camera's current height
+//              uniform float fCameraHeight2,   // fCameraHeight^2
+//              uniform float fOuterRadius,     // The outer (atmosphere) radius
+//              uniform float fOuterRadius2,    // fOuterRadius^2
+//              uniform float fInnerRadius,     // The inner (planetary) radius
+//              uniform float fInnerRadius2,    // fInnerRadius^2
+//              uniform float fKrESun,          // Kr * ESun      
+//              uniform float fKmESun,          // Km * ESun
+//              uniform float fKr4PI,           // Kr * 4 * PI
+//              uniform float fKm4PI,           // Km * 4 * PI
+//              uniform float fScale,           // 1 / (fOuterRadius - fInnerRadius)
+//              uniform float fScaleOverScaleDepth) // fScale / fScaleDepth  {    
+//   // Get the ray from the camera to the vertex and its length (which    
+//   // is the far point of the ray passing through the atmosphere)      
+//   float3 v3Pos = gl_Vertex.xyz;
+//   float3 v3Ray = v3Pos - v3CameraPos;
+//   float fFar = length(v3Ray);
+//   v3Ray /= fFar;
+//   // Calculate the closest intersection of the ray with
+//   // the outer atmosphere (point A in Figure 16-3)      
+//   float fNear = getNearIntersection(v3CameraPos, v3Ray, fCameraHeight2, fOuterRadius2);
+//   // Calculate the ray's start and end positions in the atmosphere,
+//   // then calculate its scattering offset
+//   float3 v3Start = v3CameraPos + v3Ray * fNear;
+//   fFar -= fNear;
+//   float fStartAngle = dot(v3Ray, v3Start) / fOuterRadius;
+//   float fStartDepth = exp(-fInvScaleDepth);
+//   float fStartOffset = fStartDepth * scale(fStartAngle);
+//   // Initialize the scattering loop variables      
+//   float fSampleLength = fFar / fSamples;    
+//   float fScaledLength = fSampleLength * fScale;
+//   float3 v3SampleRay = v3Ray * fSampleLength;
+//   float3 v3SamplePoint = v3Start + v3SampleRay * 0.5;
+//   Now loop through the sample points
+//   float3 v3FrontColor = float3(0.0, 0.0, 0.0);
+//   for(int i=0; i<nSamples; i++) { 
+//     float fHeight = length(v3SamplePoint);
+//     float fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));
+//     float fLightAngle = dot(v3LightDir, v3SamplePoint) / fHeight;
+//     float fCameraAngle = dot(v3Ray, v3SamplePoint) / fHeight;
+//     float fScatter = (fStartOffset + fDepth * (scale(fLightAngle) - scale(fCameraAngle)));      
+//     float3 v3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));
+//     v3FrontColor += v3Attenuate * (fDepth * fScaledLength);
+//     v3SamplePoint += v3SampleRay;
+//   }
+//   // Finally, scale the Mie and Rayleigh colors
+//   vertout OUT;
+//   OUT.pos = mul(gl_ModelViewProjectionMatrix, gl_Vertex);
+//   OUT.c0.rgb = v3FrontColor * (v3InvWavelength * fKrESun);
+//   OUT.c1.rgb = v3FrontColor * fKmESun;
+//   OUT.t0 = v3CameraPos - v3Pos;    
+//   return OUT;
+// }
+
+// Fragment shader
+const shadowFragmentSRC = `
+  mediump float fragmentDepth;
+  void main(void) {
+    gl_FragColor = vec4(1.0, 1.0, 1.0, gl_FragCoord.z);
+  }
+`;
+
+const finalFragmentSRC = `
+  uniform sampler2D uShadowMap;
+
+  varying lowp  vec4 vColor;
+  varying highp vec3 vLighting;
+  varying highp vec3 vShadowCoord;
+
+  void main(void) {
+    lowp float vis = 1.0;
+    if (vShadowCoord.x >= 0.0 && texture2D(uShadowMap, vShadowCoord.xy).z < vShadowCoord.z) {
+        vis = 0.0;
+    }
+    gl_FragColor = vec4(vColor.rgb * vLighting, vColor.a);
+  }
+`;
+
+// #include "Common.cg"
+// float4 main(float4 c0 : COLOR0,
+//             float4 c1 : COLOR1,    
+//             float3 v3Direction : TEXCOORD0,
+//             uniform float3 v3LightDirection,
+//             uniform float g,
+//             uniform float g2) : COLOR {
+//   float fCos = dot(v3LightDirection, v3Direction) / length(v3Direction);
+//   float fCos2 = fCos * fCos;
+//   float4 color = getRayleighPhase(fCos2) * c0 + getMiePhase(fCos, fCos2, g, g2) * c1;
+//   color.a = color.b;
+//   return color;  
+// }
+const mat4 = glMatrix.mat4;
+const vec3 = glMatrix.vec3;
+const vec4 = glMatrix.vec4;
+
+const MODAREA = 2.0;
+const SHADOW_TEXTURE_SIZE = 1024;
 const terrainPresets = [{ 
   R: { min: 0,   max: 0.1, add: 0.8 }, 
   G: { min: 0.3, max: 0.7, add: 0.3 },
@@ -11,76 +163,482 @@ const waterPreset = {
   G: { min: 0,     max: 0.2 },
   B: { min: 0.6,   max: 0.8 } 
 }
-const mat4 = glMatrix.mat4;
-const vec3 = glMatrix.vec3;
-const vec4 = glMatrix.vec4;
 
-// Vertex shader
-const vsSource = `
-  attribute vec4  aVertexPosition;
-  attribute vec4  aVertexColor;
-  attribute vec3  aVertexNormal;
+class Display {
+  constructor(canvas) {
+    this.canvas = canvas;
+    canvas.setAttribute("height", window.innerHeight + "px");
+    canvas.setAttribute("width",  window.innerWidth - 250  + "px");
+    
+    const gl = canvas.getContext("webgl");
+    if (!gl) {
+      alert("Impossible d'initialiser WebGL. Votre navigateur ou votre machine peut ne pas le supporter.");
+      return;
+    }
+    const ext1 = gl.getExtension('OES_element_index_uint');
+    const ext2 = gl.getExtension('WEBGL_depth_texture');
+    if (!ext1) {
+      return alert("Missing extension: OES_element_index_uint");
+    }
+    if (!ext2) {
+      return alert("Missing extension: WEBGL_depth_texture");
+    }
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    gl.enable(gl.BLEND);
+    gl.blendEquation(gl.FUNC_ADD);
+    gl.blendFuncSeparate(
+      gl.SRC_ALPHA,
+      gl.ONE_MINUS_SRC_ALPHA,
+      gl.ONE,
+      gl.ONE_MINUS_SRC_ALPHA
+    );
+  
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  
+    const shadowShaderProgram = initShaderProgram(gl, shadowVertexSRC, shadowFragmentSRC);
+    const shaderProgram       = initShaderProgram(gl, finalVertexSRC, finalFragmentSRC);
+    this.programInfo = {
+      program: shaderProgram,
+      attribLocations: {
+        vertexPosition:   gl.getAttribLocation(shaderProgram,  'aVertexPosition'),
+        vertexColor:      gl.getAttribLocation(shaderProgram,  'aVertexColor'),
+        vertexNormal:     gl.getAttribLocation(shaderProgram,  'aVertexNormal')
+      },
+      uniformLocations: {
+        projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+        modelViewMatrix:  gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+        normalMatrix:     gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
+        isLit:            gl.getUniformLocation(shaderProgram, 'uIsLit'),
+        sunLocation:      gl.getUniformLocation(shaderProgram, 'uSunLocation'),
+        shadowTransform:  gl.getUniformLocation(shaderProgram, 'uShadowTransform'),
+        shadowMap:        gl.getUniformLocation(shaderProgram, 'uShadowMap')
+      }
+    };
+    this.shadowProgramInfo = {
+      program: shadowShaderProgram,
+      attribLocations: {
+        vertexPosition:   gl.getAttribLocation(shadowShaderProgram,  'aVertexPosition'),
+      },
+      uniformLocations: {
+        projectionMatrix: gl.getUniformLocation(shadowShaderProgram, 'uProjectionMatrix'),
+        modelViewMatrix:  gl.getUniformLocation(shadowShaderProgram, 'uModelViewMatrix')
+      },
+    }
+    this.gl = gl;
+    this.buffers = null;
+    this.initFrameBuffer();
+    DM.stateVariables.rotation.actual    = vec3.fromValues(Math.PI / 20, 0, 0);
+    DM.stateVariables.translation.actual = vec3.fromValues(0, 0, -6);
+    DM.stateVariables.sunPosition.actual = vec3.fromValues(0, 1, 0);
+    this.isLit = true;
+  }
 
-  uniform mat4 uModelViewMatrix;
-  uniform mat4 uProjectionMatrix;
-  uniform mat4 uNormalMatrix;
-  uniform bool uIsLit;
+  initFrameBuffer() {
+    const width  = SHADOW_TEXTURE_SIZE;
+    const height = SHADOW_TEXTURE_SIZE;
+    const gl     = this.gl;
+    var color_buffer, depth_buffer, status;
+  
+    // Step 1: Create a frame buffer object
+    this.frameBuffer = gl.createFramebuffer();
+  
+    // Step 2: Create and initialize a texture buffer to hold the colors.
+    color_buffer = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, color_buffer);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0,
+                                    gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  
+    // Step 3: Create and initialize a texture buffer to hold the depth values.
+    // Note: the WEBGL_depth_texture extension is required for this to work
+    //       and for the gl.DEPTH_COMPONENT texture format to be supported.
+    depth_buffer = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, depth_buffer);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, width, height, 0,
+                                    gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  
+    // Step 4: Attach the specific buffers to the frame buffer.
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, color_buffer, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,  gl.TEXTURE_2D, depth_buffer, 0);
+  
+    // Step 5: Verify that the frame buffer is valid.
+    status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+      console.log("The created frame buffer is invalid: " + status.toString());
+    }
+    this.depthBuffer = depth_buffer;
+  
+    // Unbind these new objects, which makes the default frame buffer the
+    // target for rendering.
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
 
-  varying lowp  vec4 vColor;
-  varying highp vec3 vLighting;
-
-  void main(void) {
-    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vColor = aVertexColor;
-
-    if (uIsLit) {
-      highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
-      highp vec3 directionalLightColor = vec3(1, 1, 1);
-      highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
-
-      highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
-
-      highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
-      vLighting = ambientLight + (directionalLightColor * directional);
-    } else {
-      vLighting = vec3(1.0, 1.0, 1.0);
+  drawShadows() {
+    const gl = this.gl;
+    const frameBuffer = this.frameBuffer;
+    const programInfo       = this.programInfo;
+    const shadowProgramInfo = this.shadowProgramInfo;
+    const buffers = this.buffers;
+    if (buffers === null) return;
+    //gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+    //gl.viewport(0, 0, SHADOW_TEXTURE_SIZE, SHADOW_TEXTURE_SIZE);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.clearDepth(1.0);
+    gl.depthFunc(gl.LEQUAL);
+  
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  
+    const zNear = 0.1;
+    const zFar  = 100.0;
+    const top    =  5;
+    const bottom = -5;
+    const left   = -5;
+    const right  =  5;
+    const projectionMatrix = mat4.create();
+    mat4.ortho(projectionMatrix,
+               left,
+               right,
+               bottom,
+               top,
+               zNear,
+               zFar);
+  
+    const lightSource = vec3.create();
+    vec3.scale(lightSource, _sunVector, 10);
+    const modelViewMatrix = mat4.create();
+    mat4.lookAt(modelViewMatrix, 
+                lightSource,
+                vec3.fromValues(0, 0, 0),
+                vec3.fromValues(0, 1, 0));
+  
+    const shadowTransform = mat4.fromValues(0.5, 0.0, 0.0, 0.5,
+                                            0.0, 0.5, 0.0, 0.5,
+                                            0.0, 0.0, 0.5, 0.5,
+                                            0.0, 0.0, 0.0, 1.0);
+    mat4.mul(shadowTransform, shadowTransform, projectionMatrix);
+    mat4.mul(shadowTransform, shadowTransform, modelViewMatrix);
+    gl.useProgram(programInfo.program);
+    gl.uniformMatrix4fv(
+        programInfo.uniformLocations.shadowTransform,
+        false,
+        shadowTransform);
+  
+    { // VERTICES
+      const numComponents = 3;
+      const type = gl.FLOAT;
+      const normalize = false;
+      const stride = 0;
+      const offset = 0;
+  
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertices);
+      gl.vertexAttribPointer(
+          shadowProgramInfo.attribLocations.vertexPosition,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          shadowProgramInfo.attribLocations.vertexPosition);
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+  
+    gl.useProgram(shadowProgramInfo.program);
+    gl.uniformMatrix4fv(
+        shadowProgramInfo.uniformLocations.projectionMatrix,
+        false,
+        projectionMatrix);
+    gl.uniformMatrix4fv(
+        shadowProgramInfo.uniformLocations.modelViewMatrix,
+        false,
+        modelViewMatrix);
+  
+    {
+      const vertexCount = buffers.nVTriangles.count;
+      const type = gl.UNSIGNED_INT;
+      const offset = 4 * buffers.nVTriangles.offset;
+      gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
   }
-`;
 
-// Fragment shader
-const fsSource = `
-  varying lowp  vec4 vColor;
-  varying highp vec3 vLighting;
-
-  void main(void) {
-    gl_FragColor = vec4(vColor.rgb * vLighting, vColor.a);
+  drawScene() {
+    const gl = this.gl;
+    const programInfo = this.programInfo;
+    const buffers = this.buffers;
+    const rotation = DM.stateVariables.rotation.actual;
+    const translation = DM.stateVariables.translation.actual;
+    if (buffers === null) return;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearDepth(1.0);
+    gl.depthFunc(gl.LEQUAL);
+  
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  
+    const fieldOfView = 45 * Math.PI / 180;   // en radians
+    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+    const zNear = 0.1;
+    const zFar  = 100.0;
+    const top = -gl.canvas.clientHeight / 200;
+    const bottom = gl.canvas.clientHeight / 200;
+    const left = -gl.canvas.clientWidth / 200;
+    const right = gl.canvas.clientWidth / 200;
+    const projectionMatrix = mat4.create();
+    mat4.perspective(projectionMatrix,
+                     fieldOfView,
+                     aspect,
+                     zNear,
+                     zFar);
+    // mat4.ortho(projectionMatrix,
+    //            left,
+    //            right,
+    //            bottom,
+    //            top,
+    //            zNear,
+    //            zFar);
+    this.projectionMatrix = projectionMatrix;
+  
+    const modelViewMatrix = mat4.create();
+    mat4.translate(modelViewMatrix,
+                   modelViewMatrix,
+                   translation);
+    mat4.rotate(modelViewMatrix,
+                modelViewMatrix,
+                rotation[0],
+                [1.0, 0.0, 0.0]);
+    mat4.rotate(modelViewMatrix,
+                modelViewMatrix,
+                rotation[1],
+                [0.0, 1.0, 0.0]);
+    this.modelViewMatrix = modelViewMatrix;
+  
+    const normalMatrix = mat4.create();
+    mat4.invert(normalMatrix, modelViewMatrix);
+    mat4.transpose(normalMatrix, normalMatrix);
+  
+    { // VERTICES
+      const numComponents = 3;
+      const type = gl.FLOAT;
+      const normalize = false;
+      const stride = 0;
+      const offset = 0;
+  
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertices);
+      gl.vertexAttribPointer(
+          programInfo.attribLocations.vertexPosition,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          programInfo.attribLocations.vertexPosition);
+    }
+    { // COLORS
+      const numComponents = 4;
+      const type = gl.FLOAT;
+      const normalize = false;
+      const stride = 0;
+      const offset = 0;
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.colors);
+      gl.vertexAttribPointer(
+          programInfo.attribLocations.vertexColor,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          programInfo.attribLocations.vertexColor);
+    }
+    { // NORMALS
+      const numComponents = 3;
+      const type = gl.FLOAT;
+      const normalize = false;
+      const stride = 0;
+      const offset = 0;
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normals);
+      gl.vertexAttribPointer(
+          programInfo.attribLocations.vertexNormal,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          programInfo.attribLocations.vertexNormal);
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+  
+    gl.useProgram(programInfo.program);
+    gl.uniformMatrix4fv(
+        programInfo.uniformLocations.projectionMatrix,
+        false,
+        projectionMatrix);
+    gl.uniformMatrix4fv(
+        programInfo.uniformLocations.modelViewMatrix,
+        false,
+        modelViewMatrix);
+    gl.uniformMatrix4fv(
+        programInfo.uniformLocations.normalMatrix,
+        false,
+        normalMatrix);
+    gl.uniform1i(programInfo.uniformLocations.isLit, this.isLit);
+    gl.uniform3fv(programInfo.uniformLocations.sunLocation, _sunVector);
+    gl.uniform1i(programInfo.shadowMap, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, _depthTex);
+  
+    { // Draw lines first
+      const vertexCount = buffers.nVLines.count;
+      const type = gl.UNSIGNED_INT;
+      const offset = 4 * buffers.nVLines.offset;
+      gl.drawElements(gl.LINES, vertexCount, type, offset);
+    }
+    {
+      const vertexCount = buffers.nVTriangles.count;
+      const type = gl.UNSIGNED_INT;
+      const offset = 4 * buffers.nVTriangles.offset;
+      gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+    }
   }
-`;
 
-const DM = new DisplayManager();
-const MODAREA = 2.0;
+  rotate(e) {
+    if (DM.previousCoords !== null) {
+      vec3.sub(DM.previousCoords, vec3.fromValues(e.clientY, e.clientX, 0), DM.previousCoords);
+      vec3.scale(DM.previousCoords, DM.previousCoords, 0.01);
+      vec3.add(DM.previousCoords, DM.stateVariables.rotation.actual, DM.previousCoords);
+      DM.stateVariables.rotation.actual = DM.previousCoords;
+      if (DM.previousCoords[0] >  Math.PI / 2)  DM.previousCoords[0] =  Math.PI / 2;
+      if (DM.previousCoords[0] <  Math.PI / 20) DM.previousCoords[0] =  Math.PI / 20;
+      if (DM.previousCoords[1] >  Math.PI / 2)  DM.previousCoords[1] =  Math.PI / 2;
+      if (DM.previousCoords[1] < -Math.PI / 2)  DM.previousCoords[1] = -Math.PI / 2;
+      DM.stateVariables.rotation.actual = DM.previousCoords;
+    }
+    DM.previousCoords = vec3.fromValues(e.clientY, e.clientX, 0);
+  }
+  
+  mod(e) {
+    const canvas = this.canvas
+    const invMat = mat4.create();
+    const posn   = vec4.create();
+    const posf   = vec4.create();
+    const pos0   = vec3.create();
+    const pos1   = vec3.create();
+    const mRay   = vec3.create();
+    var x =  (e.clientX - canvas.clientLeft - canvas.clientWidth  / 2) / (canvas.clientWidth  / 2);
+    var y = -(e.clientY - canvas.clientTop  - canvas.clientHeight / 2) / (canvas.clientHeight / 2);
+    mat4.mul(invMat, this.projectionMatrix, this.modelViewMatrix);
+    mat4.invert(invMat, invMat);
+    vec4.transformMat4(posn, vec4.fromValues(x, y, -1, 1), invMat);
+    vec4.transformMat4(posf, vec4.fromValues(x, y,  1, 1), invMat);
+    if (posn[3] == 0 || posf[3] == 0) {
+      this.stateVariables.mouseRay.actual = null;
+      return;
+    }
+    pos0[0] = posn[0] / posn[3];
+    pos0[1] = posn[1] / posn[3];
+    pos0[2] = posn[2] / posn[3];
+    pos1[0] = posf[0] / posf[3];
+    pos1[1] = posf[1] / posf[3];
+    pos1[2] = posf[2] / posf[3];
+    vec3.sub(mRay, pos1, pos0);
+    vec3.normalize(mRay, mRay);
+  
+    this.stateVariables.mouseRay.actual = [ pos0, mRay ];
+  }
 
-var CANVAS;
-var _rotEnabled = false;
-var _modEnabled = false;
-var _modDig     = true;
-var _modApply   = null;
-var _previousCoords = null;
-var _rotation    = vec3.fromValues(Math.PI / 20, 0, 0);
-var _translation = vec3.fromValues(0, 0, -6);
-var _transmax    =  0;
-var _zoommax     = -6;
-var _gl          = null;
-var _programInfo = null;
-var _buffers     = null;
-var _projectMat = null;
-var _modelMat   = null;
-var _mouseray   = null;
-var _animate    = false;
-var _gridOn     = false;
-var _gridHD     = true;
-var _isLit      = false;
+  displayLevel(t) {
+    const gl       = this.gl;
+    const level    = DM.level;
+    const mouseray = DM.stateVariables.mouseRay.actual;
+    level.mouse = null;
+  
+    // VERTICES
+    ///////////////////////////////////////////////////////////////////////////////
+    var terrain = [];
+    var terrainNormals = [];
+    var water = [];
+    var waterNormals = [];
+    var grid = [];
+    var gridNormals = [];
+  
+    if (DM.stateVariables.gridHD.actual) level.gridRes = level.gridSub / 2;
+    else                                 level.gridRes = level.gridSub;
+    fillTerrainAndWaterArrays(level, mouseray, t, terrain, terrainNormals, water, waterNormals);
+    if (DM.stateVariables.gridOn.actual) fillGridArray(level, grid, gridNormals);
+  
+  
+    const vertices = terrain.concat(water).concat(grid);
+    const normals  = terrainNormals.concat(waterNormals).concat(gridNormals);
+    const vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    const normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+  
+    if (level.mouse !== null && _modApply) {
+      applymod(level);
+    }
+  
+    // COLORS
+    ///////////////////////////////////////////////////////////////////////////////
+    var colors;
+  
+    if (level.colors === null) {
+      setTerrainAndWaterColors(level);
+    }
+    
+    colors = fillTerrainAndWaterColorArrays(level, t);
+    if (DM.stateVariables.gridOn.actual) appendGridColors(level, colors);
+  
+  
+    const colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+  
+    // INDICES
+    ///////////////////////////////////////////////////////////////////////////////
+    var indices = [];
+    var nVTriangles = { count: 0, offset: 0, number: 0 };
+    var nVLines = { count: 0, offset: 0, number: 0 };
+  
+    fillTerrainAndWaterIndices(level, t, indices, nVTriangles);
+    if (DM.stateVariables.gridOn.actual) appendGridIndices(level, indices, nVLines, nVTriangles);
+  
+    const indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
+  
+  
+    ///////////////////////////////////////////////////////////////////////////////
+    this.buffers = {
+      vertices:       vertexBuffer,
+      normals:        normalBuffer,
+      colors:         colorBuffer,
+      indices:        indexBuffer,
+      nVTriangles:    nVTriangles,
+      nVLines:        nVLines
+    };
+  
+    DM.maxTranslation = level.terrainSizeX / 2;
+    DM.maxZoom        = -2 * level.terrainSizeZ;
+    DM.modEnabled     = true;
+  }
+}
 
 function initShaderProgram(gl, vsSource, fsSource) {
   const vertexShader   = loadShader(gl, gl.VERTEX_SHADER,   vsSource);
@@ -113,440 +671,6 @@ function loadShader(gl, type, source) {
   }
 
   return shader;
-}
-
-function drawScene(gl, programInfo, buffers, rotation, translation) {
-  if (buffers === null) return;
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);
-  gl.clearDepth(1.0);
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-  const fieldOfView = 45 * Math.PI / 180;   // en radians
-  const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-  const zNear = 0.1;
-  const zFar  = 100.0;
-  const top = -gl.canvas.clientHeight / 200;
-  const bottom = gl.canvas.clientHeight / 200;
-  const left = -gl.canvas.clientWidth / 200;
-  const right = gl.canvas.clientWidth / 200;
-  const projectionMatrix = mat4.create();
-  mat4.perspective(projectionMatrix,
-                   fieldOfView,
-                   aspect,
-                   zNear,
-                   zFar);
-  // mat4.ortho(projectionMatrix,
-  //            left,
-  //            right,
-  //            bottom,
-  //            top,
-  //            zNear,
-  //            zFar);
-  _projectMat = projectionMatrix;
-
-  const modelViewMatrix = mat4.create();
-  mat4.translate(modelViewMatrix,
-                 modelViewMatrix,
-                 translation);
-  mat4.rotate(modelViewMatrix,
-              modelViewMatrix,
-              rotation[0],
-              [1.0, 0.0, 0.0]);
-  mat4.rotate(modelViewMatrix,
-              modelViewMatrix,
-              rotation[1],
-              [0.0, 1.0, 0.0]);
-  _modelMat = modelViewMatrix;
-
-  const normalMatrix = mat4.create();
-  mat4.invert(normalMatrix, modelViewMatrix);
-  mat4.transpose(normalMatrix, normalMatrix);
-
-  {
-    const numComponents = 3;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertices);
-    gl.vertexAttribPointer(
-        programInfo.attribLocations.vertexPosition,
-        numComponents,
-        type,
-        normalize,
-        stride,
-        offset);
-    gl.enableVertexAttribArray(
-        programInfo.attribLocations.vertexPosition);
-  }
-  {
-    const numComponents = 4;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.colors);
-    gl.vertexAttribPointer(
-        programInfo.attribLocations.vertexColor,
-        numComponents,
-        type,
-        normalize,
-        stride,
-        offset);
-    gl.enableVertexAttribArray(
-        programInfo.attribLocations.vertexColor);
-  }
-  {
-    const numComponents = 3;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normals);
-    gl.vertexAttribPointer(
-        programInfo.attribLocations.vertexNormal,
-        numComponents,
-        type,
-        normalize,
-        stride,
-        offset);
-    gl.enableVertexAttribArray(
-        programInfo.attribLocations.vertexNormal);
-  }
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-
-  gl.useProgram(programInfo.program);
-  gl.uniformMatrix4fv(
-      programInfo.uniformLocations.projectionMatrix,
-      false,
-      projectionMatrix);
-  gl.uniformMatrix4fv(
-      programInfo.uniformLocations.modelViewMatrix,
-      false,
-      modelViewMatrix);
-  gl.uniformMatrix4fv(
-      programInfo.uniformLocations.normalMatrix,
-      false,
-      normalMatrix);
-  gl.uniform1i(programInfo.uniformLocations.isLit, _isLit);
-
-  { // Draw lines first
-    const vertexCount = buffers.nVLines[0];
-    const type = gl.UNSIGNED_INT;
-    const offset = 4 * buffers.nVLines[1];
-    gl.drawElements(gl.LINES, vertexCount, type, offset);
-  }
-  {
-    const vertexCount = buffers.nVTriangles[0];
-    const type = gl.UNSIGNED_INT;
-    const offset = 4 * buffers.nVTriangles[1];
-    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-  }
-}
-
-function main() {
-  CANVAS = document.getElementById("Drawing");
-  CANVAS.setAttribute("height", window.innerHeight + "px");
-  CANVAS.setAttribute("width",  window.innerWidth - 250  + "px");
-  
-  const gl = CANVAS.getContext("webgl");
-  gl.getExtension('OES_element_index_uint');
-  gl.enable(gl.BLEND);
-  gl.blendEquation(gl.FUNC_ADD);
-  gl.blendFuncSeparate(
-    gl.SRC_ALPHA,
-    gl.ONE_MINUS_SRC_ALPHA,
-    gl.ONE,
-    gl.ONE_MINUS_SRC_ALPHA
-  );
-
-  if (!gl) {
-    alert("Impossible d'initialiser WebGL. Votre navigateur ou votre machine peut ne pas le supporter.");
-    return;
-  }
-
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-
-  const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
-  const programInfo = {
-    program: shaderProgram,
-    attribLocations: {
-      vertexPosition:   gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-      vertexColor:      gl.getAttribLocation(shaderProgram, 'aVertexColor'),
-      vertexNormal:     gl.getAttribLocation(shaderProgram, 'aVertexNormal')
-    },
-    uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-      modelViewMatrix:  gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-      normalMatrix:     gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
-      isLit:            gl.getUniformLocation(shaderProgram, 'uIsLit')
-    }
-  };
-  _gl = gl;
-  _programInfo = programInfo;
-  DM.start();
-}
-
-function mousedown(event) {
-  var e = event || window.event;
-  if (e.which == 1 && _modEnabled && !_rotEnabled) {
-    _modApply = true;
-  }
-}
-
-function mouseup(event) {
-  var e = event || window.event;
-  if (e.which == 2 || _rotEnabled) {
-    _rotEnabled = !_rotEnabled;
-    _previousCoords = null;
-  }
-  _modApply = false;
-}
-
-function mousemove(event) {
-  var e = event || window.event;
-  if (_rotEnabled) {
-    rotate(e);
-  } else if (_modEnabled) {
-    mod(e);
-  }
-}
-
-function rotate(e) {
-  if (_previousCoords !== null) {
-    vec3.sub(_previousCoords, vec3.fromValues(e.clientY, e.clientX, 0), _previousCoords);
-    vec3.scale(_previousCoords, _previousCoords, 0.01);
-    vec3.add(_rotation, _rotation, _previousCoords);
-    if (_rotation[0] >  Math.PI / 2)  _rotation[0] =  Math.PI / 2;
-    if (_rotation[0] <  Math.PI / 20) _rotation[0] =  Math.PI / 20;
-    if (_rotation[1] >  Math.PI / 2)  _rotation[1] =  Math.PI / 2;
-    if (_rotation[1] < -Math.PI / 2)  _rotation[1] = -Math.PI / 2;
-  }
-  _previousCoords = vec3.fromValues(e.clientY, e.clientX, 0);
-}
-
-function mod(e) {
-  const invMat = mat4.create();
-  const posn   = vec4.create();
-  const posf   = vec4.create();
-  const pos0   = vec3.create();
-  const pos1   = vec3.create();
-  const mRay   = vec3.create();
-  var x =  (e.clientX - CANVAS.clientLeft - CANVAS.clientWidth  / 2) / (CANVAS.clientWidth  / 2);
-  var y = -(e.clientY - CANVAS.clientTop  - CANVAS.clientHeight / 2) / (CANVAS.clientHeight / 2);
-  mat4.mul(invMat, _projectMat, _modelMat);
-  mat4.invert(invMat, invMat);
-  vec4.transformMat4(posn, vec4.fromValues(x, y, -1, 1), invMat);
-  vec4.transformMat4(posf, vec4.fromValues(x, y,  1, 1), invMat);
-  if (posn[3] == 0 || posf[3] == 0) return;
-  pos0[0] = posn[0] / posn[3];
-  pos0[1] = posn[1] / posn[3];
-  pos0[2] = posn[2] / posn[3];
-  pos1[0] = posf[0] / posf[3];
-  pos1[1] = posf[1] / posf[3];
-  pos1[2] = posf[2] / posf[3];
-  vec3.sub(mRay, pos1, pos0);
-  vec3.normalize(mRay, mRay);
-
-  _mouseray = [ pos0, mRay ];
-}
-
-function DisplayManager() {
-  this.level = null;
-  this.start = async function() {
-    var deltams = 30;
-    var time    = null;
-    var pmray   = null;
-    var prot    = null;
-    var ptrans  = null;
-    var plvl    = null;
-    var pgrid   = _gridOn;
-    var pgHD    = _gridHD;
-    var fr      = document.getElementById("Pos");
-    while (true) {
-      var ticks = new Date().getTime();
-      var display = false;
-      var draw    = false;
-      await new Promise(resolve => setTimeout(resolve, deltams));
-      if (_animate) {
-        display = true;
-        if (time === null) time = 0;
-        else               time += deltams / 1000; 
-      } else               time = null;
-      if ((_modEnabled && _mouseray != null)   &&
-          (pmray === null                      ||
-          !vec3.equals(pmray[0], _mouseray[0]) ||
-          !vec3.equals(pmray[1], _mouseray[1]) ||
-          _modApply)) {
-        display = true;
-        pmray = [ vec3.clone(_mouseray[0]), vec3.clone(_mouseray[1]) ];
-      } else if (!_modEnabled) {
-        pmray = null;
-      }
-      if (_rotEnabled && (prot === null || !vec3.equals(prot, _rotation))) {
-        draw = true;
-        prot = vec3.clone(_rotation);
-      } else if (!_rotEnabled) {
-        prot = null;
-      }
-      if (ptrans === null || !vec3.equals(ptrans, _translation)) {
-        draw = true;
-        ptrans = vec3.clone(_translation);
-      }
-      if (plvl === null && this.level !== null) {
-        display = true;
-        plvl = this.level;
-      }
-      if (pgrid != _gridOn) {
-        display = true;
-        pgrid   = _gridOn;
-      }
-      if (pgHD != _gridHD) {
-        display = true;
-        pgHD    = _gridHD;
-      }
-      if (display && this.level !== null) {
-        displayLevel(this.level, _mouseray, time);
-      } else if (draw && this.level !== null) {
-        drawScene(_gl, _programInfo, _buffers, _rotation, _translation);
-      }
-      ticks = new Date().getTime() - ticks;
-      fr.innerHTML = (1000 / ticks).toFixed(1) + " FPS";
-      if (ticks > 500) {
-        console.log("The rendering function was stopped because the frame rate was too low!");
-        break;
-      }
-    }
-  }
-}
-
-function toggleAnimation() {
-  _animate = !_animate;
-}
-
-function toggleGrid() {
-  _gridOn = !_gridOn;
-}
-
-function toggleGridHD() {
-  _gridHD = !_gridHD;
-}
-
-function translateXY(event) {
-  var e = event || window.event;
-  var step = 0.1
-  switch (e.keyCode) {
-    case 37: // LEFT
-      if (_translation[0] + step < _transmax) _translation[0] += step;
-      break;
-    case 38: // UP
-      if (_translation[1] - step > -_transmax) _translation[1] -= step;
-      break;
-    case 39: // RIGHT
-      if (_translation[0] - step > -_transmax) _translation[0] -= step;
-      break;
-    case 40: // DOWN
-      if (_translation[1] + step < _transmax) _translation[1] += step;
-      break;
-    case 82: // R
-      _translation = vec3.fromValues(0, 0, -6);
-      _rotation    = vec3.fromValues(10, 0, 0);
-  }
-}
-
-function translateZ(event) {
-  var e = event || window.event;
-  if (e.deltaY < 0) {
-    if (_translation[2] - (e.deltaY / 10.0) <= -6.0) {
-      _translation[2] -= e.deltaY / 10.0;
-    }
-  } else {
-    if (_translation[2] - (e.deltaY / 10.0) > _zoommax) {
-      _translation[2] -= e.deltaY / 10.0;
-    }
-  }
-}
-
-function displayLevel(level, mouseray, t) {
-  level.mouse = null;
-
-  // VERTICES
-  ///////////////////////////////////////////////////////////////////////////////
-  var terrain = [];
-  var terrainNormals = [];
-  var water = [];
-  var waterNormals = [];
-  var grid = [];
-  var gridNormals = [];
-
-  if (_gridHD) level.gridRes = level.gridSub / 2;
-  else         level.gridRes = level.gridSub;
-  fillTerrainAndWaterArrays(level, mouseray, t, terrain, terrainNormals, water, waterNormals);
-  if (_gridOn) fillGridArray(level, grid, gridNormals);
-
-
-  const vertices = terrain.concat(water).concat(grid);
-  const normals  = terrainNormals.concat(waterNormals).concat(gridNormals);
-  const vertexBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ARRAY_BUFFER, vertexBuffer);
-  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(vertices), _gl.STATIC_DRAW);
-  const normalBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ARRAY_BUFFER, normalBuffer);
-  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(normals), _gl.STATIC_DRAW);
-
-  if (level.mouse !== null && _modApply) {
-    applymod(level);
-  }
-
-  // COLORS
-  ///////////////////////////////////////////////////////////////////////////////
-  var colors;
-
-  if (level.colors === null) {
-    setTerrainAndWaterColors(level);
-  }
-  
-  colors = fillTerrainAndWaterColorArrays(level, t);
-  if (_gridOn) appendGridColors(level, colors);
-
-
-  const colorBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ARRAY_BUFFER, colorBuffer);
-  _gl.bufferData(_gl.ARRAY_BUFFER, new Float32Array(colors), _gl.STATIC_DRAW);
-
-  // INDICES
-  ///////////////////////////////////////////////////////////////////////////////
-  var indices = [];
-  var nVTriangles = [ 0, 0, 0 ];
-  var nVLines = [ 0, 0, 0 ];
-
-  fillTerrainAndWaterIndices(level, t, indices, nVTriangles);
-  if (_gridOn) appendGridIndices(level, indices, nVLines, nVTriangles);
-
-  const indexBuffer = _gl.createBuffer();
-  _gl.bindBuffer(_gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  _gl.bufferData(_gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), _gl.STATIC_DRAW);
-
-
-  ///////////////////////////////////////////////////////////////////////////////
-  _buffers = {
-    vertices:       vertexBuffer,
-    normals:        normalBuffer,
-    colors:         colorBuffer,
-    indices:        indexBuffer,
-    nVTriangles:    nVTriangles,
-    nVLines:        nVLines
-  };
-
-  _transmax = level.terrainSizeX / 2;
-  _zoommax  = -2 * level.terrainSizeZ;
-  _modEnabled = true;
-  drawScene(_gl, _programInfo, _buffers, _rotation, _translation);
 }
 
 function fillTerrainAndWaterArrays(level, mouseray, t, terrain, terrainNormals, water, waterNormals) {
@@ -924,8 +1048,8 @@ function fillTerrainAndWaterIndices(level, t, indices, nVTriangles) {
     for (var i = l; i < l + 6 * nX * nZ; i++) {
       indices.push(i);
     }
-    nVTriangles[0] = indices.length;
-    nVTriangles[2] = indices.length;
+    nVTriangles.count  = indices.length;
+    nVTriangles.number = indices.length;
   } else {
     indices.push(l + 0);
     indices.push(l + 1);
@@ -933,15 +1057,15 @@ function fillTerrainAndWaterIndices(level, t, indices, nVTriangles) {
     indices.push(l + 0);
     indices.push(l + 2);
     indices.push(l + 3);
-    nVTriangles[0] = indices.length;
-    nVTriangles[2] = indices.length - 2;
+    nVTriangles.count  = indices.length;
+    nVTriangles.number = indices.length - 2;
   }
 }
 
 function appendGridIndices(level, indices, nVLines, nVTriangles) {
   var gX = Math.floor(level.terrainSizeX / level.gridRes);
-  var lt = nVTriangles[2];
-  var ll = nVLines[2];
+  var lt = nVTriangles.number;
+  var ll = nVLines.number;
   indices.push(lt + 0);
   indices.push(lt + 1);
   indices.push(lt + 2);
@@ -949,16 +1073,16 @@ function appendGridIndices(level, indices, nVLines, nVTriangles) {
   indices.push(lt + 2);
   indices.push(lt + 3);
   lt += 4;
-  nVTriangles[2] = lt;
-  nVTriangles[0] = indices.length;
-  nVLines[1] = nVTriangles[0];
+  nVTriangles.number = lt;
+  nVTriangles.count = indices.length;
+  nVLines.offset    = nVTriangles.count;
   for (var i = 0; i <= gX; i++) {
     indices.push(lt + ll++);
     indices.push(lt + ll++);
     indices.push(lt + ll++);
     indices.push(lt + ll++);
   }
-  nVLines[0] = ll;
+  nVLines.count = ll;
 }
 
 // https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle

@@ -5,16 +5,17 @@
     <title>Test</title>
     <link rel="stylesheet" type="text/css" href="/css/philipont.css"/>
     <script src="https://cdn.jsdelivr.net/npm/gl-matrix@3.1.0/gl-matrix-min.js"></script>
-    <script src="/js/utils/vec3D.js" type="text/javascript"></script>
-    <script src="/js/utils/websocket.js" type="text/javascript"></script>
+    <script src="/js/philipont/displayManager.js" type="text/javascript"></script>
     <script src="/js/philipont/webgl.js" type="text/javascript"></script>
+    <script src="/js/philipont/page.js" type="text/javascript"></script>
+    <script src="/js/utils/websocket.js" type="text/javascript"></script>
     <script src="/js/philipont/philipont.js" type="text/javascript"></script>
   </head>
-  <body onload="main()">
+  <body onload="startDisplay()">
     <canvas id="Drawing" tabindex="1"
-            onmousedown="mousedown(event)"
-            onmouseup="mouseup(event)" 
-            onmousemove="mousemove(event)"
+            onmousedown="canvasMouseDown(event)"
+            onmouseup="canvasMouseUp(event)" 
+            onmousemove="canvasMouseMove(event)"
             onkeydown="translateXY(event)"
             onwheel="translateZ(event)">
 
@@ -25,6 +26,10 @@
       <input type="button" value="Animate" onclick="toggleAnimation()"/>
       <input type="button" value="Grid"    onclick="toggleGrid()"/>
       <input type="button" value="GridHD"  onclick="toggleGridHD()"/>
+      <div id="SunDial" onmousedown="startMovingSun(event)"
+                        onmouseup="stopMovingSun()">
+        <div id="SunIndicator"></div>
+      </div>
       <div id="Pos"></div>
     </div>
   </body>

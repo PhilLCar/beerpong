@@ -45,3 +45,28 @@ input[type="button"]:hover {
   border-left: 1px solid grey;
   background-color: black;
 }
+
+#SunDial {
+  position: relative;
+  margin: 23px;
+  margin-bottom: 0px;
+  width: 200px;
+  height: 200px;
+  border-radius: 200px;
+  border: 1px solid grey;
+}
+
+#SunIndicator {
+  position: absolute;
+  top: 95px;
+  left: 95px;
+  width: 10px;
+  height: 10px;
+  background-color: grey;
+  border-radius: 10px;
+}
+
+#SunIndicator:hover {
+  cursor: move;
+  background-color: yellow;
+}
