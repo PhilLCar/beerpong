@@ -98,7 +98,7 @@ class DisplayManager {
         this.display.updateBuffers(this.delta);
       }
       if (shadows) {
-        // do update shadows
+        this.display.drawShadows();
       }
       if (scene) {
         this.display.drawScene();

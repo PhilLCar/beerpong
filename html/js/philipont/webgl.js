@@ -2,8 +2,8 @@
  * https://developer.mozilla.org/fr/docs/Web/API/WebGL_API/Tutorial/Commencer_avec_WebGL
  */
 // Vertex shader
-const shadowVertexSRC = `
-  attribute vec4 aVertexPosition;
+const shadowVertexSRC = `#version 300 es
+  layout (location = 0) in vec4 aVertexPosition;
 
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
@@ -13,21 +13,21 @@ const shadowVertexSRC = `
   }
 `;
 
-const finalVertexSRC = `
-  attribute vec4  aVertexPosition;
-  attribute vec4  aVertexColor;
-  attribute vec3  aVertexNormal;
+const finalVertexSRC = `#version 300 es
+  layout (location = 0) in vec4  aVertexPosition;
+  layout (location = 1) in vec4  aVertexColor;
+  layout (location = 2) in vec3  aVertexNormal;
 
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
-  uniform mat4 uNormalMatrix;
   uniform bool uIsLit;
   uniform vec3 uSunLocation;
   uniform mat4 uShadowTransform;
 
-  varying lowp  vec4 vColor;
-  varying highp vec3 vLighting;
-  varying highp vec3 vShadowCoord;
+  out lowp  vec4  vColor;
+  out highp vec3  vLighting;
+  out highp vec3  vShadowCoord;
+  out highp float vCosTheta;
 
   void main(void) {
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
@@ -35,17 +35,14 @@ const finalVertexSRC = `
 
     if (uIsLit) {
       highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
-      highp vec3 directionalLightColor = vec3(1, 1, 1);
-      highp vec3 directionalVector = normalize(uSunLocation);
-
-      highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
-
-      highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
-      vLighting    = ambientLight + (directionalLightColor * directional);
+      highp vec3 directionalLightColor = vec3(1.0, 1.0, 1.0);
+      
+      vCosTheta    = clamp(dot(aVertexNormal, normalize(uSunLocation)), 0.0, 1.0);
+      vLighting    = ambientLight + (directionalLightColor * vCosTheta);
       vShadowCoord = (uShadowTransform * aVertexPosition).xyz;
     } else {
       vLighting    = vec3(1.0, 1.0, 1.0);
-      vShadowCoord = vec3(-1, 0, 0);
+      vShadowCoord = vec3(-1.0, 0.0, 0.0);
     }
   }
 `;
@@ -111,26 +108,32 @@ const finalVertexSRC = `
 // }
 
 // Fragment shader
-const shadowFragmentSRC = `
-  mediump float fragmentDepth;
-  void main(void) {
-    gl_FragColor = vec4(1.0, 1.0, 1.0, gl_FragCoord.z);
-  }
+const shadowFragmentSRC = `#version 300 es
+  void main(void) { }
 `;
 
-const finalFragmentSRC = `
-  uniform sampler2D uShadowMap;
+const finalFragmentSRC = `#version 300 es
+  precision highp sampler2DShadow;
 
-  varying lowp  vec4 vColor;
-  varying highp vec3 vLighting;
-  varying highp vec3 vShadowCoord;
+  uniform sampler2DShadow uShadowMap;
+
+  in lowp  vec4  vColor;
+  in highp vec3  vLighting;
+  in highp vec3  vShadowCoord;
+  in highp float vCosTheta;
+
+  out highp vec4 FragColor;
 
   void main(void) {
-    lowp float vis = 1.0;
-    if (vShadowCoord.x >= 0.0 && texture2D(uShadowMap, vShadowCoord.xy).z < vShadowCoord.z) {
-        vis = 0.0;
+    highp float vis = 1.0;
+    if (vShadowCoord.x >= 0.0) {
+      highp float bias = clamp(0.0001 * tan(acos(vCosTheta)), 0.0, 0.005);
+      // if (texture(uShadowMap, vShadowCoord.xy).z < vShadowCoord.z - bias) {
+      //   vis = 0.2;
+      // }
+      vis = texture(uShadowMap, vShadowCoord - vec3(0.0, 0.0, bias));
     }
-    gl_FragColor = vec4(vColor.rgb * vLighting, vColor.a);
+    FragColor = vec4(vis * vColor.rgb * vLighting, vColor.a);
   }
 `;
 
@@ -170,18 +173,10 @@ class Display {
     canvas.setAttribute("height", window.innerHeight + "px");
     canvas.setAttribute("width",  window.innerWidth - 250  + "px");
     
-    const gl = canvas.getContext("webgl");
+    const gl = canvas.getContext("webgl2");
     if (!gl) {
       alert("Impossible d'initialiser WebGL. Votre navigateur ou votre machine peut ne pas le supporter.");
       return;
-    }
-    const ext1 = gl.getExtension('OES_element_index_uint');
-    const ext2 = gl.getExtension('WEBGL_depth_texture');
-    if (!ext1) {
-      return alert("Missing extension: OES_element_index_uint");
-    }
-    if (!ext2) {
-      return alert("Missing extension: WEBGL_depth_texture");
     }
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
@@ -209,7 +204,6 @@ class Display {
       uniformLocations: {
         projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
         modelViewMatrix:  gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-        normalMatrix:     gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
         isLit:            gl.getUniformLocation(shaderProgram, 'uIsLit'),
         sunLocation:      gl.getUniformLocation(shaderProgram, 'uSunLocation'),
         shadowTransform:  gl.getUniformLocation(shaderProgram, 'uShadowTransform'),
@@ -239,47 +233,30 @@ class Display {
     const width  = SHADOW_TEXTURE_SIZE;
     const height = SHADOW_TEXTURE_SIZE;
     const gl     = this.gl;
-    var color_buffer, depth_buffer, status;
+    var depth_buffer, status;
   
-    // Step 1: Create a frame buffer object
     this.frameBuffer = gl.createFramebuffer();
-  
-    // Step 2: Create and initialize a texture buffer to hold the colors.
-    color_buffer = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, color_buffer);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0,
-                                    gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  
-    // Step 3: Create and initialize a texture buffer to hold the depth values.
-    // Note: the WEBGL_depth_texture extension is required for this to work
-    //       and for the gl.DEPTH_COMPONENT texture format to be supported.
+
     depth_buffer = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, depth_buffer);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, width, height, 0,
-                                    gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32F, width, height, 0,
+                                    gl.DEPTH_COMPONENT, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
   
-    // Step 4: Attach the specific buffers to the frame buffer.
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, color_buffer, 0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,  gl.TEXTURE_2D, depth_buffer, 0);
   
-    // Step 5: Verify that the frame buffer is valid.
     status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       console.log("The created frame buffer is invalid: " + status.toString());
+      this.frameBuffer = null;
     }
     this.depthBuffer = depth_buffer;
   
-    // Unbind these new objects, which makes the default frame buffer the
-    // target for rendering.
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
@@ -289,22 +266,25 @@ class Display {
     const frameBuffer = this.frameBuffer;
     const programInfo       = this.programInfo;
     const shadowProgramInfo = this.shadowProgramInfo;
+    const level = DM.stateVariables.level.actual;
     const buffers = this.buffers;
     if (buffers === null) return;
-    //gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-    //gl.viewport(0, 0, SHADOW_TEXTURE_SIZE, SHADOW_TEXTURE_SIZE);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+    gl.viewport(0, 0, SHADOW_TEXTURE_SIZE, SHADOW_TEXTURE_SIZE);
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.clearDepth(1.0);
     gl.depthFunc(gl.LEQUAL);
   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    //gl.cullFace(gl.FRONT);
   
+    const size = Math.sqrt(level.terrainSizeX * level.terrainSizeX + level.terrainSizeZ * level.terrainSizeZ) / 2;
     const zNear = 0.1;
     const zFar  = 100.0;
-    const top    =  5;
-    const bottom = -5;
-    const left   = -5;
-    const right  =  5;
+    const top    =  size;
+    const bottom = -size;
+    const left   = -size;
+    const right  =  size;
     const projectionMatrix = mat4.create();
     mat4.ortho(projectionMatrix,
                left,
@@ -322,10 +302,10 @@ class Display {
                 vec3.fromValues(0, 0, 0),
                 vec3.fromValues(0, 1, 0));
   
-    const shadowTransform = mat4.fromValues(0.5, 0.0, 0.0, 0.5,
-                                            0.0, 0.5, 0.0, 0.5,
-                                            0.0, 0.0, 0.5, 0.5,
-                                            0.0, 0.0, 0.0, 1.0);
+    const shadowTransform = mat4.fromValues(0.5, 0.0, 0.0, 0.0,
+                                            0.0, 0.5, 0.0, 0.0,
+                                            0.0, 0.0, 0.5, 0.0,
+                                            0.5, 0.5, 0.5, 1.0);
     mat4.mul(shadowTransform, shadowTransform, projectionMatrix);
     mat4.mul(shadowTransform, shadowTransform, modelViewMatrix);
     gl.useProgram(programInfo.program);
@@ -386,6 +366,7 @@ class Display {
     gl.depthFunc(gl.LEQUAL);
   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    //gl.cullFace(gl.BACK);
   
     const fieldOfView = 45 * Math.PI / 180;   // en radians
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
@@ -423,10 +404,6 @@ class Display {
                 rotation[1],
                 [0.0, 1.0, 0.0]);
     this.modelViewMatrix = modelViewMatrix;
-  
-    const normalMatrix = mat4.create();
-    mat4.invert(normalMatrix, modelViewMatrix);
-    mat4.transpose(normalMatrix, normalMatrix);
   
     { // VERTICES
       const numComponents = 3;
@@ -491,13 +468,9 @@ class Display {
         programInfo.uniformLocations.modelViewMatrix,
         false,
         modelViewMatrix);
-    gl.uniformMatrix4fv(
-        programInfo.uniformLocations.normalMatrix,
-        false,
-        normalMatrix);
     gl.uniform1i(programInfo.uniformLocations.isLit, DM.stateVariables.isLit.actual);
     gl.uniform3fv(programInfo.uniformLocations.sunLocation, DM.stateVariables.sunPosition.actual);
-    gl.uniform1i(programInfo.shadowMap, 0);
+    gl.uniform1i(programInfo.uniformLocations.shadowMap, 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.depthBuffer);
   

@@ -118,6 +118,7 @@ function startMovingSun(event) {
   var e = event || window.event;
   if (e.which == 1) {
     document.getElementById("SunDial").onmousemove = moveSun;
+    document.onmouseup = stopMovingSun;
     moveSun(event);
   }
 }
@@ -143,10 +144,10 @@ function moveSun(event) {
   ///////////////////////////////////////
   var sunVector;
   if (r <= 80) {
-    sunVector = vec3.fromValues(xc, -yc, Math.sqrt(80 * 80 - r * r));
+    sunVector = vec3.fromValues(xc, Math.sqrt(80 * 80 - r * r), yc);
   } else {
     var nr = 160 - r;
-    sunVector = vec3.fromValues(xc, -yc, -Math.sqrt(80 * 80 - nr * nr));
+    sunVector = vec3.fromValues(xc, -Math.sqrt(80 * 80 - nr * nr), yc);
   }
   vec3.normalize(sunVector, sunVector);
   DM.stateVariables.sunPosition.actual = sunVector;
@@ -154,6 +155,7 @@ function moveSun(event) {
 
 function stopMovingSun() {
   document.getElementById("SunDial").onmousemove = null;
+  document.onmouseup = null;
 }
 
 function canvasMouseDown(event) {
