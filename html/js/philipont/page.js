@@ -1,5 +1,3 @@
-var philipont = null;
-
 function connect() {
   var socket    = null;
 
@@ -16,19 +14,19 @@ function connect() {
 
   socket.onopen = function(event) {
       console.log("Connection established");
-      philipont = new Philipont(socket);
+      DM.interface = new Interface(socket);
 
       // Lorsque la connexion se termine.
       this.onclose = function(event) {
           console.log("Connection closed");
-          philipont = null;
-          socket    = null;
+          DM.interface = null;
+          socket       = null;
       };
 
       // Lorsque le serveur envoi un message.
       this.onmessage = function(event) {
         var response = new WebSocketResponse(new Uint8Array(event.data));
-        philipont.update(response);
+        DM.interface.update(response);
       };
       
       var init = new Uint8Array(1);
@@ -46,7 +44,7 @@ function startDisplay() {
 }
 
 function load() {
-
+  DM.interface.load();
 }
 
 function toggleAnimation() {
@@ -101,7 +99,7 @@ function translateZ(event) {
   var t = DM.stateVariables.translation.actual;
   var n = null;
   if (e.deltaY < 0) {
-    if (t[2] - (e.deltaY / 10.0) <= DM.maxZoom) {
+    if (t[2] - (e.deltaY / 10.0) <= -6.0) {
       n = vec3.clone(t);
       n[2] -= e.deltaY / 10.0;
     }
@@ -112,7 +110,7 @@ function translateZ(event) {
     }
   }
   if (n !== null) {
-    DM.stateVariables.translation = n;
+    DM.stateVariables.translation.actual = n;
   }
 }
 

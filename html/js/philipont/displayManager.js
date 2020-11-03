@@ -12,7 +12,10 @@ class DisplayManager {
     this.previousCoords   = null;
     this.display          = null;
     this.stateVariables   = {};
+    this.interface        = null;
+    this.delta            = null;
     this.addStateVariable("level",        null);
+    this.addStateVariable("isLit",        null);
     this.addStateVariable("gridOn",       null);
     this.addStateVariable("gridHD",       null);
     this.addStateVariable("sunPosition",  null);
@@ -56,6 +59,8 @@ class DisplayManager {
         buffers = true;
         shadows = true;
         scene   = true;
+        if (this.delta === null) this.delta = 0;
+        else                     this.delta += 1 / this.targetFrameRate;
       } else if (this.modEnabled                              &&
                  this.stateVariables.mouseRay.actual !== null &&
                 (this.stateVariables.mouseRay.hasChanged      ||
@@ -78,19 +83,25 @@ class DisplayManager {
       } else if (this.stateVariables.sunPosition.hasChanged) {
         shadows = true;
         scene   = true;
+      } else if (this.stateVariables.isLit.hasChanged) {
+        shadows = true;
+        scene   = true;
       } else if (this.rotEnabled && this.stateVariables.rotation.hasChanged) {
         scene = true;
       } else if (this.stateVariables.translation.hasChanged) {
         scene = true;
       }
+      if (!this.animateEnv) {
+        this.delta = null;
+      }
       if (buffers) {
-        // do update buffers
+        this.display.updateBuffers(this.delta);
       }
       if (shadows) {
         // do update shadows
       }
       if (scene) {
-        // do update scene
+        this.display.drawScene();
       }
       ticks = new Date().getTime() - ticks;
       if (this.frameRateDisplay !== null) this.frameRateDisplay.innerHTML = (1000 / ticks).toFixed(1) + " FPS";

@@ -21,32 +21,32 @@ const SKIN_VENUS = 3;
 const NODE_MAX_LINK = 32;
 const LINK_MAX_NODE =  4;
 
-class Philipont {
+class Interface {
   constructor(socket) {
     this.socket = socket;
     this.level  = null;
   }
 
   load() {
-    identify(12, "01234567890123456789012345678901");
+    this.identify(12, "01234567890123456789012345678901");
     //newLevel("WOOHOO!", "Phil za best");
   }
   
   update(response) {
     switch (response.get(WebSocketResponse.UBYTE)) {
       case ACK_IDENT:
-        newLevel("WOOHOO!", "Phil za best", 10.0, 10.0, 0.5);
+        this.newLevel("WOOHOO!", "Phil za best", 10.0, 10.0, 0.5);
         break;
       case ACK_NEW_LEVEL:
-        this.level = parseLevel(response);
-        DM.level = this.level;
+        this.level = this.parseLevel(response);
+        DM.stateVariables.level.actual = this.level;
         break;
     }
   }
 
   identify(userid, passhash) {
     if (passhash.length != 32) return;
-    var request = new WebSocketRequest(_SOCKET);
+    var request = new WebSocketRequest(this.socket);
     request.append(CMD_IDENT);
     request.append(userid, 32);
     request.append(passhash);
@@ -56,7 +56,7 @@ class Philipont {
   newLevel(name, designer, terrainX, terrainZ, terrainRes) {
     if (name.length > 255 || designer.length > 255) return;
     if ((Math.floor(terrainX / terrainRes) + 1) * (Math.floor(terrainZ / terrainRes)) > 256 * 256) return;
-    var request = new WebSocketRequest(_SOCKET);
+    var request = new WebSocketRequest(this.socket);
     request.append(CMD_NEW_LEVEL);
     request.append(63, 32);
     request.append(name.length);

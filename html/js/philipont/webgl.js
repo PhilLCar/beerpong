@@ -232,7 +232,7 @@ class Display {
     DM.stateVariables.rotation.actual    = vec3.fromValues(Math.PI / 20, 0, 0);
     DM.stateVariables.translation.actual = vec3.fromValues(0, 0, -6);
     DM.stateVariables.sunPosition.actual = vec3.fromValues(0, 1, 0);
-    this.isLit = true;
+    DM.stateVariables.isLit.actual = true;
   }
 
   initFrameBuffer() {
@@ -315,7 +315,7 @@ class Display {
                zFar);
   
     const lightSource = vec3.create();
-    vec3.scale(lightSource, _sunVector, 10);
+    vec3.scale(lightSource, DM.stateVariables.sunPosition.actual, 10);
     const modelViewMatrix = mat4.create();
     mat4.lookAt(modelViewMatrix, 
                 lightSource,
@@ -495,11 +495,11 @@ class Display {
         programInfo.uniformLocations.normalMatrix,
         false,
         normalMatrix);
-    gl.uniform1i(programInfo.uniformLocations.isLit, this.isLit);
-    gl.uniform3fv(programInfo.uniformLocations.sunLocation, _sunVector);
+    gl.uniform1i(programInfo.uniformLocations.isLit, DM.stateVariables.isLit.actual);
+    gl.uniform3fv(programInfo.uniformLocations.sunLocation, DM.stateVariables.sunPosition.actual);
     gl.uniform1i(programInfo.shadowMap, 0);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, _depthTex);
+    gl.bindTexture(gl.TEXTURE_2D, this.depthBuffer);
   
     { // Draw lines first
       const vertexCount = buffers.nVLines.count;
@@ -545,7 +545,7 @@ class Display {
     vec4.transformMat4(posn, vec4.fromValues(x, y, -1, 1), invMat);
     vec4.transformMat4(posf, vec4.fromValues(x, y,  1, 1), invMat);
     if (posn[3] == 0 || posf[3] == 0) {
-      this.stateVariables.mouseRay.actual = null;
+      DM.stateVariables.mouseRay.actual = null;
       return;
     }
     pos0[0] = posn[0] / posn[3];
@@ -557,12 +557,12 @@ class Display {
     vec3.sub(mRay, pos1, pos0);
     vec3.normalize(mRay, mRay);
   
-    this.stateVariables.mouseRay.actual = [ pos0, mRay ];
+    DM.stateVariables.mouseRay.actual = [ pos0, mRay ];
   }
 
-  displayLevel(t) {
+  updateBuffers(t) {
     const gl       = this.gl;
-    const level    = DM.level;
+    const level    = DM.stateVariables.level.actual;
     const mouseray = DM.stateVariables.mouseRay.actual;
     level.mouse = null;
   
@@ -590,7 +590,7 @@ class Display {
     gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
   
-    if (level.mouse !== null && _modApply) {
+    if (level.mouse !== null && DM.modApply) {
       applymod(level);
     }
   
@@ -896,7 +896,7 @@ function applymod(level) {
       vec3.sub(d, v, level.mouse);
       l = vec3.length(d);
       if (l < MODAREA) {
-        if (_modDig) {
+        if (DM.modSubstract) {
           vec3.sub(v, v, vec3.fromValues(0, (MODAREA - l) * 0.01, 0));
         } else {
           vec3.add(v, v, vec3.fromValues(0, (MODAREA - l) * 0.01, 0));
