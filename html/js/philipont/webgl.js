@@ -47,7 +47,7 @@ const finalVertexSRC = `#version 300 es
         vSpecularStrength = 0.4;
         break;
       case uint(1):
-        vSpecularStrength = 0.9;
+        vSpecularStrength = 1.0;
         break;
       default:
         vSpecularStrength = 0.5;
@@ -58,7 +58,7 @@ const finalVertexSRC = `#version 300 es
       highp vec3 normalizedSunLocation = normalize(uSunLocation);
       vLightColor  = vec3(1.0, 0.4 + 0.6 * normalizedSunLocation.y, normalizedSunLocation.y);
       vLightDir    = normalize(uNormalTransform * uSunLocation);
-      vAmbiant     = 0.1 + 0.4 * normalizedSunLocation.y;
+      vAmbiant     = 0.05 + 0.2 * normalizedSunLocation.y;
       vDiffuse     = vLightColor * clamp(dot(aVertexNormal, normalizedSunLocation), 0.0, 1.0);
       vShadowCoord = (uShadowTransform * aVertexPosition).xyz;
     } else {
@@ -71,32 +71,32 @@ const finalVertexSRC = `#version 300 es
   }
 `;
 
-// #include "Common.cg"    
-// vertout main(float4 gl_Vertex : POSITION,    
+// #include "Common.cg"
+// vertout main(float4 gl_Vertex : POSITION,
 //              uniform float4x4 gl_ModelViewProjectionMatrix,
 //              uniform float3 v3CameraPos,     // The camera's current position
-//              uniform float3 v3LightDir,      // Direction vector to the light source    
-//              uniform float3 v3InvWavelength, // 1 / pow(wavelength, 4) for RGB    
+//              uniform float3 v3LightDir,      // Direction vector to the light source
+//              uniform float3 v3InvWavelength, // 1 / pow(wavelength, 4) for RGB
 //              uniform float fCameraHeight,    // The camera's current height
 //              uniform float fCameraHeight2,   // fCameraHeight^2
 //              uniform float fOuterRadius,     // The outer (atmosphere) radius
 //              uniform float fOuterRadius2,    // fOuterRadius^2
 //              uniform float fInnerRadius,     // The inner (planetary) radius
 //              uniform float fInnerRadius2,    // fInnerRadius^2
-//              uniform float fKrESun,          // Kr * ESun      
+//              uniform float fKrESun,          // Kr * ESun
 //              uniform float fKmESun,          // Km * ESun
 //              uniform float fKr4PI,           // Kr * 4 * PI
 //              uniform float fKm4PI,           // Km * 4 * PI
 //              uniform float fScale,           // 1 / (fOuterRadius - fInnerRadius)
-//              uniform float fScaleOverScaleDepth) // fScale / fScaleDepth  {    
-//   // Get the ray from the camera to the vertex and its length (which    
-//   // is the far point of the ray passing through the atmosphere)      
+//              uniform float fScaleOverScaleDepth) // fScale / fScaleDepth  {
+//   // Get the ray from the camera to the vertex and its length (which
+//   // is the far point of the ray passing through the atmosphere)
 //   float3 v3Pos = gl_Vertex.xyz;
 //   float3 v3Ray = v3Pos - v3CameraPos;
 //   float fFar = length(v3Ray);
 //   v3Ray /= fFar;
 //   // Calculate the closest intersection of the ray with
-//   // the outer atmosphere (point A in Figure 16-3)      
+//   // the outer atmosphere (point A in Figure 16-3)
 //   float fNear = getNearIntersection(v3CameraPos, v3Ray, fCameraHeight2, fOuterRadius2);
 //   // Calculate the ray's start and end positions in the atmosphere,
 //   // then calculate its scattering offset
@@ -105,19 +105,19 @@ const finalVertexSRC = `#version 300 es
 //   float fStartAngle = dot(v3Ray, v3Start) / fOuterRadius;
 //   float fStartDepth = exp(-fInvScaleDepth);
 //   float fStartOffset = fStartDepth * scale(fStartAngle);
-//   // Initialize the scattering loop variables      
-//   float fSampleLength = fFar / fSamples;    
+//   // Initialize the scattering loop variables
+//   float fSampleLength = fFar / fSamples;
 //   float fScaledLength = fSampleLength * fScale;
 //   float3 v3SampleRay = v3Ray * fSampleLength;
 //   float3 v3SamplePoint = v3Start + v3SampleRay * 0.5;
 //   Now loop through the sample points
 //   float3 v3FrontColor = float3(0.0, 0.0, 0.0);
-//   for(int i=0; i<nSamples; i++) { 
+//   for(int i=0; i<nSamples; i++) {
 //     float fHeight = length(v3SamplePoint);
 //     float fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));
 //     float fLightAngle = dot(v3LightDir, v3SamplePoint) / fHeight;
 //     float fCameraAngle = dot(v3Ray, v3SamplePoint) / fHeight;
-//     float fScatter = (fStartOffset + fDepth * (scale(fLightAngle) - scale(fCameraAngle)));      
+//     float fScatter = (fStartOffset + fDepth * (scale(fLightAngle) - scale(fCameraAngle)));
 //     float3 v3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));
 //     v3FrontColor += v3Attenuate * (fDepth * fScaledLength);
 //     v3SamplePoint += v3SampleRay;
@@ -127,7 +127,7 @@ const finalVertexSRC = `#version 300 es
 //   OUT.pos = mul(gl_ModelViewProjectionMatrix, gl_Vertex);
 //   OUT.c0.rgb = v3FrontColor * (v3InvWavelength * fKrESun);
 //   OUT.c1.rgb = v3FrontColor * fKmESun;
-//   OUT.t0 = v3CameraPos - v3Pos;    
+//   OUT.t0 = v3CameraPos - v3Pos;
 //   return OUT;
 // }
 
@@ -138,8 +138,10 @@ const shadowFragmentSRC = `#version 300 es
 
 const finalFragmentSRC = `#version 300 es
   precision highp sampler2DShadow;
+  precision highp float;
 
-  uniform sampler2DShadow uShadowMap;
+  //uniform sampler2DShadow uShadowMap;
+  uniform sampler2D uDepthMap;
 
   in highp vec3  vPosition;
   in highp vec3  vNormal;
@@ -153,15 +155,63 @@ const finalFragmentSRC = `#version 300 es
 
   out highp vec4 FragColor;
 
+  /// PCSS ///
+  // http://developer.download.nvidia.com/whitepapers/2008/PCSS_Integration.pdf
+  uniform mediump int   BLOCKER_SEARCH_NUM_SAMPLES;
+  uniform mediump int   PCF_NUM_SAMPLES;
+  uniform mediump float NEAR_PLANE;
+  uniform mediump float LIGHT_SIZE_UV;
+  uniform highp   vec2  POISSON_DISKS[16];
+
+  float penumbraSize(float zReceiver, float zBlocker) {
+    return (zReceiver - zBlocker) / zBlocker;
+  }
+
+  void findBlocker(out float avgBlockerDepth, out float numBlockers, vec2 uv, float zReceiver) {
+    float searchWidth = LIGHT_SIZE_UV * (zReceiver - NEAR_PLANE) / zReceiver;
+    float blockerSum = 0.0;
+    numBlockers = 0.0;
+    for (int i = 0; i < BLOCKER_SEARCH_NUM_SAMPLES; ++i) {
+      //float depth = texture(uDepthMap, uv + POISSON_DISKS[i] * searchWidth).x;
+      float depth = texture(uDepthMap, uv).x;
+      if (depth < zReceiver) {
+        blockerSum += depth;
+        ++numBlockers;
+      }
+    }
+    avgBlockerDepth = blockerSum / numBlockers;
+  }
+
+  float PCF_Filter(vec2 uv, float zReceiver, float filterRadiusUV) {
+    float sum = 0.0;
+    for (int i = 0; i < PCF_NUM_SAMPLES; ++i) {
+      vec2 offset = POISSON_DISKS[i] * filterRadiusUV;
+      sum += texture(uDepthMap, uv + offset).x < zReceiver ? 0.0 : 1.0;
+    }
+    return sum / float(PCF_NUM_SAMPLES);
+  }
+
+  float PCSS(sampler2D depthMap, vec3 coords) {
+    vec2  uv        = coords.xy;
+    float zReceiver = coords.z;
+    float avgBlockerDepth = 0.0;
+    float numBlockers     = 0.0;
+    findBlocker(avgBlockerDepth, numBlockers, uv, zReceiver);
+    if (numBlockers < 1.0) return 1.0;
+    float penumbraRatio  = penumbraSize(zReceiver, avgBlockerDepth);
+    float filterRadiusUV = penumbraRatio * LIGHT_SIZE_UV * NEAR_PLANE / coords.z;
+    return PCF_Filter(uv, zReceiver, filterRadiusUV);
+  }
+
   void main(void) {
     highp vec3 lighting = vec3(1.0, 1.0, 1.0);
     if (vShadowCoord.x >= 0.0) {
-      highp float vis        = texture(uShadowMap, vShadowCoord);
+      highp float vis        = PCSS(uDepthMap, vShadowCoord);
       highp vec3  viewDir    = normalize(-vPosition);
       highp vec3  reflectDir = reflect(-vLightDir, vNormal);
       highp float spec       = pow(max(dot(viewDir, reflectDir), 0.0), 64.0);
       highp vec3  specular   = vSpecularStrength * spec * vLightColor;
-      lighting = vAmbiant + vis * (vDiffuse + specular);
+      lighting = vAmbiant + (1.0 - vAmbiant) * vis * (vDiffuse + specular);
     }
     FragColor = vec4(vColor.rgb * lighting, vColor.a);
   }
@@ -169,7 +219,7 @@ const finalFragmentSRC = `#version 300 es
 
 // #include "Common.cg"
 // float4 main(float4 c0 : COLOR0,
-//             float4 c1 : COLOR1,    
+//             float4 c1 : COLOR1,
 //             float3 v3Direction : TEXCOORD0,
 //             uniform float3 v3LightDirection,
 //             uniform float g,
@@ -178,7 +228,7 @@ const finalFragmentSRC = `#version 300 es
 //   float fCos2 = fCos * fCos;
 //   float4 color = getRayleighPhase(fCos2) * c0 + getMiePhase(fCos, fCos2, g, g2) * c1;
 //   color.a = color.b;
-//   return color;  
+//   return color;
 // }
 const mat3 = glMatrix.mat3;
 const mat4 = glMatrix.mat4;
@@ -187,15 +237,15 @@ const vec4 = glMatrix.vec4;
 
 const MODAREA = 2.0;
 const SHADOW_TEXTURE_SIZE = 1024;
-const terrainPresets = [{ 
-  R: { min: 0,   max: 0.1, add: 0.8 }, 
+const terrainPresets = [{
+  R: { min: 0,   max: 0.1, add: 0.8 },
   G: { min: 0.3, max: 0.7, add: 0.3 },
-  B: { min: 0,   max: 0.2, add: 0   } 
+  B: { min: 0,   max: 0.2, add: 0   }
 }];
 const waterPreset = {
-  R: { min: 0,     max: 0.0 }, 
+  R: { min: 0,     max: 0.0 },
   G: { min: 0,     max: 0.2 },
-  B: { min: 0.6,   max: 0.8 } 
+  B: { min: 0.6,   max: 0.8 }
 }
 
 const MATERIAL_GROUND = 0;
@@ -207,7 +257,7 @@ class Display {
     this.canvas = canvas;
     canvas.setAttribute("height", window.innerHeight + "px");
     canvas.setAttribute("width",  window.innerWidth - 250  + "px");
-    
+
     const gl = canvas.getContext("webgl2");
     if (!gl) {
       alert("Impossible d'initialiser WebGL. Votre navigateur ou votre machine peut ne pas le supporter.");
@@ -223,10 +273,10 @@ class Display {
       gl.ONE,
       gl.ONE_MINUS_SRC_ALPHA
     );
-  
+
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-  
+
     const shadowShaderProgram = initShaderProgram(gl, shadowVertexSRC, shadowFragmentSRC);
     const shaderProgram       = initShaderProgram(gl, finalVertexSRC, finalFragmentSRC);
     this.programInfo = {
@@ -238,13 +288,18 @@ class Display {
         vertexMaterial:   gl.getAttribLocation(shaderProgram,  'aVertexMaterial')
       },
       uniformLocations: {
-        projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-        modelViewMatrix:  gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-        isLit:            gl.getUniformLocation(shaderProgram, 'uIsLit'),
-        sunLocation:      gl.getUniformLocation(shaderProgram, 'uSunLocation'),
-        shadowTransform:  gl.getUniformLocation(shaderProgram, 'uShadowTransform'),
-        normalTransform:  gl.getUniformLocation(shaderProgram, 'uNormalTransform'),
-        shadowMap:        gl.getUniformLocation(shaderProgram, 'uShadowMap')
+        projectionMatrix:  gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+        modelViewMatrix:   gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+        isLit:             gl.getUniformLocation(shaderProgram, 'uIsLit'),
+        sunLocation:       gl.getUniformLocation(shaderProgram, 'uSunLocation'),
+        shadowTransform:   gl.getUniformLocation(shaderProgram, 'uShadowTransform'),
+        normalTransform:   gl.getUniformLocation(shaderProgram, 'uNormalTransform'),
+        shadowMap:         gl.getUniformLocation(shaderProgram, 'uDepthMap'),
+        blkSrchNumSamples: gl.getUniformLocation(shaderProgram, 'BLOCKER_SEARCH_NUM_SAMPLES'),
+        pcfNumSamples:     gl.getUniformLocation(shaderProgram, 'PCF_NUM_SAMPLES'),
+        nearPlane:         gl.getUniformLocation(shaderProgram, 'NEAR_PLANE'),
+        lightSizeUV:       gl.getUniformLocation(shaderProgram, 'LIGHT_SIZE_UV'),
+        poissonDisks:      gl.getUniformLocation(shaderProgram, 'POISSON_DISKS'),
       }
     };
     this.shadowProgramInfo = {
@@ -264,6 +319,33 @@ class Display {
     DM.stateVariables.translation.actual = vec3.fromValues(0, 0, -6);
     DM.stateVariables.sunPosition.actual = vec3.fromValues(0, 1, 0);
     DM.stateVariables.isLit.actual = true;
+    ////////////////////////////////////////////////////////////////////////
+    // INITIALIZE PCSS CONSTANTS
+    gl.useProgram(shaderProgram);
+    gl.uniform1i(this.programInfo.uniformLocations.blkSrchNumSamples,   16);
+    gl.uniform1i(this.programInfo.uniformLocations.pcfNumSamples,       16);
+    gl.uniform1f(this.programInfo.uniformLocations.nearPlane,          0.1);
+    // 0.5: LIGHT_WORLD_SIZE; 3.75: LIGHT_FRUSTUM_SIZE;
+    gl.uniform1f(this.programInfo.uniformLocations.lightSizeUV,       0.25);
+    gl.uniform2fv(this.programInfo.uniformLocations.poissonDisks,
+      new Float32Array([
+        -0.94201624,  -0.39906216,
+         0.94558609,  -0.76890725,
+        -0.094184101, -0.92938870,
+         0.34495938,   0.29387760,
+        -0.91588581,   0.45771432,
+        -0.81544232,  -0.87912464,
+        -0.38277543,   0.27676845,
+         0.97484398,   0.75648379,
+         0.44323325,  -0.97511554,
+         0.53742981,  -0.47373420,
+        -0.26496911,  -0.41893023,
+         0.79197514,   0.19090188,
+        -0.24188840,   0.99706507,
+        -0.81409955,   0.91437590,
+         0.19984126,   0.78641367,
+         0.14383161,  -0.14100790
+      ]));
   }
 
   initFrameBuffer() {
@@ -271,7 +353,7 @@ class Display {
     const height = SHADOW_TEXTURE_SIZE;
     const gl     = this.gl;
     var depth_buffer, status;
-  
+
     this.frameBuffer = gl.createFramebuffer();
 
     depth_buffer = gl.createTexture();
@@ -282,18 +364,18 @@ class Display {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
-  
+    //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,  gl.TEXTURE_2D, depth_buffer, 0);
-  
+
     status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       console.log("The created frame buffer is invalid: " + status.toString());
       this.frameBuffer = null;
     }
     this.depthBuffer = depth_buffer;
-  
+
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
@@ -311,10 +393,10 @@ class Display {
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.clearDepth(1.0);
     gl.depthFunc(gl.LEQUAL);
-  
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.cullFace(gl.FRONT);
-  
+
     const size = Math.sqrt(level.terrainSizeX * level.terrainSizeX + level.terrainSizeZ * level.terrainSizeZ) / 2;
     const zNear = 0.1;
     const zFar  = 100.0;
@@ -330,15 +412,15 @@ class Display {
                top,
                zNear,
                zFar);
-  
+
     const lightSource = vec3.create();
     vec3.scale(lightSource, DM.stateVariables.sunPosition.actual, 10);
     const modelViewMatrix = mat4.create();
-    mat4.lookAt(modelViewMatrix, 
+    mat4.lookAt(modelViewMatrix,
                 lightSource,
                 vec3.fromValues(0, 0, 0),
                 vec3.fromValues(0, 1, 0));
-  
+
     const shadowTransform = mat4.fromValues(0.5, 0.0, 0.0, 0.0,
                                             0.0, 0.5, 0.0, 0.0,
                                             0.0, 0.0, 0.5, 0.0,
@@ -350,14 +432,14 @@ class Display {
         programInfo.uniformLocations.shadowTransform,
         false,
         shadowTransform);
-  
+
     { // VERTICES
       const numComponents = 3;
       const type = gl.FLOAT;
       const normalize = false;
       const stride = 0;
       const offset = 0;
-  
+
       gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertices);
       gl.vertexAttribPointer(
           shadowProgramInfo.attribLocations.vertexPosition,
@@ -370,7 +452,7 @@ class Display {
           shadowProgramInfo.attribLocations.vertexPosition);
     }
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-  
+
     gl.useProgram(shadowProgramInfo.program);
     gl.uniformMatrix4fv(
         shadowProgramInfo.uniformLocations.projectionMatrix,
@@ -380,7 +462,7 @@ class Display {
         shadowProgramInfo.uniformLocations.modelViewMatrix,
         false,
         modelViewMatrix);
-  
+
     {
       const vertexCount = buffers.nVTriangles.count;
       const type = gl.UNSIGNED_INT;
@@ -401,10 +483,10 @@ class Display {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
     gl.depthFunc(gl.LEQUAL);
-  
+
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.cullFace(gl.BACK);
-  
+
     const fieldOfView = 45 * Math.PI / 180;   // en radians
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
     const zNear = 0.1;
@@ -427,7 +509,7 @@ class Display {
     //            zNear,
     //            zFar);
     this.projectionMatrix = projectionMatrix;
-  
+
     const modelViewMatrix = mat4.create();
     mat4.translate(modelViewMatrix,
                    modelViewMatrix,
@@ -447,14 +529,14 @@ class Display {
     mat4.invert(normalTransform, modelViewMatrix);
     mat4.transpose(normalTransform, normalTransform);
     mat3.fromMat4(normalTransform3x3, normalTransform);
-  
+
     { // VERTICES
       const numComponents = 3;
       const type = gl.FLOAT;
       const normalize = false;
       const stride = 0;
       const offset = 0;
-  
+
       gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertices);
       gl.vertexAttribPointer(
           programInfo.attribLocations.vertexPosition,
@@ -472,7 +554,7 @@ class Display {
       const normalize = false;
       const stride = 0;
       const offset = 0;
-  
+
       gl.bindBuffer(gl.ARRAY_BUFFER, buffers.materials);
       gl.vertexAttribIPointer(
           programInfo.attribLocations.vertexMaterial,
@@ -519,7 +601,7 @@ class Display {
           programInfo.attribLocations.vertexNormal);
     }
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-  
+
     gl.useProgram(programInfo.program);
     gl.uniformMatrix4fv(
         programInfo.uniformLocations.projectionMatrix,
@@ -538,7 +620,7 @@ class Display {
     gl.uniform1i(programInfo.uniformLocations.shadowMap, 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.depthBuffer);
-  
+
     { // Draw lines first
       const vertexCount = buffers.nVLines.count;
       const type = gl.UNSIGNED_INT;
@@ -567,7 +649,7 @@ class Display {
     }
     DM.previousCoords = vec3.fromValues(e.clientY, e.clientX, 0);
   }
-  
+
   mod(e) {
     const canvas = this.canvas
     const invMat = mat4.create();
@@ -594,7 +676,7 @@ class Display {
     pos1[2] = posf[2] / posf[3];
     vec3.sub(mRay, pos1, pos0);
     vec3.normalize(mRay, mRay);
-  
+
     DM.stateVariables.mouseRay.actual = [ pos0, mRay ];
   }
 
@@ -603,7 +685,7 @@ class Display {
     const level    = DM.stateVariables.level.actual;
     const mouseray = DM.stateVariables.mouseRay.actual;
     level.mouse = null;
-  
+
     // VERTICES
     ///////////////////////////////////////////////////////////////////////////////
     var terrain = [];
@@ -615,7 +697,7 @@ class Display {
     var grid = [];
     var gridNormals = [];
     var gridMaterials = [];
-  
+
     if (DM.stateVariables.gridHD.actual) level.gridRes = level.gridSub / 2;
     else                                 level.gridRes = level.gridSub;
     fillTerrainAndWaterArrays(level, mouseray, t, terrain, terrainNormals, water, waterNormals);
@@ -625,7 +707,7 @@ class Display {
       fillGridArray(level, grid, gridNormals);
       for (var i = 0; i < grid.length / 3; i++) gridMaterials.push(MATERIAL_GRID);
     }
-  
+
     const vertices  = terrain.concat(water).concat(grid);
     const normals   = terrainNormals.concat(waterNormals).concat(gridNormals);
     const materials = terrainMaterials.concat(waterMaterials).concat(gridMaterials);
@@ -638,41 +720,41 @@ class Display {
     const materialBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, materialBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(materials), gl.STATIC_DRAW);
-  
+
     if (level.mouse !== null && DM.modApply) {
       applymod(level);
     }
-  
+
     // COLORS
     ///////////////////////////////////////////////////////////////////////////////
     var colors;
-  
+
     if (level.colors === null) {
       setTerrainAndWaterColors(level);
     }
-    
+
     colors = fillTerrainAndWaterColorArrays(level, t);
     if (DM.stateVariables.gridOn.actual) appendGridColors(level, colors);
-  
-  
+
+
     const colorBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-  
+
     // INDICES
     ///////////////////////////////////////////////////////////////////////////////
     var indices = [];
     var nVTriangles = { count: 0, offset: 0, number: 0 };
     var nVLines = { count: 0, offset: 0, number: 0 };
-  
+
     fillTerrainAndWaterIndices(level, t, indices, nVTriangles);
     if (DM.stateVariables.gridOn.actual) appendGridIndices(level, indices, nVLines, nVTriangles);
-  
+
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
-  
-  
+
+
     ///////////////////////////////////////////////////////////////////////////////
     this.buffers = {
       vertices:       vertexBuffer,
@@ -683,7 +765,7 @@ class Display {
       nVTriangles:    nVTriangles,
       nVLines:        nVLines
     };
-  
+
     DM.maxTranslation = level.terrainSizeX / 2;
     DM.maxZoom        = -2 * level.terrainSizeZ;
     DM.modEnabled     = true;
@@ -1016,8 +1098,8 @@ function fillTerrainAndWaterColorArrays(level, t) {
             vec3.sub(l1, v1, level.mouse);
             vec3.sub(l2, v2, level.mouse);
             vec3.sub(l3, v3, level.mouse);
-            if (vec3.length(l1) < MODAREA && 
-                vec3.length(l2) < MODAREA && 
+            if (vec3.length(l1) < MODAREA &&
+                vec3.length(l2) < MODAREA &&
                 vec3.length(l3) < MODAREA) {
               for (var k = 0; k < 3; k++) {
                 colors[(i * nZ + j) * 24 + 4 * k]     += preset.R.add;
@@ -1036,8 +1118,8 @@ function fillTerrainAndWaterColorArrays(level, t) {
             vec3.sub(l1, v1, level.mouse);
             vec3.sub(l2, v2, level.mouse);
             vec3.sub(l3, v3, level.mouse);
-            if (vec3.length(l1) < MODAREA && 
-                vec3.length(l2) < MODAREA && 
+            if (vec3.length(l1) < MODAREA &&
+                vec3.length(l2) < MODAREA &&
                 vec3.length(l3) < MODAREA) {
               for (var k = 0; k < 3; k++) {
                 colors[(i * nZ + j) * 24 + 4 * k + 12] += preset.R.add;
@@ -1164,7 +1246,7 @@ function intersect(plane0, plane1, plane2, mouseray) {
 
   var neg = (s1 < 0) || (s2 < 0) || (s3 < 0);
   var pos = (s1 > 0) || (s2 > 0) || (s3 > 0);
-  
+
   if (!(neg && pos)) return t;
   return null;
 }
