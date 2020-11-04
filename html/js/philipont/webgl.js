@@ -14,34 +14,58 @@ const shadowVertexSRC = `#version 300 es
 `;
 
 const finalVertexSRC = `#version 300 es
-  layout (location = 0) in vec4  aVertexPosition;
-  layout (location = 1) in vec4  aVertexColor;
-  layout (location = 2) in vec3  aVertexNormal;
+  layout (location = 0) in vec4      aVertexPosition;
+  layout (location = 1) in vec4      aVertexColor;
+  layout (location = 2) in vec3      aVertexNormal;
+  layout (location = 3) in lowp uint aVertexMaterial;
 
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
   uniform bool uIsLit;
   uniform vec3 uSunLocation;
   uniform mat4 uShadowTransform;
+  uniform mat3 uNormalTransform;
 
+  out highp vec3  vPosition;
+  out highp vec3  vNormal;
   out lowp  vec4  vColor;
-  out highp vec3  vLighting;
+  out lowp  vec3  vLightColor;
+  out highp vec3  vLightDir;
+  out highp vec3  vDiffuse;
   out highp vec3  vShadowCoord;
-  out highp float vCosTheta;
+  out highp float vAmbiant;
+  out highp float vSpecularStrength;
 
   void main(void) {
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vColor = aVertexColor;
+    vPosition = (uModelViewMatrix * aVertexPosition).xyz;
+    vNormal   = normalize(uNormalTransform * aVertexNormal);
+    vColor    = aVertexColor;
+
+    switch (aVertexMaterial) {
+      case uint(0):
+        vSpecularStrength = 0.4;
+        break;
+      case uint(1):
+        vSpecularStrength = 0.9;
+        break;
+      default:
+        vSpecularStrength = 0.5;
+        break;
+    }
 
     if (uIsLit) {
-      highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
-      highp vec3 directionalLightColor = vec3(1.0, 1.0, 1.0);
-      
-      vCosTheta    = clamp(dot(aVertexNormal, normalize(uSunLocation)), 0.0, 1.0);
-      vLighting    = ambientLight + (directionalLightColor * vCosTheta);
+      highp vec3 normalizedSunLocation = normalize(uSunLocation);
+      vLightColor  = vec3(1.0, 0.4 + 0.6 * normalizedSunLocation.y, normalizedSunLocation.y);
+      vLightDir    = normalize(uNormalTransform * uSunLocation);
+      vAmbiant     = 0.1 + 0.4 * normalizedSunLocation.y;
+      vDiffuse     = vLightColor * clamp(dot(aVertexNormal, normalizedSunLocation), 0.0, 1.0);
       vShadowCoord = (uShadowTransform * aVertexPosition).xyz;
     } else {
-      vLighting    = vec3(1.0, 1.0, 1.0);
+      vLightColor  = vec3(1.0, 1.0, 1.0);
+      vLightDir    = vec3(0.0, 0.0, 0.0);
+      vAmbiant     = 0.0;
+      vDiffuse     = vec3(1.0, 1.0, 1.0);
       vShadowCoord = vec3(-1.0, 0.0, 0.0);
     }
   }
@@ -117,23 +141,29 @@ const finalFragmentSRC = `#version 300 es
 
   uniform sampler2DShadow uShadowMap;
 
+  in highp vec3  vPosition;
+  in highp vec3  vNormal;
   in lowp  vec4  vColor;
-  in highp vec3  vLighting;
+  in lowp  vec3  vLightColor;
+  in highp vec3  vLightDir;
+  in highp vec3  vDiffuse;
   in highp vec3  vShadowCoord;
-  in highp float vCosTheta;
+  in highp float vAmbiant;
+  in highp float vSpecularStrength;
 
   out highp vec4 FragColor;
 
   void main(void) {
-    highp float vis = 1.0;
+    highp vec3 lighting = vec3(1.0, 1.0, 1.0);
     if (vShadowCoord.x >= 0.0) {
-      highp float bias = clamp(0.0001 * tan(acos(vCosTheta)), 0.0, 0.005);
-      // if (texture(uShadowMap, vShadowCoord.xy).z < vShadowCoord.z - bias) {
-      //   vis = 0.2;
-      // }
-      vis = texture(uShadowMap, vShadowCoord - vec3(0.0, 0.0, bias));
+      highp float vis        = texture(uShadowMap, vShadowCoord);
+      highp vec3  viewDir    = normalize(-vPosition);
+      highp vec3  reflectDir = reflect(-vLightDir, vNormal);
+      highp float spec       = pow(max(dot(viewDir, reflectDir), 0.0), 64.0);
+      highp vec3  specular   = vSpecularStrength * spec * vLightColor;
+      lighting = vAmbiant + vis * (vDiffuse + specular);
     }
-    FragColor = vec4(vis * vColor.rgb * vLighting, vColor.a);
+    FragColor = vec4(vColor.rgb * lighting, vColor.a);
   }
 `;
 
@@ -150,6 +180,7 @@ const finalFragmentSRC = `#version 300 es
 //   color.a = color.b;
 //   return color;  
 // }
+const mat3 = glMatrix.mat3;
 const mat4 = glMatrix.mat4;
 const vec3 = glMatrix.vec3;
 const vec4 = glMatrix.vec4;
@@ -166,6 +197,10 @@ const waterPreset = {
   G: { min: 0,     max: 0.2 },
   B: { min: 0.6,   max: 0.8 } 
 }
+
+const MATERIAL_GROUND = 0;
+const MATERIAL_WATER  = 1;
+const MATERIAL_GRID   = 2;
 
 class Display {
   constructor(canvas) {
@@ -199,7 +234,8 @@ class Display {
       attribLocations: {
         vertexPosition:   gl.getAttribLocation(shaderProgram,  'aVertexPosition'),
         vertexColor:      gl.getAttribLocation(shaderProgram,  'aVertexColor'),
-        vertexNormal:     gl.getAttribLocation(shaderProgram,  'aVertexNormal')
+        vertexNormal:     gl.getAttribLocation(shaderProgram,  'aVertexNormal'),
+        vertexMaterial:   gl.getAttribLocation(shaderProgram,  'aVertexMaterial')
       },
       uniformLocations: {
         projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
@@ -207,6 +243,7 @@ class Display {
         isLit:            gl.getUniformLocation(shaderProgram, 'uIsLit'),
         sunLocation:      gl.getUniformLocation(shaderProgram, 'uSunLocation'),
         shadowTransform:  gl.getUniformLocation(shaderProgram, 'uShadowTransform'),
+        normalTransform:  gl.getUniformLocation(shaderProgram, 'uNormalTransform'),
         shadowMap:        gl.getUniformLocation(shaderProgram, 'uShadowMap')
       }
     };
@@ -276,7 +313,7 @@ class Display {
     gl.depthFunc(gl.LEQUAL);
   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    //gl.cullFace(gl.FRONT);
+    gl.cullFace(gl.FRONT);
   
     const size = Math.sqrt(level.terrainSizeX * level.terrainSizeX + level.terrainSizeZ * level.terrainSizeZ) / 2;
     const zNear = 0.1;
@@ -366,7 +403,7 @@ class Display {
     gl.depthFunc(gl.LEQUAL);
   
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    //gl.cullFace(gl.BACK);
+    gl.cullFace(gl.BACK);
   
     const fieldOfView = 45 * Math.PI / 180;   // en radians
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
@@ -404,6 +441,12 @@ class Display {
                 rotation[1],
                 [0.0, 1.0, 0.0]);
     this.modelViewMatrix = modelViewMatrix;
+
+    const normalTransform    = mat4.create();
+    const normalTransform3x3 = mat3.create();
+    mat4.invert(normalTransform, modelViewMatrix);
+    mat4.transpose(normalTransform, normalTransform);
+    mat3.fromMat4(normalTransform3x3, normalTransform);
   
     { // VERTICES
       const numComponents = 3;
@@ -422,6 +465,24 @@ class Display {
           offset);
       gl.enableVertexAttribArray(
           programInfo.attribLocations.vertexPosition);
+    }
+    { // MATERIALS
+      const numComponents = 1;
+      const type = gl.UNSIGNED_BYTE;
+      const normalize = false;
+      const stride = 0;
+      const offset = 0;
+  
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.materials);
+      gl.vertexAttribIPointer(
+          programInfo.attribLocations.vertexMaterial,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          programInfo.attribLocations.vertexMaterial);
     }
     { // COLORS
       const numComponents = 4;
@@ -468,6 +529,10 @@ class Display {
         programInfo.uniformLocations.modelViewMatrix,
         false,
         modelViewMatrix);
+    gl.uniformMatrix3fv(
+        programInfo.uniformLocations.normalTransform,
+        false,
+        normalTransform3x3);
     gl.uniform1i(programInfo.uniformLocations.isLit, DM.stateVariables.isLit.actual);
     gl.uniform3fv(programInfo.uniformLocations.sunLocation, DM.stateVariables.sunPosition.actual);
     gl.uniform1i(programInfo.uniformLocations.shadowMap, 0);
@@ -543,25 +608,36 @@ class Display {
     ///////////////////////////////////////////////////////////////////////////////
     var terrain = [];
     var terrainNormals = [];
+    var terrainMaterials = [];
     var water = [];
     var waterNormals = [];
+    var waterMaterials = [];
     var grid = [];
     var gridNormals = [];
+    var gridMaterials = [];
   
     if (DM.stateVariables.gridHD.actual) level.gridRes = level.gridSub / 2;
     else                                 level.gridRes = level.gridSub;
     fillTerrainAndWaterArrays(level, mouseray, t, terrain, terrainNormals, water, waterNormals);
-    if (DM.stateVariables.gridOn.actual) fillGridArray(level, grid, gridNormals);
+    for (var i = 0; i < terrain.length / 3; i++) terrainMaterials.push(MATERIAL_GROUND);
+    for (var i = 0; i < water.length   / 3; i++) waterMaterials.push(MATERIAL_WATER);
+    if (DM.stateVariables.gridOn.actual) {
+      fillGridArray(level, grid, gridNormals);
+      for (var i = 0; i < grid.length / 3; i++) gridMaterials.push(MATERIAL_GRID);
+    }
   
-  
-    const vertices = terrain.concat(water).concat(grid);
-    const normals  = terrainNormals.concat(waterNormals).concat(gridNormals);
+    const vertices  = terrain.concat(water).concat(grid);
+    const normals   = terrainNormals.concat(waterNormals).concat(gridNormals);
+    const materials = terrainMaterials.concat(waterMaterials).concat(gridMaterials);
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     const normalBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+    const materialBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, materialBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(materials), gl.STATIC_DRAW);
   
     if (level.mouse !== null && DM.modApply) {
       applymod(level);
@@ -601,6 +677,7 @@ class Display {
     this.buffers = {
       vertices:       vertexBuffer,
       normals:        normalBuffer,
+      materials:      materialBuffer,
       colors:         colorBuffer,
       indices:        indexBuffer,
       nVTriangles:    nVTriangles,
