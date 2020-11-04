@@ -431,7 +431,7 @@ class Display {
   }
 
   initFrameBuffers() {
-    const gl     = this.gl;
+    const gl = this.gl;
     var status;
 
     /// DEPTH BUFFER ///
@@ -481,7 +481,6 @@ class Display {
     const render_frame_buffer = gl.createFramebuffer();
     const render_buffer       = gl.createRenderbuffer();
     const render_depth_buffer = gl.createRenderbuffer();
-
     gl.bindRenderbuffer(gl.RENDERBUFFER, render_buffer);
     gl.renderbufferStorageMultisample(gl.RENDERBUFFER,
                                       8,
