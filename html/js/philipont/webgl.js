@@ -46,7 +46,7 @@ const sceneVertexSRC = `#version 300 es
     switch (aVertexMaterial) {
       case uint(0):
         vSpecularSoft     = vec2(0.4, 64.0);
-        vSpecularHard     = vec2(0.0,  0.0);
+        vSpecularHard     = vec2(0.0, 32.0);
         break;
       case uint(1):
         vSpecularSoft     = vec2(0.5,  256.0);
@@ -54,7 +54,7 @@ const sceneVertexSRC = `#version 300 es
         break;
       default:
         vSpecularSoft     = vec2(0.5, 32.0);
-        vSpecularHard     = vec2(0.0,  0.0);
+        vSpecularHard     = vec2(0.0, 32.0);
         break;
     }
 
@@ -224,7 +224,7 @@ const sceneFragmentSRC = `#version 300 es
       highp float anglef     = max(dot(viewDir, reflectDir), 0.0);
       highp float soft       = pow(anglef, vSpecularSoft.y);
       highp float hard       = pow(anglef, vSpecularHard.y);
-      highlight = (vSpecularSoft.x * soft)  * vLightColor;
+      highlight = vis * ((vSpecularSoft.x * soft) + (vSpecularHard.x * hard))  * vLightColor;
       lighting  = vAmbiant + (1.0 - vAmbiant) * vis * vDiffuse;
     }
     FragColor = vec4(vColor.rgb * lighting + highlight, vColor.a);
