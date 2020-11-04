@@ -102,6 +102,7 @@ class DisplayManager {
       }
       if (scene) {
         this.display.drawScene();
+        this.display.drawHDR();
       }
       ticks = new Date().getTime() - ticks;
       if (this.frameRateDisplay !== null) this.frameRateDisplay.innerHTML = (1000 / ticks).toFixed(1) + " FPS";

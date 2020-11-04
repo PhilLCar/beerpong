@@ -8,12 +8,12 @@ const shadowVertexSRC = `#version 300 es
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
 
-  void main() {
+  void main(void) {
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
   }
 `;
 
-const finalVertexSRC = `#version 300 es
+const sceneVertexSRC = `#version 300 es
   layout (location = 0) in vec4      aVertexPosition;
   layout (location = 1) in vec4      aVertexColor;
   layout (location = 2) in vec3      aVertexNormal;
@@ -34,7 +34,8 @@ const finalVertexSRC = `#version 300 es
   out highp vec3  vDiffuse;
   out highp vec3  vShadowCoord;
   out highp float vAmbiant;
-  out highp float vSpecularStrength;
+  out highp vec2  vSpecularSoft;
+  out highp vec2  vSpecularHard;
 
   void main(void) {
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
@@ -44,13 +45,16 @@ const finalVertexSRC = `#version 300 es
 
     switch (aVertexMaterial) {
       case uint(0):
-        vSpecularStrength = 0.4;
+        vSpecularSoft     = vec2(0.4, 64.0);
+        vSpecularHard     = vec2(0.0,  0.0);
         break;
       case uint(1):
-        vSpecularStrength = 1.0;
+        vSpecularSoft     = vec2(0.5,  256.0);
+        vSpecularHard     = vec2(8.0, 4096.0);
         break;
       default:
-        vSpecularStrength = 0.5;
+        vSpecularSoft     = vec2(0.5, 32.0);
+        vSpecularHard     = vec2(0.0,  0.0);
         break;
     }
 
@@ -68,6 +72,14 @@ const finalVertexSRC = `#version 300 es
       vDiffuse     = vec3(1.0, 1.0, 1.0);
       vShadowCoord = vec3(-1.0, 0.0, 0.0);
     }
+  }
+`;
+
+const hdrVertexSRC=`#version 300 es
+  layout (location = 4) in vec4 aVertexPosition;
+
+  void main(void) {
+    gl_Position = aVertexPosition;
   }
 `;
 
@@ -136,12 +148,10 @@ const shadowFragmentSRC = `#version 300 es
   void main(void) { }
 `;
 
-const finalFragmentSRC = `#version 300 es
-  precision highp sampler2DShadow;
+const sceneFragmentSRC = `#version 300 es
   precision highp float;
-
-  //uniform sampler2DShadow uShadowMap;
-  uniform sampler2D uDepthMap;
+  
+  uniform sampler2D uShadowMap;
 
   in highp vec3  vPosition;
   in highp vec3  vNormal;
@@ -151,7 +161,8 @@ const finalFragmentSRC = `#version 300 es
   in highp vec3  vDiffuse;
   in highp vec3  vShadowCoord;
   in highp float vAmbiant;
-  in highp float vSpecularStrength;
+  in highp vec2  vSpecularSoft;
+  in highp vec2  vSpecularHard;
 
   out highp vec4 FragColor;
 
@@ -172,8 +183,8 @@ const finalFragmentSRC = `#version 300 es
     float blockerSum = 0.0;
     numBlockers = 0.0;
     for (int i = 0; i < BLOCKER_SEARCH_NUM_SAMPLES; ++i) {
-      //float depth = texture(uDepthMap, uv + POISSON_DISKS[i] * searchWidth).x;
-      float depth = texture(uDepthMap, uv).x;
+      //float depth = texture(uShadowMap, uv + POISSON_DISKS[i] * searchWidth).x;
+      float depth = texture(uShadowMap, uv).x;
       if (depth < zReceiver) {
         blockerSum += depth;
         ++numBlockers;
@@ -186,12 +197,12 @@ const finalFragmentSRC = `#version 300 es
     float sum = 0.0;
     for (int i = 0; i < PCF_NUM_SAMPLES; ++i) {
       vec2 offset = POISSON_DISKS[i] * filterRadiusUV;
-      sum += texture(uDepthMap, uv + offset).x < zReceiver ? 0.0 : 1.0;
+      sum += texture(uShadowMap, uv + offset).x < zReceiver ? 0.0 : 1.0;
     }
     return sum / float(PCF_NUM_SAMPLES);
   }
 
-  float PCSS(sampler2D depthMap, vec3 coords) {
+  float PCSS(vec3 coords) {
     vec2  uv        = coords.xy;
     float zReceiver = coords.z;
     float avgBlockerDepth = 0.0;
@@ -204,16 +215,48 @@ const finalFragmentSRC = `#version 300 es
   }
 
   void main(void) {
-    highp vec3 lighting = vec3(1.0, 1.0, 1.0);
+    highp vec3 lighting  = vec3(1.0, 1.0, 1.0);
+    highp vec3 highlight = vec3(0.0, 0.0, 0.0);
     if (vShadowCoord.x >= 0.0) {
-      highp float vis        = PCSS(uDepthMap, vShadowCoord);
+      highp float vis        = PCSS(vShadowCoord);
       highp vec3  viewDir    = normalize(-vPosition);
       highp vec3  reflectDir = reflect(-vLightDir, vNormal);
-      highp float spec       = pow(max(dot(viewDir, reflectDir), 0.0), 64.0);
-      highp vec3  specular   = vSpecularStrength * spec * vLightColor;
-      lighting = vAmbiant + (1.0 - vAmbiant) * vis * (vDiffuse + specular);
+      highp float anglef     = max(dot(viewDir, reflectDir), 0.0);
+      highp float soft       = pow(anglef, vSpecularSoft.y);
+      highp float hard       = pow(anglef, vSpecularHard.y);
+      highlight = (vSpecularSoft.x * soft)  * vLightColor;
+      lighting  = vAmbiant + (1.0 - vAmbiant) * vis * vDiffuse;
     }
-    FragColor = vec4(vColor.rgb * lighting, vColor.a);
+    FragColor = vec4(vColor.rgb * lighting + highlight, vColor.a);
+  }
+`;
+
+const hdrFragmentSRC =`#version 300 es
+  precision highp float;
+
+  uniform sampler2D      uSceneMap;
+  uniform highp     vec2 uViewport;
+
+  out lowp vec4 FragColor;
+
+  // LIGHT BLEED ALGORITHM
+  uniform lowp    int   BLEED_NUM_SAMPLES;
+  uniform highp   float BLEED_RADIUS;
+  uniform highp   vec2  POISSON_DISKS[16];
+
+  vec3 lightBleed(vec2 coord) {
+    highp vec3  color = texture(uSceneMap, coord).rgb;
+    highp vec3  sum   = vec3(0.0, 0.0, 0.0);
+    if (length(color) >= 1.0) return color;
+    for (lowp int i = 0; i < BLEED_NUM_SAMPLES; ++i) {
+      sum += max(texture(uSceneMap, coord + POISSON_DISKS[i] * BLEED_RADIUS).rgb,
+                 vec3(1.0, 1.0, 1.0)) - vec3(1.0, 1.0, 1.0);
+    }
+    return color + sum / float(BLEED_NUM_SAMPLES);
+  }
+
+  void main(void) {
+    FragColor = vec4(lightBleed(gl_FragCoord.xy / uViewport), 1.0);
   }
 `;
 
@@ -230,6 +273,35 @@ const finalFragmentSRC = `#version 300 es
 //   color.a = color.b;
 //   return color;
 // }
+const POISSON_DISKS = new Float32Array([
+  -0.94201624,  -0.39906216,
+   0.94558609,  -0.76890725,
+  -0.094184101, -0.92938870,
+   0.34495938,   0.29387760,
+  -0.91588581,   0.45771432,
+  -0.81544232,  -0.87912464,
+  -0.38277543,   0.27676845,
+   0.97484398,   0.75648379,
+   0.44323325,  -0.97511554,
+   0.53742981,  -0.47373420,
+  -0.26496911,  -0.41893023,
+   0.79197514,   0.19090188,
+  -0.24188840,   0.99706507,
+  -0.81409955,   0.91437590,
+   0.19984126,   0.78641367,
+   0.14383161,  -0.14100790
+]);
+
+const viewportCoords = new Float32Array([
+   1.0,  1.0, 0.0,
+  -1.0,  1.0, 0.0,
+  -1.0, -1.0, 0.0,
+   1.0, -1.0, 0.0
+]);
+const viewportIndices = new Uint32Array([
+  0, 1, 2, 0, 2, 3
+])
+
 const mat3 = glMatrix.mat3;
 const mat4 = glMatrix.mat4;
 const vec3 = glMatrix.vec3;
@@ -258,10 +330,18 @@ class Display {
     canvas.setAttribute("height", window.innerHeight + "px");
     canvas.setAttribute("width",  window.innerWidth - 250  + "px");
 
-    const gl = canvas.getContext("webgl2");
+    const gl = canvas.getContext("webgl2", { antialias: false });
     if (!gl) {
-      alert("Impossible d'initialiser WebGL. Votre navigateur ou votre machine peut ne pas le supporter.");
-      return;
+      return alert("Your browser does not support WebGL2!");
+    }
+    if (!gl.getExtension('EXT_color_buffer_float')) {
+      return alert("Your browser is missing the extension: 'EXT_color_buffer_float'");
+    }
+    if (!gl.getExtension('EXT_float_blend')) {
+      return alert("Your browser is missing the extension: 'EXT_float_blend'");
+    }
+    if (!gl.getExtension('OES_texture_float_linear')) { // TODO: MAYBE SWITCH TO NEAREST
+      return alert("Your browser is missing the extension: 'OES_texture_float_linear'");
     }
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
@@ -275,10 +355,21 @@ class Display {
     );
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const shadowShaderProgram = initShaderProgram(gl, shadowVertexSRC, shadowFragmentSRC);
-    const shaderProgram       = initShaderProgram(gl, finalVertexSRC, finalFragmentSRC);
+    const shaderProgram       = initShaderProgram(gl, sceneVertexSRC,  sceneFragmentSRC);
+    const hdrProgram          = initShaderProgram(gl, hdrVertexSRC,    hdrFragmentSRC);
+    this.shadowProgramInfo = {
+      program: shadowShaderProgram,
+      attribLocations: {
+        vertexPosition:   gl.getAttribLocation(shadowShaderProgram,  'aVertexPosition'),
+      },
+      uniformLocations: {
+        projectionMatrix: gl.getUniformLocation(shadowShaderProgram, 'uProjectionMatrix'),
+        modelViewMatrix:  gl.getUniformLocation(shadowShaderProgram, 'uModelViewMatrix')
+      },
+    }
     this.programInfo = {
       program: shaderProgram,
       attribLocations: {
@@ -294,7 +385,7 @@ class Display {
         sunLocation:       gl.getUniformLocation(shaderProgram, 'uSunLocation'),
         shadowTransform:   gl.getUniformLocation(shaderProgram, 'uShadowTransform'),
         normalTransform:   gl.getUniformLocation(shaderProgram, 'uNormalTransform'),
-        shadowMap:         gl.getUniformLocation(shaderProgram, 'uDepthMap'),
+        shadowMap:         gl.getUniformLocation(shaderProgram, 'uShadowMap'),
         blkSrchNumSamples: gl.getUniformLocation(shaderProgram, 'BLOCKER_SEARCH_NUM_SAMPLES'),
         pcfNumSamples:     gl.getUniformLocation(shaderProgram, 'PCF_NUM_SAMPLES'),
         nearPlane:         gl.getUniformLocation(shaderProgram, 'NEAR_PLANE'),
@@ -302,19 +393,22 @@ class Display {
         poissonDisks:      gl.getUniformLocation(shaderProgram, 'POISSON_DISKS'),
       }
     };
-    this.shadowProgramInfo = {
-      program: shadowShaderProgram,
+    this.hdrProgramInfo = {
+      program: hdrProgram,
       attribLocations: {
-        vertexPosition:   gl.getAttribLocation(shadowShaderProgram,  'aVertexPosition'),
+        vertexPosition:   gl.getAttribLocation(hdrProgram,  'aVertexPosition'),
       },
       uniformLocations: {
-        projectionMatrix: gl.getUniformLocation(shadowShaderProgram, 'uProjectionMatrix'),
-        modelViewMatrix:  gl.getUniformLocation(shadowShaderProgram, 'uModelViewMatrix')
+        sceneMap:         gl.getUniformLocation(hdrProgram, 'uSceneMap'),
+        viewport:         gl.getUniformLocation(hdrProgram, 'uViewport'),
+        bleedNumSamples:  gl.getUniformLocation(hdrProgram, 'BLEED_NUM_SAMPLES'),
+        bleedRadius:      gl.getUniformLocation(hdrProgram, 'BLEED_RADIUS'),
+        poissonDisks:     gl.getUniformLocation(hdrProgram, 'POISSON_DISKS')
       },
     }
     this.gl = gl;
     this.buffers = null;
-    this.initFrameBuffer();
+    this.initFrameBuffers();
     DM.stateVariables.rotation.actual    = vec3.fromValues(Math.PI / 20, 0, 0);
     DM.stateVariables.translation.actual = vec3.fromValues(0, 0, -6);
     DM.stateVariables.sunPosition.actual = vec3.fromValues(0, 1, 0);
@@ -327,54 +421,101 @@ class Display {
     gl.uniform1f(this.programInfo.uniformLocations.nearPlane,          0.1);
     // 0.5: LIGHT_WORLD_SIZE; 3.75: LIGHT_FRUSTUM_SIZE;
     gl.uniform1f(this.programInfo.uniformLocations.lightSizeUV,       0.25);
-    gl.uniform2fv(this.programInfo.uniformLocations.poissonDisks,
-      new Float32Array([
-        -0.94201624,  -0.39906216,
-         0.94558609,  -0.76890725,
-        -0.094184101, -0.92938870,
-         0.34495938,   0.29387760,
-        -0.91588581,   0.45771432,
-        -0.81544232,  -0.87912464,
-        -0.38277543,   0.27676845,
-         0.97484398,   0.75648379,
-         0.44323325,  -0.97511554,
-         0.53742981,  -0.47373420,
-        -0.26496911,  -0.41893023,
-         0.79197514,   0.19090188,
-        -0.24188840,   0.99706507,
-        -0.81409955,   0.91437590,
-         0.19984126,   0.78641367,
-         0.14383161,  -0.14100790
-      ]));
+    gl.uniform2fv(this.programInfo.uniformLocations.poissonDisks, POISSON_DISKS);
+    ////////////////////////////////////////////////////////////////////////
+    // INITIALIZE BLEED CONSTANTS
+    gl.useProgram(hdrProgram);
+    gl.uniform1i(this.hdrProgramInfo.uniformLocations.bleedNumSamples,     16);
+    gl.uniform1f(this.hdrProgramInfo.uniformLocations.bleedRadius,       0.01);
+    gl.uniform2fv(this.hdrProgramInfo.uniformLocations.poissonDisks, POISSON_DISKS);
   }
 
-  initFrameBuffer() {
-    const width  = SHADOW_TEXTURE_SIZE;
-    const height = SHADOW_TEXTURE_SIZE;
+  initFrameBuffers() {
     const gl     = this.gl;
-    var depth_buffer, status;
+    var status;
 
-    this.frameBuffer = gl.createFramebuffer();
-
-    depth_buffer = gl.createTexture();
+    /// DEPTH BUFFER ///
+    const depth_frame_buffer = gl.createFramebuffer();
+    const depth_buffer       = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, depth_buffer);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32F, width, height, 0,
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32F, SHADOW_TEXTURE_SIZE, SHADOW_TEXTURE_SIZE, 0,
                                     gl.DEPTH_COMPONENT, gl.FLOAT, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, depth_frame_buffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,  gl.TEXTURE_2D, depth_buffer, 0);
+
+    status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+      console.log("The created frame buffer is invalid: " + status.toString());
+    }
+    this.depthFrameBuffer = depth_frame_buffer;
+    this.depthBuffer      = depth_buffer;
+
+    /// HDR BUFFER ///
+    const hdr_frame_buffer = gl.createFramebuffer();
+    const hdr_buffer       = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, hdr_buffer);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, gl.canvas.clientWidth, gl.canvas.clientHeight, 0,
+                                    gl.RGBA, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, hdr_frame_buffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,  gl.TEXTURE_2D, hdr_buffer, 0);
 
     status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       console.log("The created frame buffer is invalid: " + status.toString());
       this.frameBuffer = null;
     }
-    this.depthBuffer = depth_buffer;
+    this.hdrFrameBuffer = hdr_frame_buffer;
+    this.hdrBuffer      = hdr_buffer;
+
+    /// RENDER BUFFER ///
+    const render_frame_buffer = gl.createFramebuffer();
+    const render_buffer       = gl.createRenderbuffer();
+    const render_depth_buffer = gl.createRenderbuffer();
+
+    gl.bindRenderbuffer(gl.RENDERBUFFER, render_buffer);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER,
+                                      8,
+                                      gl.RGBA32F,
+                                      gl.canvas.clientWidth,
+                                      gl.canvas.clientHeight);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, render_depth_buffer);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER,
+                                      8,
+                                      gl.DEPTH_COMPONENT32F,
+                                      gl.canvas.clientWidth,
+                                      gl.canvas.clientHeight);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, render_frame_buffer);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, render_buffer);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,  gl.RENDERBUFFER, render_depth_buffer);
+
+    status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+      console.log("The created frame buffer is invalid: " + status.toString());
+      this.frameBuffer = null;
+    }
+    this.renderFrameBuffer = render_frame_buffer;
+    this.renderBuffer      = render_buffer;
+
+    /// HDR COORDS ///
+    const hdrVertices = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, hdrVertices);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(viewportCoords), gl.STATIC_DRAW);
+    this.hdrVertices = hdrVertices;
+    const hdrIndices = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, hdrIndices);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(viewportIndices), gl.STATIC_DRAW);
+    this.hdrIndices = hdrIndices;
 
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -382,13 +523,12 @@ class Display {
 
   drawShadows() {
     const gl = this.gl;
-    const frameBuffer = this.frameBuffer;
     const programInfo       = this.programInfo;
     const shadowProgramInfo = this.shadowProgramInfo;
     const level = DM.stateVariables.level.actual;
     const buffers = this.buffers;
     if (buffers === null) return;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.depthFrameBuffer);
     gl.viewport(0, 0, SHADOW_TEXTURE_SIZE, SHADOW_TEXTURE_SIZE);
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.clearDepth(1.0);
@@ -478,7 +618,7 @@ class Display {
     const rotation = DM.stateVariables.rotation.actual;
     const translation = DM.stateVariables.translation.actual;
     if (buffers === null) return;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.renderFrameBuffer);
     gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
@@ -631,6 +771,62 @@ class Display {
       const vertexCount = buffers.nVTriangles.count;
       const type = gl.UNSIGNED_INT;
       const offset = 4 * buffers.nVTriangles.offset;
+      gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+    }
+
+    // ANTI ALIAS
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.renderFrameBuffer);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.hdrFrameBuffer);
+    gl.clearBufferfv(gl.COLOR, 0, [ 0.0, 0.0, 0.0, 1.0 ]);
+    gl.blitFramebuffer(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight,
+                       0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight,
+                       gl.COLOR_BUFFER_BIT, gl.LINEAR);
+  }
+
+  drawHDR() {
+    const gl = this.gl;
+    const hdrProgramInfo = this.hdrProgramInfo;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearDepth(1.0);
+    gl.depthFunc(gl.LEQUAL);
+
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    { // VERTICES
+      const numComponents = 3;
+      const type = gl.FLOAT;
+      const normalize = false;
+      const stride = 0;
+      const offset = 0;
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.hdrVertices);
+      gl.vertexAttribPointer(
+          hdrProgramInfo.attribLocations.vertexPosition,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          hdrProgramInfo.attribLocations.vertexPosition);
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.hdrIndices);
+
+    gl.useProgram(hdrProgramInfo.program);
+    gl.uniform2fv(hdrProgramInfo.uniformLocations.viewport, new Float32Array([
+      gl.canvas.clientWidth,
+      gl.canvas.clientHeight
+    ]));
+    gl.uniform1i(hdrProgramInfo.uniformLocations.sceneMap, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.hdrBuffer);
+
+    { // Draw lines first
+      const vertexCount = 6;
+      const type = gl.UNSIGNED_INT;
+      const offset = 0;
       gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
   }
