@@ -11,6 +11,7 @@ class DisplayManager {
     this.maxZoom          = -6;
     this.previousCoords   = null;
     this.display          = null;
+    this.atmosphere       = null;
     this.stateVariables   = {};
     this.interface        = null;
     this.delta            = null;
@@ -95,14 +96,15 @@ class DisplayManager {
         this.delta = null;
       }
       if (buffers) {
-        this.display.updateBuffers(this.delta);
+        //this.display.updateBuffers(this.delta);
       }
       if (shadows) {
-        this.display.drawShadows();
+        //this.display.drawShadows();
+        this.atmosphere.drawAtmosphere();
       }
       if (scene) {
-        this.display.drawScene();
-        this.display.drawHDR();
+        //this.display.drawScene();
+        //this.display.drawHDR();
       }
       ticks = new Date().getTime() - ticks;
       if (this.frameRateDisplay !== null) this.frameRateDisplay.innerHTML = (1000 / ticks).toFixed(1) + " FPS";

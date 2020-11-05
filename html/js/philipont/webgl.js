@@ -428,6 +428,8 @@ class Display {
     gl.uniform1i(this.hdrProgramInfo.uniformLocations.bleedNumSamples,     16);
     gl.uniform1f(this.hdrProgramInfo.uniformLocations.bleedRadius,       0.01);
     gl.uniform2fv(this.hdrProgramInfo.uniformLocations.poissonDisks, POISSON_DISKS);
+
+    DM.atmosphere = new Atmosphere(gl);
   }
 
   initFrameBuffers() {
