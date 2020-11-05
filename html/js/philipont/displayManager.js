@@ -23,6 +23,7 @@ class DisplayManager {
     this.addStateVariable("mouseRay",     null);
     this.addStateVariable("rotation",     null);
     this.addStateVariable("translation",  null);
+    this.addStateVariable("atmoOn",       null);
   }
 
   addStateVariable(name, value) {
@@ -84,6 +85,9 @@ class DisplayManager {
       } else if (this.stateVariables.sunPosition.hasChanged) {
         shadows = true;
         scene   = true;
+      } else if (this.stateVariables.atmoOn.hasChanged) {
+        shadows = true;
+        scene   = true;
       } else if (this.stateVariables.isLit.hasChanged) {
         shadows = true;
         scene   = true;
@@ -96,15 +100,15 @@ class DisplayManager {
         this.delta = null;
       }
       if (buffers) {
-        //this.display.updateBuffers(this.delta);
+        this.display.updateBuffers(this.delta);
       }
       if (shadows) {
-        //this.display.drawShadows();
+        this.display.drawShadows();
         this.atmosphere.drawAtmosphere();
       }
       if (scene) {
-        //this.display.drawScene();
-        //this.display.drawHDR();
+        this.display.drawScene();
+        this.display.drawHDR();
       }
       ticks = new Date().getTime() - ticks;
       if (this.frameRateDisplay !== null) this.frameRateDisplay.innerHTML = (1000 / ticks).toFixed(1) + " FPS";

@@ -36,12 +36,16 @@ const sceneVertexSRC = `#version 300 es
   out highp float vAmbiant;
   out highp vec2  vSpecularSoft;
   out highp vec2  vSpecularHard;
+  out highp vec3  vAtmoCoord;
+
+  flat out lowp  uint  vAtmosphere;
 
   void main(void) {
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vPosition = (uModelViewMatrix * aVertexPosition).xyz;
-    vNormal   = normalize(uNormalTransform * aVertexNormal);
-    vColor    = aVertexColor;
+    vPosition   = (uModelViewMatrix * aVertexPosition).xyz;
+    vNormal     = normalize(uNormalTransform * aVertexNormal);
+    vColor      = aVertexColor;
+    vAtmosphere = uint(0);
 
     switch (aVertexMaterial) {
       case uint(0):
@@ -51,6 +55,10 @@ const sceneVertexSRC = `#version 300 es
       case uint(1):
         vSpecularSoft     = vec2(0.5,  256.0);
         vSpecularHard     = vec2(8.0, 4096.0);
+        break;
+      case uint(3):
+        vAtmosphere = uint(1);
+        vAtmoCoord  = normalize(aVertexPosition.xyz);
         break;
       default:
         vSpecularSoft     = vec2(0.5, 32.0);
@@ -83,75 +91,18 @@ const hdrVertexSRC=`#version 300 es
   }
 `;
 
-// #include "Common.cg"
-// vertout main(float4 gl_Vertex : POSITION,
-//              uniform float4x4 gl_ModelViewProjectionMatrix,
-//              uniform float3 v3CameraPos,     // The camera's current position
-//              uniform float3 v3LightDir,      // Direction vector to the light source
-//              uniform float3 v3InvWavelength, // 1 / pow(wavelength, 4) for RGB
-//              uniform float fCameraHeight,    // The camera's current height
-//              uniform float fCameraHeight2,   // fCameraHeight^2
-//              uniform float fOuterRadius,     // The outer (atmosphere) radius
-//              uniform float fOuterRadius2,    // fOuterRadius^2
-//              uniform float fInnerRadius,     // The inner (planetary) radius
-//              uniform float fInnerRadius2,    // fInnerRadius^2
-//              uniform float fKrESun,          // Kr * ESun
-//              uniform float fKmESun,          // Km * ESun
-//              uniform float fKr4PI,           // Kr * 4 * PI
-//              uniform float fKm4PI,           // Km * 4 * PI
-//              uniform float fScale,           // 1 / (fOuterRadius - fInnerRadius)
-//              uniform float fScaleOverScaleDepth) // fScale / fScaleDepth  {
-//   // Get the ray from the camera to the vertex and its length (which
-//   // is the far point of the ray passing through the atmosphere)
-//   float3 v3Pos = gl_Vertex.xyz;
-//   float3 v3Ray = v3Pos - v3CameraPos;
-//   float fFar = length(v3Ray);
-//   v3Ray /= fFar;
-//   // Calculate the closest intersection of the ray with
-//   // the outer atmosphere (point A in Figure 16-3)
-//   float fNear = getNearIntersection(v3CameraPos, v3Ray, fCameraHeight2, fOuterRadius2);
-//   // Calculate the ray's start and end positions in the atmosphere,
-//   // then calculate its scattering offset
-//   float3 v3Start = v3CameraPos + v3Ray * fNear;
-//   fFar -= fNear;
-//   float fStartAngle = dot(v3Ray, v3Start) / fOuterRadius;
-//   float fStartDepth = exp(-fInvScaleDepth);
-//   float fStartOffset = fStartDepth * scale(fStartAngle);
-//   // Initialize the scattering loop variables
-//   float fSampleLength = fFar / fSamples;
-//   float fScaledLength = fSampleLength * fScale;
-//   float3 v3SampleRay = v3Ray * fSampleLength;
-//   float3 v3SamplePoint = v3Start + v3SampleRay * 0.5;
-//   Now loop through the sample points
-//   float3 v3FrontColor = float3(0.0, 0.0, 0.0);
-//   for(int i=0; i<nSamples; i++) {
-//     float fHeight = length(v3SamplePoint);
-//     float fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));
-//     float fLightAngle = dot(v3LightDir, v3SamplePoint) / fHeight;
-//     float fCameraAngle = dot(v3Ray, v3SamplePoint) / fHeight;
-//     float fScatter = (fStartOffset + fDepth * (scale(fLightAngle) - scale(fCameraAngle)));
-//     float3 v3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));
-//     v3FrontColor += v3Attenuate * (fDepth * fScaledLength);
-//     v3SamplePoint += v3SampleRay;
-//   }
-//   // Finally, scale the Mie and Rayleigh colors
-//   vertout OUT;
-//   OUT.pos = mul(gl_ModelViewProjectionMatrix, gl_Vertex);
-//   OUT.c0.rgb = v3FrontColor * (v3InvWavelength * fKrESun);
-//   OUT.c1.rgb = v3FrontColor * fKmESun;
-//   OUT.t0 = v3CameraPos - v3Pos;
-//   return OUT;
-// }
-
 // Fragment shader
 const shadowFragmentSRC = `#version 300 es
   void main(void) { }
 `;
 
 const sceneFragmentSRC = `#version 300 es
+  #define PI 3.141592653589793238462643383
+
   precision highp float;
   
   uniform sampler2D uShadowMap;
+  uniform sampler2D uAtmosphere;
 
   in highp vec3  vPosition;
   in highp vec3  vNormal;
@@ -163,16 +114,20 @@ const sceneFragmentSRC = `#version 300 es
   in highp float vAmbiant;
   in highp vec2  vSpecularSoft;
   in highp vec2  vSpecularHard;
+  in highp vec3  vAtmoCoord;
+
+  flat in lowp  uint  vAtmosphere;
 
   out highp vec4 FragColor;
 
   /// PCSS ///
   // http://developer.download.nvidia.com/whitepapers/2008/PCSS_Integration.pdf
-  uniform mediump int   BLOCKER_SEARCH_NUM_SAMPLES;
-  uniform mediump int   PCF_NUM_SAMPLES;
-  uniform mediump float NEAR_PLANE;
-  uniform mediump float LIGHT_SIZE_UV;
-  uniform highp   vec2  POISSON_DISKS[16];
+  #define BLOCKER_SEARCH_NUM_SAMPLES 16
+  #define PCF_NUM_SAMPLES            16
+  #define NEAR_PLANE                 0.01
+  #define LIGHT_SIZE_UV              0.18
+
+  uniform highp vec2 POISSON_DISKS[16];
 
   float penumbraSize(float zReceiver, float zBlocker) {
     return (zReceiver - zBlocker) / zBlocker;
@@ -217,7 +172,12 @@ const sceneFragmentSRC = `#version 300 es
   void main(void) {
     highp vec3 lighting  = vec3(1.0, 1.0, 1.0);
     highp vec3 highlight = vec3(0.0, 0.0, 0.0);
-    if (vShadowCoord.x >= 0.0) {
+    if (vAtmosphere == uint(1)) {
+      highp float r = acos(vAtmoCoord.y) / (PI / 2.0);
+      highp vec2  p = normalize(vAtmoCoord.xz) * vec2(1.0, -1.0);
+      FragColor = texture(uAtmosphere, (r * p + vec2(1.0, 1.0)) / 2.0);
+      return;
+    } else if (vShadowCoord.x >= 0.0) {
       highp float vis        = PCSS(vShadowCoord);
       highp vec3  viewDir    = normalize(-vPosition);
       highp vec3  reflectDir = reflect(-vLightDir, vNormal);
@@ -240,9 +200,10 @@ const hdrFragmentSRC =`#version 300 es
   out lowp vec4 FragColor;
 
   // LIGHT BLEED ALGORITHM
-  uniform lowp    int   BLEED_NUM_SAMPLES;
-  uniform highp   float BLEED_RADIUS;
-  uniform highp   vec2  POISSON_DISKS[16];
+  #define BLEED_NUM_SAMPLES 16
+  #define BLEED_RADIUS      0.01
+
+  uniform highp vec2 POISSON_DISKS[16];
 
   vec3 lightBleed(vec2 coord) {
     highp vec3  color = texture(uSceneMap, coord).rgb;
@@ -260,19 +221,6 @@ const hdrFragmentSRC =`#version 300 es
   }
 `;
 
-// #include "Common.cg"
-// float4 main(float4 c0 : COLOR0,
-//             float4 c1 : COLOR1,
-//             float3 v3Direction : TEXCOORD0,
-//             uniform float3 v3LightDirection,
-//             uniform float g,
-//             uniform float g2) : COLOR {
-//   float fCos = dot(v3LightDirection, v3Direction) / length(v3Direction);
-//   float fCos2 = fCos * fCos;
-//   float4 color = getRayleighPhase(fCos2) * c0 + getMiePhase(fCos, fCos2, g, g2) * c1;
-//   color.a = color.b;
-//   return color;
-// }
 const POISSON_DISKS = new Float32Array([
   -0.94201624,  -0.39906216,
    0.94558609,  -0.76890725,
@@ -323,6 +271,7 @@ const waterPreset = {
 const MATERIAL_GROUND = 0;
 const MATERIAL_WATER  = 1;
 const MATERIAL_GRID   = 2;
+const MATERIAL_ATMO   = 3;
 
 class Display {
   constructor(canvas) {
@@ -386,11 +335,8 @@ class Display {
         shadowTransform:   gl.getUniformLocation(shaderProgram, 'uShadowTransform'),
         normalTransform:   gl.getUniformLocation(shaderProgram, 'uNormalTransform'),
         shadowMap:         gl.getUniformLocation(shaderProgram, 'uShadowMap'),
-        blkSrchNumSamples: gl.getUniformLocation(shaderProgram, 'BLOCKER_SEARCH_NUM_SAMPLES'),
-        pcfNumSamples:     gl.getUniformLocation(shaderProgram, 'PCF_NUM_SAMPLES'),
-        nearPlane:         gl.getUniformLocation(shaderProgram, 'NEAR_PLANE'),
-        lightSizeUV:       gl.getUniformLocation(shaderProgram, 'LIGHT_SIZE_UV'),
-        poissonDisks:      gl.getUniformLocation(shaderProgram, 'POISSON_DISKS'),
+        atmosphere:        gl.getUniformLocation(shaderProgram, 'uAtmosphere'),
+        poissonDisks:      gl.getUniformLocation(shaderProgram, 'POISSON_DISKS')
       }
     };
     this.hdrProgramInfo = {
@@ -401,8 +347,6 @@ class Display {
       uniformLocations: {
         sceneMap:         gl.getUniformLocation(hdrProgram, 'uSceneMap'),
         viewport:         gl.getUniformLocation(hdrProgram, 'uViewport'),
-        bleedNumSamples:  gl.getUniformLocation(hdrProgram, 'BLEED_NUM_SAMPLES'),
-        bleedRadius:      gl.getUniformLocation(hdrProgram, 'BLEED_RADIUS'),
         poissonDisks:     gl.getUniformLocation(hdrProgram, 'POISSON_DISKS')
       },
     }
@@ -412,21 +356,15 @@ class Display {
     DM.stateVariables.rotation.actual    = vec3.fromValues(Math.PI / 20, 0, 0);
     DM.stateVariables.translation.actual = vec3.fromValues(0, 0, -6);
     DM.stateVariables.sunPosition.actual = vec3.fromValues(0, 1, 0);
-    DM.stateVariables.isLit.actual = true;
+    DM.stateVariables.isLit.actual  = true;
+    DM.stateVariables.atmoOn.actual = true;
     ////////////////////////////////////////////////////////////////////////
     // INITIALIZE PCSS CONSTANTS
     gl.useProgram(shaderProgram);
-    gl.uniform1i(this.programInfo.uniformLocations.blkSrchNumSamples,   16);
-    gl.uniform1i(this.programInfo.uniformLocations.pcfNumSamples,       16);
-    gl.uniform1f(this.programInfo.uniformLocations.nearPlane,          0.1);
-    // 0.5: LIGHT_WORLD_SIZE; 3.75: LIGHT_FRUSTUM_SIZE;
-    gl.uniform1f(this.programInfo.uniformLocations.lightSizeUV,       0.25);
     gl.uniform2fv(this.programInfo.uniformLocations.poissonDisks, POISSON_DISKS);
     ////////////////////////////////////////////////////////////////////////
     // INITIALIZE BLEED CONSTANTS
     gl.useProgram(hdrProgram);
-    gl.uniform1i(this.hdrProgramInfo.uniformLocations.bleedNumSamples,     16);
-    gl.uniform1f(this.hdrProgramInfo.uniformLocations.bleedRadius,       0.01);
     gl.uniform2fv(this.hdrProgramInfo.uniformLocations.poissonDisks, POISSON_DISKS);
 
     DM.atmosphere = new Atmosphere(gl);
@@ -474,7 +412,6 @@ class Display {
     status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       console.log("The created frame buffer is invalid: " + status.toString());
-      this.frameBuffer = null;
     }
     this.hdrFrameBuffer = hdr_frame_buffer;
     this.hdrBuffer      = hdr_buffer;
@@ -503,7 +440,6 @@ class Display {
     status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       console.log("The created frame buffer is invalid: " + status.toString());
-      this.frameBuffer = null;
     }
     this.renderFrameBuffer = render_frame_buffer;
     this.renderBuffer      = render_buffer;
@@ -534,8 +470,6 @@ class Display {
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.clearDepth(1.0);
     gl.depthFunc(gl.LEQUAL);
-
-    //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.cullFace(gl.FRONT);
 
     const size = Math.sqrt(level.terrainSizeX * level.terrainSizeX + level.terrainSizeZ * level.terrainSizeZ) / 2;
@@ -624,7 +558,6 @@ class Display {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
     gl.depthFunc(gl.LEQUAL);
-
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.cullFace(gl.BACK);
 
@@ -761,6 +694,9 @@ class Display {
     gl.uniform1i(programInfo.uniformLocations.shadowMap, 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.depthBuffer);
+    gl.uniform1i(programInfo.uniformLocations.atmosphere, 1);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, DM.atmosphere.atmoBuffer);
 
     { // Draw lines first
       const vertexCount = buffers.nVLines.count;
@@ -894,20 +830,33 @@ class Display {
     var grid = [];
     var gridNormals = [];
     var gridMaterials = [];
+    var atmo = [];
+    var atmoNormals = [];
+    var atmoMaterials = [];
 
     if (DM.stateVariables.gridHD.actual) level.gridRes = level.gridSub / 2;
     else                                 level.gridRes = level.gridSub;
     fillTerrainAndWaterArrays(level, mouseray, t, terrain, terrainNormals, water, waterNormals);
     for (var i = 0; i < terrain.length / 3; i++) terrainMaterials.push(MATERIAL_GROUND);
     for (var i = 0; i < water.length   / 3; i++) waterMaterials.push(MATERIAL_WATER);
+    if (DM.stateVariables.atmoOn.actual) {
+      if (level.atmosphere === null) {
+        level.atmosphere = generateSphereBuffers([0, level.waterLevel, 0], 
+                                                 Math.sqrt(level.terrainSizeX * level.terrainSizeX + level.terrainSizeZ * level.terrainSizeZ) * 3, 
+                                                 20, true, [0.5, 0.5, 0.5, 1.0], MATERIAL_ATMO);
+      }
+      atmo          = level.atmosphere.vertices;
+      atmoNormals   = level.atmosphere.normals;
+      atmoMaterials = level.atmosphere.materials;
+    }
     if (DM.stateVariables.gridOn.actual) {
       fillGridArray(level, grid, gridNormals);
       for (var i = 0; i < grid.length / 3; i++) gridMaterials.push(MATERIAL_GRID);
     }
 
-    const vertices  = terrain.concat(water).concat(grid);
-    const normals   = terrainNormals.concat(waterNormals).concat(gridNormals);
-    const materials = terrainMaterials.concat(waterMaterials).concat(gridMaterials);
+    const vertices  = terrain.concat(water).concat(atmo).concat(grid);
+    const normals   = terrainNormals.concat(waterNormals).concat(atmoNormals).concat(gridNormals);
+    const materials = terrainMaterials.concat(waterMaterials).concat(atmoMaterials).concat(gridMaterials);
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
@@ -931,6 +880,7 @@ class Display {
     }
 
     colors = fillTerrainAndWaterColorArrays(level, t);
+    if (DM.stateVariables.atmoOn.actual) colors = colors.concat(level.atmosphere.colors);
     if (DM.stateVariables.gridOn.actual) appendGridColors(level, colors);
 
 
@@ -945,6 +895,7 @@ class Display {
     var nVLines = { count: 0, offset: 0, number: 0 };
 
     fillTerrainAndWaterIndices(level, t, indices, nVTriangles);
+    if (DM.stateVariables.atmoOn.actual) appendAtmoIndices(level, indices, nVTriangles);
     if (DM.stateVariables.gridOn.actual) appendGridIndices(level, indices, nVLines, nVTriangles);
 
     const indexBuffer = gl.createBuffer();
@@ -1391,6 +1342,15 @@ function fillTerrainAndWaterIndices(level, t, indices, nVTriangles) {
   }
 }
 
+function appendAtmoIndices(level, indices, nVTriangles) {
+  var len = level.atmosphere.indices.length;
+  for (var i = 0; i < len; i++) {
+    indices.push(nVTriangles.number + level.atmosphere.indices[i]);
+  }
+  nVTriangles.number += level.atmosphere.vertices.length;
+  nVTriangles.count  += len;
+}
+
 function appendGridIndices(level, indices, nVLines, nVTriangles) {
   var gX = Math.floor(level.terrainSizeX / level.gridRes);
   var lt = nVTriangles.number;
@@ -1412,6 +1372,124 @@ function appendGridIndices(level, indices, nVLines, nVTriangles) {
     indices.push(lt + ll++);
   }
   nVLines.count = ll;
+}
+
+function generateSphereBuffers(position, size, resolution, inverted, color, material) {
+  const vertices  = [];
+  const normals   = [];
+  const materials = [];
+  const colors    = [];
+  const indices   = [];
+
+  // Add top point
+  vertices.push(position[0]);
+  vertices.push(position[1] + size);
+  vertices.push(position[2]);
+  normals.push(0.0);
+  normals.push(inverted ? -1.0 : 1.0);
+  normals.push(0.0);
+  materials.push(material);
+  colors.push(color[0]);
+  colors.push(color[1]);
+  colors.push(color[2]);
+  colors.push(color[3]);
+  for (var i = 1; i < resolution / 2; i++) {
+    for (var j = 0; j < resolution; j++) {
+      // VERTEX
+      var y   = Math.cos(Math.PI * i / (resolution / 2)) * size;
+      var rxz = Math.sin(Math.PI * i / (resolution / 2)) * size;
+      var x   = Math.cos(Math.PI * 2 * j / resolution) * rxz;
+      var z   = Math.sin(Math.PI * 2 * j / resolution) * rxz;
+      vertices.push(x + position[0]);
+      vertices.push(y + position[1]);
+      vertices.push(z + position[2]);
+      // NORMAL
+      const normal = vec3.fromValues(x, y, z);
+      vec3.normalize(normal, normal);
+      if (inverted) {
+        normals.push(-normal[0]);
+        normals.push(-normal[1]);
+        normals.push(-normal[2]);
+      } else {
+        normals.push(normal[0]);
+        normals.push(normal[1]);
+        normals.push(normal[2]);
+      }
+      // MATERIAL
+      materials.push(material);
+      // COLOR
+      colors.push(color[0]);
+      colors.push(color[1]);
+      colors.push(color[2]);
+      colors.push(color[3]);
+    }
+  }
+  // Add bottom point
+  vertices.push(position[0]);
+  vertices.push(position[1] - size);
+  vertices.push(position[2]);
+  normals.push(0.0);
+  normals.push(inverted ? 1.0 : -1.0);
+  normals.push(0.0);
+  materials.push(material);
+  colors.push(color[0]);
+  colors.push(color[1]);
+  colors.push(color[2]);
+  colors.push(color[3]);
+  // INDICES
+  // top row
+  if (inverted) {
+    for (var i = 0; i < resolution; i++) {
+      indices.push(0);
+      indices.push( i                   + 1);
+      indices.push((i + 1) % resolution + 1);
+    }
+    for (var i = 0; i < (resolution / 2) - 2; i++) {
+      for (var j = 0; j < resolution; j++) {
+        indices.push( j                   +  i      * resolution + 1);
+        indices.push((j + 1) % resolution + (i + 1) * resolution + 1);
+        indices.push((j + 1) % resolution +  i      * resolution + 1);
+        indices.push( j                   +  i      * resolution + 1);
+        indices.push( j                   + (i + 1) * resolution + 1);
+        indices.push((j + 1) % resolution + (i + 1) * resolution + 1);
+      }
+    }
+    // bottom row
+    for (var i = 0; i < resolution; i++) {
+      indices.push( i                   + (resolution / 2 - 2) * resolution + 1);
+      indices.push(                       (resolution / 2 - 1) * resolution + 1);
+      indices.push((i + 1) % resolution + (resolution / 2 - 2) * resolution + 1);
+    }
+  } else {
+    for (var i = 0; i < resolution; i++) {
+      indices.push(0);
+      indices.push((i + 1) % resolution + 1);
+      indices.push( i                   + 1);
+    }
+    for (var i = 0; i < (resolution / 2) - 2; i++) {
+      for (var j = 0; j < resolution; j++) {
+        indices.push( j                   +  i      * resolution + 1);
+        indices.push((j + 1) % resolution +  i      * resolution + 1);
+        indices.push((j + 1) % resolution + (i + 1) * resolution + 1);
+        indices.push( j                   +  i      * resolution + 1);
+        indices.push((j + 1) % resolution + (i + 1) * resolution + 1);
+        indices.push( j                   + (i + 1) * resolution + 1);
+      }
+    }
+    // bottom row
+    for (var i = 0; i < resolution; i++) {
+      indices.push( i                   + (resolution / 2 - 2) * resolution + 1);
+      indices.push((i + 1) % resolution + (resolution / 2 - 2) * resolution + 1);
+      indices.push(                       (resolution / 2 - 1) * resolution + 1);
+    }
+  }
+  return {
+    vertices:  vertices,
+    normals:   normals,
+    materials: materials,
+    colors:    colors,
+    indices:   indices
+  }
 }
 
 // https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle

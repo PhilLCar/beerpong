@@ -55,19 +55,19 @@ const atmoFragSRC = `#version 300 es
     return true;
   }
 
-  vec3 computeIncidentLight(vec3 orig, vec3 dir, float min, float max) {
+  vec3 computeIncidentLight(vec3 orig, vec3 dir, float tmin, float tmax) {
     float t0;
     float t1;
     if (!raySphereIntersect(orig, dir, uAtmoRadius, t0, t1) || t1 < 0.0) return vec3(0.0, 0.0, 0.0);
-    if (t0 > min && t0 > 0.0) min = t0;
-    if (t1 < max)             max = t1;
-    float segmentLength = (max - min) / float(NUM_SAMPLES);
-    float current       = min;
+    if (t0 > tmin && t0 > 0.0) tmin = t0;
+    if (t1 < tmax)             tmax = t1;
+    float segmentLength = (tmax - tmin) / float(NUM_SAMPLES);
+    float current       = tmin;
     vec3  sumR = vec3(0.0, 0.0, 0.0);
     vec3  sumM = vec3(0.0, 0.0, 0.0);
     float optDepthR = 0.0;
     float optDepthM = 0.0;
-    float mu        = dot(dir, uSunDirection);
+    float mu        = max(0.01, pow(dot(dir, uSunDirection), 32.0));
     float mu2       = mu * mu;
     float phaseR    = 3.0 / (16.0 * PI) * (1.0 + mu2);
     float g         = 0.76;
@@ -107,15 +107,17 @@ const atmoFragSRC = `#version 300 es
   }
 
   void main(void) {
-    vec2  coords = gl_FragCoord.xy / uViewport * 2.0 - vec2(1.0, 1.0);
+    vec2  coords = (gl_FragCoord.xy / uViewport * 2.0 - vec2(1.0, 1.0)) * uViewport.x / (uViewport.x - 32.0);
     float z2     = coords.x * coords.x + coords.y * coords.y;
     float phi    = atan(-coords.y, coords.x);
     float theta  = acos(1.0 - z2);
     vec3  dir    = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
-    vec3  orig   = vec3(0.0, uPlanetRadius + 1.0, 0.0);
+    vec3  orig   = vec3(0.0, uPlanetRadius, 0.0);
     FragColor    = vec4(computeIncidentLight(orig, dir, MIN, MAX), 1.0);
   }
 `;
+
+const ATMOSPHERE_TEXTURE_SIZE = 1024;
 
 class Atmosphere {
   constructor(gl) {
@@ -149,11 +151,11 @@ class Atmosphere {
     const gl = this.gl;
     var status;
 
-    /// RENDER BUFFER ///
+    /// ATMO BUFFER ///
     const atmo_frame_buffer = gl.createFramebuffer();
     const atmo_buffer       = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, atmo_buffer);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, gl.canvas.clientWidth, gl.canvas.clientHeight, 0,
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, ATMOSPHERE_TEXTURE_SIZE, ATMOSPHERE_TEXTURE_SIZE, 0,
                                     gl.RGBA, gl.FLOAT, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -166,7 +168,6 @@ class Atmosphere {
     status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     if (status !== gl.FRAMEBUFFER_COMPLETE) {
       console.log("The created frame buffer is invalid: " + status.toString());
-      this.frameBuffer = null;
     }
     this.atmoFrameBuffer = atmo_frame_buffer;
     this.atmoBuffer      = atmo_buffer;
@@ -188,13 +189,11 @@ class Atmosphere {
   drawAtmosphere() {
     const gl          = this.gl;
     const programInfo = this.programInfo;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.atmoFrameBuffer);
+    gl.viewport(0, 0, ATMOSPHERE_TEXTURE_SIZE, ATMOSPHERE_TEXTURE_SIZE);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clearDepth(1.0);
-    gl.depthFunc(gl.LEQUAL);
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.cullFace(gl.BACK);
 
     { // VERTICES
       const numComponents = 3;
@@ -218,8 +217,8 @@ class Atmosphere {
     gl.useProgram(programInfo.program);
     gl.uniform3fv(programInfo.uniformLocations.sunDirection, DM.stateVariables.sunPosition.actual);
     gl.uniform2fv(programInfo.uniformLocations.viewport, new Float32Array([
-      gl.canvas.clientWidth,
-      gl.canvas.clientHeight
+      ATMOSPHERE_TEXTURE_SIZE,
+      ATMOSPHERE_TEXTURE_SIZE
     ]));
 
     { // Draw lines first

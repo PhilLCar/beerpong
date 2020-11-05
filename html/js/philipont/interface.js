@@ -132,10 +132,11 @@ class Interface {
       }
       level.links.push(link);
     }
-    level.colors  = null;
-    level.gridRes = 0.1;
-    level.gridSub = 0.2;
-    level.gridZ   = 1;
+    level.atmosphere = null;
+    level.colors     = null;
+    level.gridRes    = 0.1;
+    level.gridSub    = 0.2;
+    level.gridZ      = 1;
     return level;
   }
 }
