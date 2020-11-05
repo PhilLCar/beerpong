@@ -10,7 +10,7 @@ class DisplayManager {
     this.maxTranslation   = 10;
     this.maxZoom          = -6;
     this.previousCoords   = null;
-    this.display          = null;
+    this.scene          = null;
     this.atmosphere       = null;
     this.stateVariables   = {};
     this.interface        = null;

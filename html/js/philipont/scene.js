@@ -1,225 +1,8 @@
-/* Most of the code below is strongly inspired by (or straight out copied from):
- * https://developer.mozilla.org/fr/docs/Web/API/WebGL_API/Tutorial/Commencer_avec_WebGL
- */
-// Vertex shader
-const shadowVertexSRC = `#version 300 es
-  layout (location = 0) in vec4 aVertexPosition;
 
-  uniform mat4 uModelViewMatrix;
-  uniform mat4 uProjectionMatrix;
-
-  void main(void) {
-    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-  }
-`;
-
-const sceneVertexSRC = `#version 300 es
-  layout (location = 0) in vec4      aVertexPosition;
-  layout (location = 1) in vec4      aVertexColor;
-  layout (location = 2) in vec3      aVertexNormal;
-  layout (location = 3) in lowp uint aVertexMaterial;
-
-  uniform mat4 uModelViewMatrix;
-  uniform mat4 uProjectionMatrix;
-  uniform bool uIsLit;
-  uniform vec3 uSunLocation;
-  uniform mat4 uShadowTransform;
-  uniform mat3 uNormalTransform;
-
-  out highp vec3  vPosition;
-  out highp vec3  vNormal;
-  out lowp  vec4  vColor;
-  out lowp  vec3  vLightColor;
-  out highp vec3  vLightDir;
-  out highp vec3  vDiffuse;
-  out highp vec3  vShadowCoord;
-  out highp float vAmbiant;
-  out highp vec2  vSpecularSoft;
-  out highp vec2  vSpecularHard;
-  out highp vec3  vAtmoCoord;
-
-  flat out lowp  uint  vAtmosphere;
-
-  void main(void) {
-    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vPosition   = (uModelViewMatrix * aVertexPosition).xyz;
-    vNormal     = normalize(uNormalTransform * aVertexNormal);
-    vColor      = aVertexColor;
-    vAtmosphere = uint(0);
-
-    switch (aVertexMaterial) {
-      case uint(0):
-        vSpecularSoft     = vec2(0.4, 64.0);
-        vSpecularHard     = vec2(0.0, 32.0);
-        break;
-      case uint(1):
-        vSpecularSoft     = vec2(0.5,  256.0);
-        vSpecularHard     = vec2(8.0, 4096.0);
-        break;
-      case uint(3):
-        vAtmosphere = uint(1);
-        vAtmoCoord  = normalize(aVertexPosition.xyz);
-        break;
-      default:
-        vSpecularSoft     = vec2(0.5, 32.0);
-        vSpecularHard     = vec2(0.0, 32.0);
-        break;
-    }
-
-    if (uIsLit) {
-      highp vec3 normalizedSunLocation = normalize(uSunLocation);
-      vLightColor  = vec3(1.0, 0.4 + 0.6 * normalizedSunLocation.y, normalizedSunLocation.y);
-      vLightDir    = normalize(uNormalTransform * uSunLocation);
-      vAmbiant     = 0.05 + 0.2 * normalizedSunLocation.y;
-      vDiffuse     = vLightColor * clamp(dot(aVertexNormal, normalizedSunLocation), 0.0, 1.0);
-      vShadowCoord = (uShadowTransform * aVertexPosition).xyz;
-    } else {
-      vLightColor  = vec3(1.0, 1.0, 1.0);
-      vLightDir    = vec3(0.0, 0.0, 0.0);
-      vAmbiant     = 0.0;
-      vDiffuse     = vec3(1.0, 1.0, 1.0);
-      vShadowCoord = vec3(-1.0, 0.0, 0.0);
-    }
-  }
-`;
-
-const hdrVertexSRC=`#version 300 es
-  layout (location = 4) in vec4 aVertexPosition;
-
-  void main(void) {
-    gl_Position = aVertexPosition;
-  }
-`;
-
-// Fragment shader
-const shadowFragmentSRC = `#version 300 es
-  void main(void) { }
-`;
-
-const sceneFragmentSRC = `#version 300 es
-  #define PI 3.141592653589793238462643383
-
-  precision highp float;
-  
-  uniform sampler2D uShadowMap;
-  uniform sampler2D uAtmosphere;
-
-  in highp vec3  vPosition;
-  in highp vec3  vNormal;
-  in lowp  vec4  vColor;
-  in lowp  vec3  vLightColor;
-  in highp vec3  vLightDir;
-  in highp vec3  vDiffuse;
-  in highp vec3  vShadowCoord;
-  in highp float vAmbiant;
-  in highp vec2  vSpecularSoft;
-  in highp vec2  vSpecularHard;
-  in highp vec3  vAtmoCoord;
-
-  flat in lowp  uint  vAtmosphere;
-
-  out highp vec4 FragColor;
-
-  /// PCSS ///
-  // http://developer.download.nvidia.com/whitepapers/2008/PCSS_Integration.pdf
-  #define BLOCKER_SEARCH_NUM_SAMPLES 16
-  #define PCF_NUM_SAMPLES            16
-  #define NEAR_PLANE                 0.01
-  #define LIGHT_SIZE_UV              0.18
-
-  uniform highp vec2 POISSON_DISKS[16];
-
-  float penumbraSize(float zReceiver, float zBlocker) {
-    return (zReceiver - zBlocker) / zBlocker;
-  }
-
-  void findBlocker(out float avgBlockerDepth, out float numBlockers, vec2 uv, float zReceiver) {
-    float searchWidth = LIGHT_SIZE_UV * (zReceiver - NEAR_PLANE) / zReceiver;
-    float blockerSum = 0.0;
-    numBlockers = 0.0;
-    for (int i = 0; i < BLOCKER_SEARCH_NUM_SAMPLES; ++i) {
-      //float depth = texture(uShadowMap, uv + POISSON_DISKS[i] * searchWidth).x;
-      float depth = texture(uShadowMap, uv).x;
-      if (depth < zReceiver) {
-        blockerSum += depth;
-        ++numBlockers;
-      }
-    }
-    avgBlockerDepth = blockerSum / numBlockers;
-  }
-
-  float PCF_Filter(vec2 uv, float zReceiver, float filterRadiusUV) {
-    float sum = 0.0;
-    for (int i = 0; i < PCF_NUM_SAMPLES; ++i) {
-      vec2 offset = POISSON_DISKS[i] * filterRadiusUV;
-      sum += texture(uShadowMap, uv + offset).x < zReceiver ? 0.0 : 1.0;
-    }
-    return sum / float(PCF_NUM_SAMPLES);
-  }
-
-  float PCSS(vec3 coords) {
-    vec2  uv        = coords.xy;
-    float zReceiver = coords.z;
-    float avgBlockerDepth = 0.0;
-    float numBlockers     = 0.0;
-    findBlocker(avgBlockerDepth, numBlockers, uv, zReceiver);
-    if (numBlockers < 1.0) return 1.0;
-    float penumbraRatio  = penumbraSize(zReceiver, avgBlockerDepth);
-    float filterRadiusUV = penumbraRatio * LIGHT_SIZE_UV * NEAR_PLANE / coords.z;
-    return PCF_Filter(uv, zReceiver, filterRadiusUV);
-  }
-
-  void main(void) {
-    highp vec3 lighting  = vec3(1.0, 1.0, 1.0);
-    highp vec3 highlight = vec3(0.0, 0.0, 0.0);
-    if (vAtmosphere == uint(1)) {
-      highp float r = acos(vAtmoCoord.y) / (PI / 2.0);
-      highp vec2  p = normalize(vAtmoCoord.xz) * vec2(1.0, -1.0);
-      FragColor = texture(uAtmosphere, (r * p + vec2(1.0, 1.0)) / 2.0);
-      return;
-    } else if (vShadowCoord.x >= 0.0) {
-      highp float vis        = PCSS(vShadowCoord);
-      highp vec3  viewDir    = normalize(-vPosition);
-      highp vec3  reflectDir = reflect(-vLightDir, vNormal);
-      highp float anglef     = max(dot(viewDir, reflectDir), 0.0);
-      highp float soft       = pow(anglef, vSpecularSoft.y);
-      highp float hard       = pow(anglef, vSpecularHard.y);
-      highlight = vis * ((vSpecularSoft.x * soft) + (vSpecularHard.x * hard))  * vLightColor;
-      lighting  = vAmbiant + (1.0 - vAmbiant) * vis * vDiffuse;
-    }
-    FragColor = vec4(vColor.rgb * lighting + highlight, vColor.a);
-  }
-`;
-
-const hdrFragmentSRC =`#version 300 es
-  precision highp float;
-
-  uniform sampler2D      uSceneMap;
-  uniform highp     vec2 uViewport;
-
-  out lowp vec4 FragColor;
-
-  // LIGHT BLEED ALGORITHM
-  #define BLEED_NUM_SAMPLES 16
-  #define BLEED_RADIUS      0.01
-
-  uniform highp vec2 POISSON_DISKS[16];
-
-  vec3 lightBleed(vec2 coord) {
-    highp vec3  color = texture(uSceneMap, coord).rgb;
-    highp vec3  sum   = vec3(0.0, 0.0, 0.0);
-    if (length(color) >= 1.0) return color;
-    for (lowp int i = 0; i < BLEED_NUM_SAMPLES; ++i) {
-      sum += max(texture(uSceneMap, coord + POISSON_DISKS[i] * BLEED_RADIUS).rgb,
-                 vec3(1.0, 1.0, 1.0)) - vec3(1.0, 1.0, 1.0);
-    }
-    return color + sum / float(BLEED_NUM_SAMPLES);
-  }
-
-  void main(void) {
-    FragColor = vec4(lightBleed(gl_FragCoord.xy / uViewport), 1.0);
-  }
-`;
+const mat3 = glMatrix.mat3;
+const mat4 = glMatrix.mat4;
+const vec3 = glMatrix.vec3;
+const vec4 = glMatrix.vec4;
 
 const POISSON_DISKS = new Float32Array([
   -0.94201624,  -0.39906216,
@@ -240,40 +23,33 @@ const POISSON_DISKS = new Float32Array([
    0.14383161,  -0.14100790
 ]);
 
-const viewportCoords = new Float32Array([
-   1.0,  1.0, 0.0,
-  -1.0,  1.0, 0.0,
-  -1.0, -1.0, 0.0,
-   1.0, -1.0, 0.0
-]);
-const viewportIndices = new Uint32Array([
-  0, 1, 2, 0, 2, 3
-])
+const VIEWPORT = {
+  vertices: null,
+  vertexBuffer: new Float32Array([
+     1.0,  1.0, 0.0,
+    -1.0,  1.0, 0.0,
+    -1.0, -1.0, 0.0,
+     1.0, -1.0, 0.0
+  ]),
+  normals: null,
+  normalBuffer: null,
+  colorBuffer:  null,
+  indices: null,
+  indexBuffer: new Uint32Array([
+    0, 1, 2, 0, 2, 3
+  ]),
+  vertexCount: 6,
+  offset: 0
+};
 
-const mat3 = glMatrix.mat3;
-const mat4 = glMatrix.mat4;
-const vec3 = glMatrix.vec3;
-const vec4 = glMatrix.vec4;
-
-const MODAREA = 2.0;
+const MODAREA             = 2.0;
 const SHADOW_TEXTURE_SIZE = 1024;
-const terrainPresets = [{
-  R: { min: 0,   max: 0.1, add: 0.8 },
-  G: { min: 0.3, max: 0.7, add: 0.3 },
-  B: { min: 0,   max: 0.2, add: 0   }
-}];
-const waterPreset = {
-  R: { min: 0,     max: 0.0 },
-  G: { min: 0,     max: 0.2 },
-  B: { min: 0.6,   max: 0.8 }
-}
+const MAX_NUM_LIGHTS      = 4;
 
-const MATERIAL_GROUND = 0;
-const MATERIAL_WATER  = 1;
-const MATERIAL_GRID   = 2;
-const MATERIAL_ATMO   = 3;
+const ZNEAR = 0.1;
+const ZFAR  = 100.0;
 
-class Display {
+class Scene {
   constructor(canvas) {
     this.canvas = canvas;
     canvas.setAttribute("height", window.innerHeight + "px");
@@ -328,15 +104,25 @@ class Display {
         vertexMaterial:   gl.getAttribLocation(shaderProgram,  'aVertexMaterial')
       },
       uniformLocations: {
-        projectionMatrix:  gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-        modelViewMatrix:   gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-        isLit:             gl.getUniformLocation(shaderProgram, 'uIsLit'),
-        sunLocation:       gl.getUniformLocation(shaderProgram, 'uSunLocation'),
-        shadowTransform:   gl.getUniformLocation(shaderProgram, 'uShadowTransform'),
-        normalTransform:   gl.getUniformLocation(shaderProgram, 'uNormalTransform'),
-        shadowMap:         gl.getUniformLocation(shaderProgram, 'uShadowMap'),
-        atmosphere:        gl.getUniformLocation(shaderProgram, 'uAtmosphere'),
-        poissonDisks:      gl.getUniformLocation(shaderProgram, 'POISSON_DISKS')
+        modelViewMatrix:      gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+        projectionMatrix:     gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+        shadowTransform:      gl.getUniformLocation(shaderProgram, 'uShadowTransform'),
+        normalTransform:      gl.getUniformLocation(shaderProgram, 'uNormalTransform'),
+        isLit:                gl.getUniformLocation(shaderProgram, 'uIsLit'),
+        lightDirectional:     gl.getUniformLocation(shaderProgram, 'uLightDirectional'),
+        lightPosition:        gl.getUniformLocation(shaderProgram, 'uLightPosition'),
+        lightColor:           gl.getUniformLocation(shaderProgram, 'uLightColor'),
+        lightNum:             gl.getUniformLocation(shaderProgram, 'uLightNum'),
+        materialTextureMap:   gl.getUniformLocation(shaderProgram, 'uMaterialTextureMap'),
+        materialBumpMap:      gl.getUniformLocation(shaderProgram, 'uMaterialBumpMap'),
+        materialAmbiant:      gl.getUniformLocation(shaderProgram, 'uMaterialAmbiant'),
+        materialDiffuse:      gl.getUniformLocation(shaderProgram, 'uMaterialDiffuse'),
+        materialSpecularSoft: gl.getUniformLocation(shaderProgram, 'uMaterialSpecularSoft'),
+        materialSpecularHard: gl.getUniformLocation(shaderProgram, 'uMaterialSpecularHard'),
+        objectCenter:         gl.getUniformLocation(shaderProgram, 'uObjectCenter'),
+        objectType:           gl.getUniformLocation(shaderProgram, 'uObjectType'),
+        shadowMap:            gl.getUniformLocation(shaderProgram, 'uShadowMap'),
+        poissonDisks:         gl.getUniformLocation(shaderProgram, 'POISSON_DISKS')
       }
     };
     this.hdrProgramInfo = {
@@ -356,8 +142,8 @@ class Display {
     DM.stateVariables.rotation.actual    = vec3.fromValues(Math.PI / 20, 0, 0);
     DM.stateVariables.translation.actual = vec3.fromValues(0, 0, -6);
     DM.stateVariables.sunPosition.actual = vec3.fromValues(0, 1, 0);
-    DM.stateVariables.isLit.actual  = true;
-    DM.stateVariables.atmoOn.actual = true;
+    DM.stateVariables.isLit.actual       = true;
+    DM.stateVariables.atmoOn.actual      = true;
     ////////////////////////////////////////////////////////////////////////
     // INITIALIZE PCSS CONSTANTS
     gl.useProgram(shaderProgram);
@@ -368,6 +154,9 @@ class Display {
     gl.uniform2fv(this.hdrProgramInfo.uniformLocations.poissonDisks, POISSON_DISKS);
 
     DM.atmosphere = new Atmosphere(gl);
+    this.solids   = [];
+    this.lines    = [];
+    this.lights   = [];
   }
 
   initFrameBuffers() {
@@ -375,25 +164,29 @@ class Display {
     var status;
 
     /// DEPTH BUFFER ///
-    const depth_frame_buffer = gl.createFramebuffer();
-    const depth_buffer       = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, depth_buffer);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32F, SHADOW_TEXTURE_SIZE, SHADOW_TEXTURE_SIZE, 0,
-                                    gl.DEPTH_COMPONENT, gl.FLOAT, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.depthBuffers      = [];
+    this.depthFrameBuffers = [];
+    for (var i = 0; i < MAX_NUM_LIGHTS; i++) {
+      const depth_frame_buffer = gl.createFramebuffer();
+      const depth_buffer       = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, depth_buffer);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32F, SHADOW_TEXTURE_SIZE, SHADOW_TEXTURE_SIZE, 0,
+                                      gl.DEPTH_COMPONENT, gl.FLOAT, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, depth_frame_buffer);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,  gl.TEXTURE_2D, depth_buffer, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, depth_frame_buffer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,  gl.TEXTURE_2D, depth_buffer, 0);
 
-    status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-    if (status !== gl.FRAMEBUFFER_COMPLETE) {
-      console.log("The created frame buffer is invalid: " + status.toString());
+      status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        console.log(`The created frame buffer #${i} is invalid: ` + status.toString());
+      }
+      this.depthBuffers.push(depth_buffer);
+      this.depthFrameBuffers.push(depth_frame_buffer);
     }
-    this.depthFrameBuffer = depth_frame_buffer;
-    this.depthBuffer      = depth_buffer;
 
     /// HDR BUFFER ///
     const hdr_frame_buffer = gl.createFramebuffer();
@@ -459,100 +252,111 @@ class Display {
   }
 
   drawShadows() {
-    const gl = this.gl;
+    const gl                = this.gl;
     const programInfo       = this.programInfo;
     const shadowProgramInfo = this.shadowProgramInfo;
-    const level = DM.stateVariables.level.actual;
-    const buffers = this.buffers;
-    if (buffers === null) return;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.depthFrameBuffer);
-    gl.viewport(0, 0, SHADOW_TEXTURE_SIZE, SHADOW_TEXTURE_SIZE);
-    gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.clearDepth(1.0);
-    gl.depthFunc(gl.LEQUAL);
-    gl.cullFace(gl.FRONT);
+    const level             = this.level;
+    const shadowTransforms  = [];
 
-    const size = Math.sqrt(level.terrainSizeX * level.terrainSizeX + level.terrainSizeZ * level.terrainSizeZ) / 2;
-    const zNear = 0.1;
-    const zFar  = 100.0;
-    const top    =  size;
-    const bottom = -size;
-    const left   = -size;
-    const right  =  size;
-    const projectionMatrix = mat4.create();
-    mat4.ortho(projectionMatrix,
-               left,
-               right,
-               bottom,
-               top,
-               zNear,
-               zFar);
+    for (var i = 0; i < this.lights.length; i++) {
+      // PREP THE FRAME BUFFER
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.depthFrameBuffers[i]);
+      gl.viewport(0, 0, SHADOW_TEXTURE_SIZE, SHADOW_TEXTURE_SIZE);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      gl.clearDepth(1.0);
+      gl.depthFunc(gl.LEQUAL);
+      gl.cullFace(gl.FRONT);
 
-    const lightSource = vec3.create();
-    vec3.scale(lightSource, DM.stateVariables.sunPosition.actual, 10);
-    const modelViewMatrix = mat4.create();
-    mat4.lookAt(modelViewMatrix,
-                lightSource,
-                vec3.fromValues(0, 0, 0),
-                vec3.fromValues(0, 1, 0));
+      // INIT LIGHT MATRIX
+      const size = Math.sqrt(level.terrainSizeX * level.terrainSizeX + 
+                             level.terrainSizeZ * level.terrainSizeZ) / 2;
+      const top    =  size;
+      const bottom = -size;
+      const left   = -size;
+      const right  =  size;
+      const projectionMatrix = mat4.create();
+      mat4.ortho(projectionMatrix,
+                left,
+                right,
+                bottom,
+                top,
+                zNear,
+                zFar);
 
-    const shadowTransform = mat4.fromValues(0.5, 0.0, 0.0, 0.0,
-                                            0.0, 0.5, 0.0, 0.0,
-                                            0.0, 0.0, 0.5, 0.0,
-                                            0.5, 0.5, 0.5, 1.0);
-    mat4.mul(shadowTransform, shadowTransform, projectionMatrix);
-    mat4.mul(shadowTransform, shadowTransform, modelViewMatrix);
+      const lightSource = vec3.create();
+      if (this.lights[i].directional) {
+        vec3.scale(lightSource, this.lights[i].position, size);
+      } else {
+        vec3.scale(lightSource, this.lights[i].posiiton, 1.0);
+      }
+      const modelViewMatrix = mat4.create();
+      mat4.lookAt(modelViewMatrix,
+                  lightSource,
+                  vec3.fromValues(0, 0, 0),
+                  vec3.fromValues(0, 1, 0));
+
+      const shadowTransform = mat4.fromValues(0.5, 0.0, 0.0, 0.0,
+                                              0.0, 0.5, 0.0, 0.0,
+                                              0.0, 0.0, 0.5, 0.0,
+                                              0.5, 0.5, 0.5, 1.0);
+      mat4.mul(shadowTransform, shadowTransform, projectionMatrix);
+      mat4.mul(shadowTransform, shadowTransform, modelViewMatrix);
+      shadowTransforms.push(shadowTransform);
+
+      gl.useProgram(shadowProgramInfo.program);
+      gl.uniformMatrix4fv(shadowProgramInfo.uniformLocations.projectionMatrix,
+                          false,
+                          projectionMatrix);
+      gl.uniformMatrix4fv(shadowProgramInfo.uniformLocations.modelViewMatrix,
+                          false,
+                          modelViewMatrix);
+
+      for (var solid of this.solids) {
+        { // VERTICES
+          const numComponents = 3;
+          const type          = gl.FLOAT;
+          const normalize     = false;
+          const stride        = 0;
+          const offset        = 0;
+    
+          gl.bindBuffer(gl.ARRAY_BUFFER, solid.vertices);
+          gl.vertexAttribPointer(
+              shadowProgramInfo.attribLocations.vertexPosition,
+              numComponents,
+              type,
+              normalize,
+              stride,
+              offset);
+          gl.enableVertexAttribArray(shadowProgramInfo.attribLocations.vertexPosition);
+        }
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, solid.indices);
+        {
+          const vertexCount = solid.vertexCount;
+          const type        = gl.UNSIGNED_INT;
+          const offset      = solid.offset;
+          gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+        }
+      }
+    }
+    /// TODO: might fail
+    const shadowTransformsArray = new Float64Array(shadowTransforms.length * 16);
+    for (var i = 0; i < shadowTransforms.length; i++) {
+      shadowTransformsArray.set(shadowTransforms[i].buffer, 16 * i);
+    }
+    // Save shadow transform for later
     gl.useProgram(programInfo.program);
-    gl.uniformMatrix4fv(
-        programInfo.uniformLocations.shadowTransform,
-        false,
-        shadowTransform);
-
-    { // VERTICES
-      const numComponents = 3;
-      const type = gl.FLOAT;
-      const normalize = false;
-      const stride = 0;
-      const offset = 0;
-
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertices);
-      gl.vertexAttribPointer(
-          shadowProgramInfo.attribLocations.vertexPosition,
-          numComponents,
-          type,
-          normalize,
-          stride,
-          offset);
-      gl.enableVertexAttribArray(
-          shadowProgramInfo.attribLocations.vertexPosition);
-    }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-
-    gl.useProgram(shadowProgramInfo.program);
-    gl.uniformMatrix4fv(
-        shadowProgramInfo.uniformLocations.projectionMatrix,
-        false,
-        projectionMatrix);
-    gl.uniformMatrix4fv(
-        shadowProgramInfo.uniformLocations.modelViewMatrix,
-        false,
-        modelViewMatrix);
-
-    {
-      const vertexCount = buffers.nVTriangles.count;
-      const type = gl.UNSIGNED_INT;
-      const offset = 4 * buffers.nVTriangles.offset;
-      gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-    }
+    gl.uniformMatrix4fv(programInfo.uniformLocations.shadowTransform,
+                        false,
+                        shadowTransformsArray);
   }
 
   drawScene() {
-    const gl = this.gl;
+    const gl          = this.gl;
     const programInfo = this.programInfo;
-    const buffers = this.buffers;
-    const rotation = DM.stateVariables.rotation.actual;
+    const rotation    = DM.stateVariables.rotation.actual;
     const translation = DM.stateVariables.translation.actual;
-    if (buffers === null) return;
+
+    // PREP THE FRAME BUFFER
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.renderFrameBuffer);
     gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -561,27 +365,31 @@ class Display {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.cullFace(gl.BACK);
 
-    const fieldOfView = 45 * Math.PI / 180;   // en radians
-    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-    const zNear = 0.1;
-    const zFar  = 100.0;
-    const top = -gl.canvas.clientHeight / 200;
-    const bottom = gl.canvas.clientHeight / 200;
-    const left = -gl.canvas.clientWidth / 200;
-    const right = gl.canvas.clientWidth / 200;
+    // INIT WORLD MATRICES
     const projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix,
-                     fieldOfView,
-                     aspect,
-                     zNear,
-                     zFar);
-    // mat4.ortho(projectionMatrix,
-    //            left,
-    //            right,
-    //            bottom,
-    //            top,
-    //            zNear,
-    //            zFar);
+    if (this.ortho) {
+      const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+      const size   = DM.level.terrainSizeX / 2.0;
+      const top    =  size / aspect;
+      const bottom = -size / aspect;
+      const left   = -size;
+      const right  =  size;
+      mat4.ortho(projectionMatrix,
+                 left,
+                 right,
+                 bottom,
+                 top,
+                 ZNEAR,
+                 ZFAR);
+    } else {
+      const fieldOfView = 45 * Math.PI / 180;
+      const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+      mat4.perspective(projectionMatrix,
+                      fieldOfView,
+                      aspect,
+                      ZNEAR,
+                      ZFAR);
+    }
     this.projectionMatrix = projectionMatrix;
 
     const modelViewMatrix = mat4.create();
@@ -604,111 +412,121 @@ class Display {
     mat4.transpose(normalTransform, normalTransform);
     mat3.fromMat4(normalTransform3x3, normalTransform);
 
-    { // VERTICES
-      const numComponents = 3;
-      const type = gl.FLOAT;
-      const normalize = false;
-      const stride = 0;
-      const offset = 0;
-
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertices);
-      gl.vertexAttribPointer(
-          programInfo.attribLocations.vertexPosition,
-          numComponents,
-          type,
-          normalize,
-          stride,
-          offset);
-      gl.enableVertexAttribArray(
-          programInfo.attribLocations.vertexPosition);
-    }
-    { // MATERIALS
-      const numComponents = 1;
-      const type = gl.UNSIGNED_BYTE;
-      const normalize = false;
-      const stride = 0;
-      const offset = 0;
-
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.materials);
-      gl.vertexAttribIPointer(
-          programInfo.attribLocations.vertexMaterial,
-          numComponents,
-          type,
-          normalize,
-          stride,
-          offset);
-      gl.enableVertexAttribArray(
-          programInfo.attribLocations.vertexMaterial);
-    }
-    { // COLORS
-      const numComponents = 4;
-      const type = gl.FLOAT;
-      const normalize = false;
-      const stride = 0;
-      const offset = 0;
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.colors);
-      gl.vertexAttribPointer(
-          programInfo.attribLocations.vertexColor,
-          numComponents,
-          type,
-          normalize,
-          stride,
-          offset);
-      gl.enableVertexAttribArray(
-          programInfo.attribLocations.vertexColor);
-    }
-    { // NORMALS
-      const numComponents = 3;
-      const type = gl.FLOAT;
-      const normalize = false;
-      const stride = 0;
-      const offset = 0;
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffers.normals);
-      gl.vertexAttribPointer(
-          programInfo.attribLocations.vertexNormal,
-          numComponents,
-          type,
-          normalize,
-          stride,
-          offset);
-      gl.enableVertexAttribArray(
-          programInfo.attribLocations.vertexNormal);
-    }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-
     gl.useProgram(programInfo.program);
-    gl.uniformMatrix4fv(
-        programInfo.uniformLocations.projectionMatrix,
-        false,
-        projectionMatrix);
-    gl.uniformMatrix4fv(
-        programInfo.uniformLocations.modelViewMatrix,
-        false,
-        modelViewMatrix);
-    gl.uniformMatrix3fv(
-        programInfo.uniformLocations.normalTransform,
-        false,
-        normalTransform3x3);
-    gl.uniform1i(programInfo.uniformLocations.isLit, DM.stateVariables.isLit.actual);
-    gl.uniform3fv(programInfo.uniformLocations.sunLocation, DM.stateVariables.sunPosition.actual);
-    gl.uniform1i(programInfo.uniformLocations.shadowMap, 0);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.depthBuffer);
-    gl.uniform1i(programInfo.uniformLocations.atmosphere, 1);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, DM.atmosphere.atmoBuffer);
-
-    { // Draw lines first
-      const vertexCount = buffers.nVLines.count;
-      const type = gl.UNSIGNED_INT;
-      const offset = 4 * buffers.nVLines.offset;
-      gl.drawElements(gl.LINES, vertexCount, type, offset);
+    gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
+                        false,
+                        projectionMatrix);
+    gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
+                        false,
+                        modelViewMatrix);
+    gl.uniformMatrix3fv(programInfo.uniformLocations.normalTransform,
+                        false,
+                        normalTransform3x3);
+    const shadowMaps  = new Uint8Array(this.lights.length);
+    const directional = new Uint8Array(this.lights.length);
+    const position    = new Float64Array(this.lights.length * 3);
+    const color       = new Float64Array(this.lights.length * 3);
+    for (var i = 0; i < this.lights.length; i++) {
+      shadowMaps[i]  = i;
+      directional[i] = this.lights[i].directional ? 1 : 0;
+      positions.set(this.lights[i].position.buffer, 3 * i);
+      colors.set(this.lights[i].color.buffer, 3 * i);
+      gl.activeTexture(gl[`TEXTURE${i}`]);
+      gl.bindTexture(gl.TEXTURE_2D, this.depthBuffers[i]);
     }
-    {
-      const vertexCount = buffers.nVTriangles.count;
-      const type = gl.UNSIGNED_INT;
-      const offset = 4 * buffers.nVTriangles.offset;
-      gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+    gl.uniform1iv(programInfo.uniformLocations.shadowMap,        false, shadowMap);
+    gl.uniform1iv(programInfo.uniformLocations.lightDirectional, false, directional);
+    gl.uniform3fv(programInfo.uniformLocations.lightPosition,    false, position);
+    gl.uniform3fv(programInfo.uniformLocations.lightColor,       false, color);
+    gl.uniform1i(programInfo.uniformLocations.lightNum, shadowTransforms.length);
+    gl.uniform1i(programInfo.uniformLocations.isLit,    this.isLit);
+
+    for (var shape of this.lines.concat(this.solids)) {
+      var textureOffset = this.lights.length;
+      if (shape.textureMap !== null) {
+        gl.uniform1i(programInfo.uniformLocations.materialTextureMap, textureOffset);
+        gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
+        gl.bindTexture(gl.TEXTURE_2D, shape.texture);
+        textureOffset++;
+      }
+      if (shape.bumpMap !== null) {
+        gl.uniform1i(programInfo.uniformLocations.materialTextureMap, textureOffset);
+        gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
+        gl.bindTexture(gl.TEXTURE_2D, shape.bumpMap);
+      }
+      gl.uniform3fv(programInfo.uniformLocations.materialAmbiant,      false, solid.ambiant);
+      gl.uniform3fv(programInfo.uniformLocations.materialDiffuse,      false, solid.diffuse);
+      gl.uniform3fv(programInfo.uniformLocations.materialSpecularSoft, false, solid.specularSoft);
+      gl.uniform3fv(programInfo.uniformLocations.materialSpecularHard, false, solid.specularHard);
+      gl.uniform3fv(programInfo.uniformLocations.objectCenter,         false, solid.center);
+      gl.uniform1i(programInfo.uniformLocations.objectType, shape.type);
+
+      { // VERTICES
+        const numComponents = 3;
+        const type          = gl.FLOAT;
+        const normalize     = false;
+        const stride        = 0;
+        const offset        = 0;
+  
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertices);
+        gl.vertexAttribPointer(
+            programInfo.attribLocations.vertexPosition,
+            numComponents,
+            type,
+            normalize,
+            stride,
+            offset);
+        gl.enableVertexAttribArray(
+            programInfo.attribLocations.vertexPosition);
+      }
+      if (shape.colors !== null) { // COLORS
+        const numComponents = 4;
+        const type          = gl.FLOAT;
+        const normalize     = false;
+        const stride        = 0;
+        const offset        = 0;
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.colors);
+        gl.vertexAttribPointer(
+            programInfo.attribLocations.vertexColor,
+            numComponents,
+            type,
+            normalize,
+            stride,
+            offset);
+        gl.enableVertexAttribArray(
+            programInfo.attribLocations.vertexColor);
+      }
+      if (shape.normals !== null) { // NORMALS
+        const numComponents = 3;
+        const type          = gl.FLOAT;
+        const normalize     = false;
+        const stride        = 0;
+        const offset        = 0;
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.normals);
+        gl.vertexAttribPointer(
+            programInfo.attribLocations.vertexNormal,
+            numComponents,
+            type,
+            normalize,
+            stride,
+            offset);
+        gl.enableVertexAttribArray(
+            programInfo.attribLocations.vertexNormal);
+      }
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.indices);
+
+
+      if (shape.isLine) {
+        const vertexCount = shape.vertexCount;
+        const type        = gl.UNSIGNED_INT;
+        const offset      = shape.offset;
+        gl.drawElements(gl.LINES, vertexCount, type, offset);
+      } else {
+        const vertexCount = shape.vertexCount;
+        const type        = gl.UNSIGNED_INT;
+        const offset      = shape.offset;
+        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+      }
     }
 
     // ANTI ALIAS
@@ -721,24 +539,24 @@ class Display {
   }
 
   drawHDR() {
-    const gl = this.gl;
+    const gl             = this.gl;
     const hdrProgramInfo = this.hdrProgramInfo;
+    // PREP THE FRAME BUFFER
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.canvas.clientWidth, gl.canvas.clientHeight);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
     gl.depthFunc(gl.LEQUAL);
-
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     { // VERTICES
       const numComponents = 3;
-      const type = gl.FLOAT;
-      const normalize = false;
-      const stride = 0;
-      const offset = 0;
+      const type          = gl.FLOAT;
+      const normalize     = false;
+      const stride        = 0;
+      const offset        = 0;
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.hdrVertices);
+      gl.bindBuffer(gl.ARRAY_BUFFER, VIEWPORT.vertices);
       gl.vertexAttribPointer(
           hdrProgramInfo.attribLocations.vertexPosition,
           numComponents,
@@ -749,7 +567,7 @@ class Display {
       gl.enableVertexAttribArray(
           hdrProgramInfo.attribLocations.vertexPosition);
     }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.hdrIndices);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, VIEWPORT.indices);
 
     gl.useProgram(hdrProgramInfo.program);
     gl.uniform2fv(hdrProgramInfo.uniformLocations.viewport, new Float32Array([
@@ -761,9 +579,9 @@ class Display {
     gl.bindTexture(gl.TEXTURE_2D, this.hdrBuffer);
 
     { // Draw lines first
-      const vertexCount = 6;
-      const type = gl.UNSIGNED_INT;
-      const offset = 0;
+      const vertexCount = VIEWPORT.vertexCount;
+      const type        = gl.UNSIGNED_INT;
+      const offset      = VIEWPORT.offset;
       gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
   }

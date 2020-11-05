@@ -37,8 +37,8 @@ function connect() {
 }
 
 function startDisplay() {
-  const display = new Display(document.getElementById("Drawing"));
-  DM.display = display;
+  const scene = new Scene(document.getElementById("Drawing"));
+  DM.scene = scene;
   DM.setFrameRateDisplay(document.getElementById("Pos"));
   DM.start();
 }
