@@ -1,9 +1,3 @@
-
-const mat3 = glMatrix.mat3;
-const mat4 = glMatrix.mat4;
-const vec3 = glMatrix.vec3;
-const vec4 = glMatrix.vec4;
-
 const POISSON_DISKS = new Float32Array([
   -0.94201624,  -0.39906216,
    0.94558609,  -0.76890725,
@@ -43,7 +37,6 @@ const VIEWPORT = {
 };
 
 const SHADOW_TEXTURE_SIZE = 1024;
-const MAX_NUM_LIGHTS      = 4;
 
 const ZNEAR = 0.1;
 const ZFAR  = 100.0;
@@ -135,6 +128,15 @@ class Scene {
         poissonDisks:     gl.getUniformLocation(hdrProgram, 'POISSON_DISKS')
       },
     }
+
+    /// VIEWPORT COORDS ///
+    VIEWPORT.vertices = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, VIEWPORT.vertices);
+    gl.bufferData(gl.ARRAY_BUFFER, VIEWPORT.vertexBuffer, gl.STATIC_DRAW);
+    VIEWPORT.indices = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, VIEWPORT.indices);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, VIEWPORT.indexBuffer, gl.STATIC_DRAW);
+
     this.gl             = gl;
     this.level          = null;
     this.mouseray       = null;
@@ -246,16 +248,6 @@ class Scene {
     }
     this.renderFrameBuffer = render_frame_buffer;
     this.renderBuffer      = render_buffer;
-
-    /// HDR COORDS ///
-    const hdrVertices = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, hdrVertices);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(viewportCoords), gl.STATIC_DRAW);
-    this.hdrVertices = hdrVertices;
-    const hdrIndices = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, hdrIndices);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(viewportIndices), gl.STATIC_DRAW);
-    this.hdrIndices = hdrIndices;
 
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -463,11 +455,12 @@ class Scene {
         gl.bindTexture(gl.TEXTURE_2D, shape.textureMap);
         textureOffset++;
       }
-      if (shape.bumpMap !== null) {
-        gl.uniform1i(programInfo.uniformLocations.materialTextureMap, textureOffset);
-        gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
-        gl.bindTexture(gl.TEXTURE_2D, shape.bumpMap);
-      }
+      // This will need to go in the shadow renderer
+      // if (shape.bumpMap !== null) {
+      //   gl.uniform1i(programInfo.uniformLocations.materialTextureMap, textureOffset);
+      //   gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
+      //   gl.bindTexture(gl.TEXTURE_2D, shape.bumpMap);
+      // }
       gl.uniform3fv(programInfo.uniformLocations.materialAmbiant,      false, solid.ambiant);
       gl.uniform3fv(programInfo.uniformLocations.materialDiffuse,      false, solid.diffuse);
       gl.uniform2fv(programInfo.uniformLocations.materialSpecularSoft, false, solid.specularSoft);

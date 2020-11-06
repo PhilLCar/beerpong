@@ -1,3 +1,9 @@
+const mat3 = glMatrix.mat3;
+const mat4 = glMatrix.mat4;
+const vec2 = glMatrix.vec2;
+const vec3 = glMatrix.vec3;
+const vec4 = glMatrix.vec4;
+
 function initShaderProgram(gl, vsSource, fsSource) {
   const vertexShader   = loadShader(gl, gl.VERTEX_SHADER,   vsSource);
   const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);

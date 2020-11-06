@@ -4,7 +4,7 @@ class Atmosphere {
   constructor(gl, sunlight) {
     this.gl       = gl;
     this.sunlight = sunlight;
-    const atmosphericProgram = initShaderProgram(gl, atmoVertexSRC, atmoFragSRC);
+    const atmosphericProgram = initShaderProgram(gl, atmoVertexSRC, atmoFragmentSRC);
     this.programInfo = {
       program: atmosphericProgram,
       attribLocations: {
@@ -55,16 +55,6 @@ class Atmosphere {
     this.atmoBuffer      = atmo_buffer;
     // SET THE ATMOSPHERE TEXTURE
     MATERIALS.ATMOSPHERE.TEXTURE = atmo_buffer;
-
-    /// ATMO COORDS ///
-    const atmoVertices = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, atmoVertices);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(viewportCoords), gl.STATIC_DRAW);
-    this.atmoVertices = atmoVertices;
-    const atmoIndices = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, atmoIndices);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(viewportIndices), gl.STATIC_DRAW);
-    this.atmoIndices = atmoIndices;
 
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);

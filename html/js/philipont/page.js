@@ -48,18 +48,22 @@ function load() {
 }
 
 function toggleAnimation() {
+  if (DM.scene === null) return;
   DM.animate = !DM.animate;
 }
 
 function toggleGrid() {
+  if (DM.scene === null) return;
   DM.scene.toggleGridOn();
 }
 
 function toggleGridHD() {
+  if (DM.scene === null) return;
   DM.scene.toogleGridHD();
 }
 
 function translateXY(event) {
+  if (DM.scene === null) return;
   var e = event || window.event;
   var step = 0.1;
   // Clone the translation vector to trigger the hasChanged method
@@ -85,6 +89,7 @@ function translateXY(event) {
 }
 
 function translateZ(event) {
+  if (DM.scene === null) return;
   var e = event || window.event;
   var nTranslation = vec3.fromValues(0, 0, 0);
   nTranslation[2] -= e.deltaY / 10.0;
@@ -92,6 +97,7 @@ function translateZ(event) {
 }
 
 function startMovingSun(event) {
+  if (DM.scene === null) return;
   var e = event || window.event;
   if (e.which == 1) {
     document.getElementById("SunDial").onmousemove = moveSun;
@@ -101,6 +107,7 @@ function startMovingSun(event) {
 }
 
 function moveSun(event) {
+  if (DM.scene === null) return;
   var e = event || window.event;
   var sunDial = document.getElementById("SunDial").getBoundingClientRect();
   var sunIndicator = document.getElementById("SunIndicator");
@@ -130,11 +137,13 @@ function moveSun(event) {
 }
 
 function stopMovingSun() {
+  if (DM.scene === null) return;
   document.getElementById("SunDial").onmousemove = null;
   document.onmouseup = null;
 }
 
 function canvasMouseDown(event) {
+  if (DM.scene === null) return;
   var e = event || window.event;
   if (e.which == 1 && DM.scene.modEnabled && !DM.scene.rotEnabled) {
     DM.scene.setModApply(true);
@@ -142,6 +151,7 @@ function canvasMouseDown(event) {
 }
 
 function canvasMouseUp(event) {
+  if (DM.scene === null) return;
   var e = event || window.event;
   if (e.which == 2 || DM.rotEnabled) {
     DM.scene.rotEnabled = !DM.rotEnabled;
@@ -151,6 +161,7 @@ function canvasMouseUp(event) {
 }
 
 function canvasMouseMove(event) {
+  if (DM.scene === null) return;
   var e = event || window.event;
   if (DM.scene.rotEnabled) {
     DM.scene.setRotation(e.clientX, e.clientY);

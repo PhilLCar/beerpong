@@ -92,7 +92,7 @@ function initGrid(gl, level) {
   for (var i = 0; i < gridVertices.length; i++) {
     gridIndices.push(i);
   }
-  const shape = Shape(gl, {
+  const shape = new Shape(gl, {
     vertexBuffer: gridVertices, 
     indexBuffer:  gridIndices, 
     normalBuffer: gridNormals,
@@ -143,7 +143,7 @@ function initGridHD(gl, level) {
   for (var i = 0; i < gridVertices.length; i++) {
     gridIndices.push(i);
   }
-  const shape = Shape(gl, {
+  const shape = new Shape(gl, {
     vertexBuffer: gridVertices, 
     indexBuffer:  gridIndices, 
     normalBuffer: gridNormals,

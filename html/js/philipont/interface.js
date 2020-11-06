@@ -40,7 +40,7 @@ class Interface {
       case ACK_NEW_LEVEL:
         DM.scene.destroyBuffers();
         this.level = this.parseLevel(response);
-        DM.scene.initBuffers(level);
+        DM.scene.initBuffers(this.level);
         break;
     }
   }

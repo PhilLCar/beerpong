@@ -1,5 +1,8 @@
 
 const shadowFragmentSRC = `#version 300 es
+  // Material properties
+  // uniform sampler2D uMaterialBumpMap;
+
   void main(void) { }
 `;
 
@@ -9,21 +12,31 @@ const sceneFragmentSRC = `#version 300 es
 
   precision highp float;
   
+  // Shadows
   uniform sampler2D uShadowMap[MAX_NUM_LIGHTS];
 
-  in highp vec3  vPosition;
-  in highp vec3  vNormal;
-  in lowp  vec4  vColor;
-  in lowp  vec3  vLightColor;
-  in highp vec3  vLightDir;
-  in highp vec3  vDiffuse;
-  in highp vec3  vShadowCoord;
-  in highp float vAmbiant;
-  in highp vec2  vSpecularSoft;
-  in highp vec2  vSpecularHard;
-  in highp vec3  vAtmoCoord;
+  // Lights
+  uniform vec3 uLightColor[MAX_NUM_LIGHTS];
 
-  flat in lowp  uint  vAtmosphere;
+  // Material properties
+  uniform sampler2D uMaterialTextureMap;
+  uniform vec2      uMaterialSpecularSoft;
+  uniform vec2      uMaterialSpecularHard;
+  uniform vec3      uMaterialAmbiant;
+  uniform vec3      uMaterialDiffuse;
+
+  // Object properties
+  uniform uint uObjectType;
+
+  in highp vec3 vPosition;
+  in highp vec4 vColor;
+  in highp vec3 vNormal;
+  in highp vec3 vCenter;
+  in highp vec3 vLightDir[MAX_NUM_LIGHTS];
+  in highp vec3 vLightColor[MAX_NUM_LIGHTS];
+  in highp vec3 vShadowCoord[MAX_NUM_LIGHTS];
+
+  flat in lowp uint vLightNum;
 
   out highp vec4 FragColor;
 
@@ -40,13 +53,12 @@ const sceneFragmentSRC = `#version 300 es
     return (zReceiver - zBlocker) / zBlocker;
   }
 
-  void findBlocker(out float avgBlockerDepth, out float numBlockers, vec2 uv, float zReceiver) {
+  void findBlocker(sampler2D shadowMap, out float avgBlockerDepth, out float numBlockers, vec2 uv, float zReceiver) {
     float searchWidth = LIGHT_SIZE_UV * (zReceiver - NEAR_PLANE) / zReceiver;
     float blockerSum = 0.0;
     numBlockers = 0.0;
     for (int i = 0; i < BLOCKER_SEARCH_NUM_SAMPLES; ++i) {
-      //float depth = texture(uShadowMap, uv + POISSON_DISKS[i] * searchWidth).x;
-      float depth = texture(uShadowMap, uv).x;
+      float depth = texture(shadowMap, uv + POISSON_DISKS[i] * searchWidth).x;
       if (depth < zReceiver) {
         blockerSum += depth;
         ++numBlockers;
@@ -55,46 +67,59 @@ const sceneFragmentSRC = `#version 300 es
     avgBlockerDepth = blockerSum / numBlockers;
   }
 
-  float PCF_Filter(vec2 uv, float zReceiver, float filterRadiusUV) {
+  float PCF_Filter(sampler2D shadowMap, vec2 uv, float zReceiver, float filterRadiusUV) {
     float sum = 0.0;
     for (int i = 0; i < PCF_NUM_SAMPLES; ++i) {
       vec2 offset = POISSON_DISKS[i] * filterRadiusUV;
-      sum += texture(uShadowMap, uv + offset).x < zReceiver ? 0.0 : 1.0;
+      sum += texture(shadowMap, uv + offset).x < zReceiver ? 0.0 : 1.0;
     }
     return sum / float(PCF_NUM_SAMPLES);
   }
 
-  float PCSS(vec3 coords) {
+  float PCSS(sampler2D shadowMap, vec3 coords) {
     vec2  uv        = coords.xy;
     float zReceiver = coords.z;
     float avgBlockerDepth = 0.0;
     float numBlockers     = 0.0;
-    findBlocker(avgBlockerDepth, numBlockers, uv, zReceiver);
+    findBlocker(shadowMap, avgBlockerDepth, numBlockers, uv, zReceiver);
     if (numBlockers < 1.0) return 1.0;
     float penumbraRatio  = penumbraSize(zReceiver, avgBlockerDepth);
     float filterRadiusUV = penumbraRatio * LIGHT_SIZE_UV * NEAR_PLANE / coords.z;
-    return PCF_Filter(uv, zReceiver, filterRadiusUV);
+    return PCF_Filter(shadowMap, uv, zReceiver, filterRadiusUV);
+  }
+
+  bool applyTexture(out vec4 FragColor) {
+    if (uObjectType == uint(${MATERIAL_ATMO})) {
+      highp float r = acos(vPosition.y - vCenter.y) / (PI / 2.0);
+      highp vec2  p = normalize(vPosition.xz - vCenter.xz) * vec2(1.0, -1.0);
+      FragColor = texture(uMaterialTextureMap, (r * p + vec2(1.0, 1.0)) / 2.0);
+      return true;
+    }
+    return false;
   }
 
   void main(void) {
-    highp vec3 lighting  = vec3(1.0, 1.0, 1.0);
-    highp vec3 highlight = vec3(0.0, 0.0, 0.0);
-    if (vAtmosphere == uint(1)) {
-      highp float r = acos(vAtmoCoord.y) / (PI / 2.0);
-      highp vec2  p = normalize(vAtmoCoord.xz) * vec2(1.0, -1.0);
-      FragColor = texture(uAtmosphere, (r * p + vec2(1.0, 1.0)) / 2.0);
-      return;
-    } else if (vShadowCoord.x >= 0.0) {
-      highp float vis        = PCSS(vShadowCoord);
-      highp vec3  viewDir    = normalize(-vPosition);
-      highp vec3  reflectDir = reflect(-vLightDir, vNormal);
-      highp float anglef     = max(dot(viewDir, reflectDir), 0.0);
-      highp float soft       = pow(anglef, vSpecularSoft.y);
-      highp float hard       = pow(anglef, vSpecularHard.y);
-      highlight = vis * ((vSpecularSoft.x * soft) + (vSpecularHard.x * hard))  * vLightColor;
-      lighting  = vAmbiant + (1.0 - vAmbiant) * vis * vDiffuse;
+    FragColor = vColor;
+    if (!applyTexture(FragColor)) {
+      highp vec3 viewDir = normalize(-vPosition);
+      FragColor = vec4(uMaterialAmbiant * vColor.rgb, vColor.a);
+      for (uint i = uint(0); i < vLightNum; i++) {
+        highp float factor     = 0.0;
+        highp float vis        = PCSS(uShadowMap[i], vShadowCoord[i]);
+        highp vec3  reflectDir = reflect(-vLightDir[i], vNormal);
+        highp float anglef     = max(dot(viewDir, reflectDir), 0.0);
+        // Diffuse
+        FragColor += vec4((vec3(1.0, 1.0, 1.0) - uMaterialAmbiant) *
+                          max(dot(vNormal, vLightDir[i]), 0.0) *
+                          uMaterialDiffuse *
+                          uLightColor[i] * vColor.rgb * vis, 0.0);
+        // Soft specular
+        factor += uMaterialSpecularSoft.y * pow(anglef, uMaterialSpecularSoft.y);
+        // Hard specular
+        factor += uMaterialSpecularHard.y * pow(anglef, uMaterialSpecularHard.y);
+        FragColor += vec4(vis * uLightColor[i] * factor, 0.0);
+      }
     }
-    FragColor = vec4(vColor.rgb * lighting + highlight, vColor.a);
   }
 `;
 

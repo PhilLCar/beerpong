@@ -105,10 +105,10 @@ function initSphere(gl, size = 1, resolution = 20, inverted = false, material = 
   }
   return new Shape(gl,
     {
-      vertices:  vertices,
-      normals:   normals,
-      colors:    colors,
-      indices:   indices
+      vertexBuffer: vertices,
+      normalBuffer: normals,
+      colorBuffer:  colors,
+      indexBuffer:  indices
     },
     material
   );

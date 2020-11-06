@@ -44,7 +44,7 @@ const MATERIALS = {
       R: { min: 0,     max: 0.0, add: null },
       G: { min: 0,     max: 0.2, add: null },
       B: { min: 0.6,   max: 0.8, add: null },
-      B: { min: 0.8,   max: 0.8, add: null }
+      A: { min: 0.8,   max: 0.8, add: null }
     }
   },
   ATMOSPHERE: {

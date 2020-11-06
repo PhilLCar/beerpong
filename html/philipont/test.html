@@ -5,12 +5,22 @@
     <title>Test</title>
     <link rel="stylesheet" type="text/css" href="/css/philipont.css"/>
     <script src="https://cdn.jsdelivr.net/npm/gl-matrix@3.1.0/gl-matrix-min.js"></script>
-    <script src="/js/philipont/displayManager.js"   type="text/javascript"></script>
-    <script src="/js/philipont/atmosphericModel.js" type="text/javascript"></script>
-    <script src="/js/philipont/webgl.js"            type="text/javascript"></script>
-    <script src="/js/philipont/page.js"             type="text/javascript"></script>
-    <script src="/js/utils/websocket.js"            type="text/javascript"></script>
-    <script src="/js/philipont/interface.js"        type="text/javascript"></script>
+    <script src="/js/philipont/webgl/utils.js"             type="text/javascript"></script>
+    <script src="/js/philipont/shapes/light.js"            type="text/javascript"></script>
+    <script src="/js/philipont/shapes/material.js"         type="text/javascript"></script>
+    <script src="/js/philipont/shapes/shape.js"            type="text/javascript"></script>
+    <script src="/js/philipont/webgl/vert.js"              type="text/javascript"></script>
+    <script src="/js/philipont/webgl/frag.js"              type="text/javascript"></script>
+    <script src="/js/philipont/displayManager.js"          type="text/javascript"></script>
+    <script src="/js/philipont/models/atmosphericModel.js" type="text/javascript"></script>
+    <script src="/js/philipont/scene.js"                   type="text/javascript"></script>
+    <script src="/js/philipont/objects/grid.js"            type="text/javascript"></script>
+    <script src="/js/philipont/objects/sphere.js"          type="text/javascript"></script>
+    <script src="/js/philipont/objects/terrain.js"         type="text/javascript"></script>
+    <script src="/js/philipont/objects/water.js"           type="text/javascript"></script>
+    <script src="/js/philipont/page.js"                    type="text/javascript"></script>
+    <script src="/js/utils/websocket.js"                   type="text/javascript"></script>
+    <script src="/js/philipont/interface.js"               type="text/javascript"></script>
   </head>
   <body onload="startDisplay()">
     <canvas id="Drawing" tabindex="1"
