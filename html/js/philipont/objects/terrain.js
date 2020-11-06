@@ -10,18 +10,18 @@ function initTerrain(gl, level) {
   const nX = Math.floor(level.terrainSizeX / level.terrainRes);
   const nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
   const nX1 = nX + 1;
-  const nZ1 = nZ + 1;
   const terrainVertices = [];
   const terrainNormals  = [];
   const terrainColors   = [];
   const terrainIndices  = [];
+  const terrain         = level.terrain;
   for (var i = 0; i < nX; i++) {
     for (var j = 0; j < nZ; j++) {
       /////////////////////////////////////////////////
       {
-        const v1 = level.terrain[i +     j      * nX1];
-        const v2 = level.terrain[i +    (j + 1) * nX1];
-        const v3 = level.terrain[i + 1 + j      * nX1];
+        const v1 = terrain[i +     j      * nX1];
+        const v2 = terrain[i +    (j + 1) * nX1];
+        const v3 = terrain[i + 1 + j      * nX1];
         // top left
         terrainVertices.push(v1[0]);
         terrainVertices.push(v1[1]);
@@ -50,9 +50,9 @@ function initTerrain(gl, level) {
       }
       /////////////////////////////////////////////////
       {
-        const v1 = level.terrain[i + 1 +  j      * nX1];
-        const v2 = level.terrain[i +     (j + 1) * nX1];
-        const v3 = level.terrain[i + 1 + (j + 1) * nX1];
+        const v1 = terrain[i + 1 +  j      * nX1];
+        const v2 = terrain[i +     (j + 1) * nX1];
+        const v3 = terrain[i + 1 + (j + 1) * nX1];
         // top left
         terrainVertices.push(v1[0]);
         terrainVertices.push(v1[1]);
@@ -106,12 +106,12 @@ function initTerrain(gl, level) {
     },
     preset
   );
-  shape.nX     = nX;
-  shape.nX1    = nX1;
-  shape.nZ     = nZ;
-  shape.nZ1    = nZ1;
-  shape.level  = level;
-  shape.prevmr = null;
+  shape.nX       = nX;
+  shape.nX1      = nX1;
+  shape.nZ       = nZ;
+  shape.level    = level;
+  shape.prevmr   = null;
+  shape.colorRef = terrainColors;
   shape.prototype.animate = function(scene, t) {
     const nX       = this.nX;
     const nZ       = this.nZ;
@@ -160,6 +160,7 @@ function initTerrain(gl, level) {
       if (mouse != null) {
         for (var i = 0; i < nX; i++) {
           for (var j = 0; j < nZ; j++) {
+            const index = (i * nZ + j) * 24;
             {
               const v1 = terrain[i +     j      * nX1];
               const v2 = terrain[i +    (j + 1) * nX1];
@@ -174,10 +175,17 @@ function initTerrain(gl, level) {
                   vec3.length(l2) < modArea &&
                   vec3.length(l3) < modArea) {
                 for (var k = 0; k < 3; k++) {
-                  this.colors[(i * nZ + j) * 24 + 4 * k]     += this.preset.R.add;
-                  this.colors[(i * nZ + j) * 24 + 4 * k + 1] += this.preset.G.add;
-                  this.colors[(i * nZ + j) * 24 + 4 * k + 2] += this.preset.B.add;
-                  this.colors[(i * nZ + j) * 24 + 4 * k + 3] += this.preset.A.add;
+                  this.colors[index + 4 * k]     = this.colorRef[index + 4 * k]     + this.preset.R.add;
+                  this.colors[index + 4 * k + 1] = this.colorRef[index + 4 * k + 1] + this.preset.G.add;
+                  this.colors[index + 4 * k + 2] = this.colorRef[index + 4 * k + 2] + this.preset.B.add;
+                  this.colors[index + 4 * k + 3] = this.colorRef[index + 4 * k + 3] + this.preset.A.add;
+                }
+              } else {
+                for (var k = 0; k < 3; k++) {
+                  this.colors[index + 4 * k]     = this.colorRef[index + 4 * k];
+                  this.colors[index + 4 * k + 1] = this.colorRef[index + 4 * k + 1];
+                  this.colors[index + 4 * k + 2] = this.colorRef[index + 4 * k + 2];
+                  this.colors[index + 4 * k + 3] = this.colorRef[index + 4 * k + 3];
                 }
               }
             }
@@ -195,10 +203,17 @@ function initTerrain(gl, level) {
                   vec3.length(l2) < modArea &&
                   vec3.length(l3) < modArea) {
                 for (var k = 0; k < 3; k++) {
-                  this.colors[(i * nZ + j) * 24 + 4 * k + 12] += this.preset.R.add;
-                  this.colors[(i * nZ + j) * 24 + 4 * k + 13] += this.preset.G.add;
-                  this.colors[(i * nZ + j) * 24 + 4 * k + 14] += this.preset.B.add;
-                  this.colors[(i * nZ + j) * 24 + 4 * k + 15] += this.preset.A.add;
+                  this.colors[index + 4 * k + 12] = this.colorRef[index + 4 * k + 12] + this.preset.R.add;
+                  this.colors[index + 4 * k + 13] = this.colorRef[index + 4 * k + 13] + this.preset.G.add;
+                  this.colors[index + 4 * k + 14] = this.colorRef[index + 4 * k + 14] + this.preset.B.add;
+                  this.colors[index + 4 * k + 15] = this.colorRef[index + 4 * k + 15] + this.preset.A.add;
+                }
+              } else {
+                for (var k = 0; k < 3; k++) {
+                  this.colors[index + 4 * k + 12] = this.colorRef[index + 4 * k + 12]
+                  this.colors[index + 4 * k + 13] = this.colorRef[index + 4 * k + 13];
+                  this.colors[index + 4 * k + 14] = this.colorRef[index + 4 * k + 14];
+                  this.colors[index + 4 * k + 15] = this.colorRef[index + 4 * k + 15];
                 }
               }
             }
@@ -213,17 +228,32 @@ function initTerrain(gl, level) {
         const d = vec3.create();
         for (var i = 0; i < nX1; i++) {
           for (var j = 0; j < nZ1; j++) {
-            var v = terrain[i + j * nX1];
-            var l;
+            const v = terrain[i + j * nX1];
             vec3.sub(d, v, mouse);
-            l = vec3.length(d);
-            if (l < modArea) {
+            if (vec3.length(d) < modArea) {
               if (scene.modSubstract) {
                 vec3.sub(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
               } else {
                 vec3.add(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
               }
-              // todo index projections!!
+              const i1 = (i * nZ + j) * 18 + 1;
+              this.vertices[i1] = v[1];
+              if (i > 0) {
+                const i2 = ((i - 1) * nZ + j) * 18 + 7;
+                const i3 = i2 + 3;
+                this.vertices[i2] = v[1];
+                this.vertices[i3] = v[1];
+              }
+              if (j > 0) {
+                const i4 = (i * nZ + j - 1) * 18 + 4;
+                const i5 = i4 + 9;
+                this.vertices[i4] = v[1];
+                this.vertices[i5] = v[1];
+              }
+              if (i > 0 && j > 0) {
+                const i6 = ((i - 1) * nZ + j - 1) * 18 + 16;
+                this.vertices[i6] = v[1];
+              }
             }
           }
         }

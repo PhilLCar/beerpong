@@ -133,11 +133,7 @@ class Interface {
       }
       level.links.push(link);
     }
-    // TODO: Remove unused components;
-    level.atmosphere = null;
-    level.colors     = null;
     level.gridRes    = 0.1;
-    level.gridSub    = 0.2;
     level.gridZ      = 1;
     return level;
   }

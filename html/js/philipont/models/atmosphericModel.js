@@ -53,6 +53,8 @@ class Atmosphere {
     }
     this.atmoFrameBuffer = atmo_frame_buffer;
     this.atmoBuffer      = atmo_buffer;
+    // SET THE ATMOSPHERE TEXTURE
+    MATERIALS.ATMOSPHERE.TEXTURE = atmo_buffer;
 
     /// ATMO COORDS ///
     const atmoVertices = gl.createBuffer();

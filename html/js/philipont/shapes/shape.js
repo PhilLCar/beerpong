@@ -10,6 +10,7 @@ class Shape {
     this.normalBuffer = buffers.normalBuffer ? new Float32Array(buffers.normalBuffer) : null;
     this.colorBuffer  = buffers.colorBuffer  ? new Float32Array(buffers.colorBuffer)  : null;
     /// ATTRIBUTES ///
+    this.texture      = material.TEXTURE;
     this.preset       = material.COLOR_PRESET;
     this.ambiant      = material.AMBIANT;
     this.diffuse      = material.DIFFUSE;

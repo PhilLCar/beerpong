@@ -26,9 +26,9 @@ function initWaterPlane(gl, level) {
     waterNormals.push(0);
   }
   for (var i = 0; i < 4; i++) {
-    waterColors.push(waterPreset.R.max);
-    waterColors.push(waterPreset.G.max);
-    waterColors.push(waterPreset.B.max);
+    waterColors.push(preset.R.max);
+    waterColors.push(preset.G.max);
+    waterColors.push(preset.B.max);
     waterColors.push(0.8);
   }
   waterIndices.push(0);
@@ -40,160 +40,150 @@ function initWaterPlane(gl, level) {
   return new Shape(
     gl,
     { 
-      vertexBuffer: terrainVertices, 
-      indexBuffer:  terrainIndices, 
-      normalBuffer: terrainNormals,
-      colorBuffer:  terrainColors
+      vertexBuffer: waterVertices, 
+      indexBuffer:  waterIndices, 
+      normalBuffer: waterNormals,
+      colorBuffer:  waterColors
     },
     preset
   );
 }
 
 function initWaterWaves(gl, level) {
-
-}
-
-function fillTerrainAndWaterArrays(level, mouseray, t, terrain, terrainNormals, water, waterNormals) {
-  var nX = Math.floor(level.terrainSizeX / level.terrainRes);
-  var nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
-  var nX1 = nX + 1;
-  var freq = 1.5;
-  var amp  = 0.05;
+  const preset = MATERIALS.WATER;
+  const nX = Math.floor(level.terrainSizeX / level.terrainRes);
+  const nZ = Math.floor(level.terrainSizeZ / level.terrainRes);
+  const nX1 = nX + 1;
+  const waterVertices = [];
+  const waterNormals  = [];
+  const waterColors   = [];
+  const waterIndices  = [];
+  const terrain       = level.terrain;
+  const waterLevel    = level.waterLevel;
   for (var i = 0; i < nX; i++) {
     for (var j = 0; j < nZ; j++) {
       /////////////////////////////////////////////////
       {
-        var v1 = level.terrain[i +     j      * nX1];
-        var v2 = level.terrain[i +    (j + 1) * nX1];
-        var v3 = level.terrain[i + 1 + j      * nX1];
-        // top left
-        terrain.push(v1[0]);
-        terrain.push(v1[1]);
-        terrain.push(v1[2]);
-        // bottom left
-        terrain.push(v2[0]);
-        terrain.push(v2[1]);
-        terrain.push(v2[2]);
-        // top right
-        terrain.push(v3[0]);
-        terrain.push(v3[1]);
-        terrain.push(v3[2]);
-        // intersection
-        if (mouseray !== null) {
-          var p = intersect(v1, v2, v3, mouseray);
-          if (p !== null) {
-            level.mouse = p;
-          }
-        }
-        // normal
-        const a1 = vec3.create();
-        const a2 = vec3.create();
-        const norm = vec3.create();
-        vec3.sub(a1, v2, v1);
-        vec3.sub(a2, v3, v1);
+        const v1 = terrain[i +     j      * nX1];
+        const v2 = terrain[i +    (j + 1) * nX1];
+        const v3 = terrain[i + 1 + j      * nX1];
+        const u1 = vec3.fromValues(v1[0], waterLevel, v1[2]);
+        const u2 = vec3.fromValues(v2[0], waterLevel, v2[2]);
+        const u3 = vec3.fromValues(v3[0], waterLevel, v3[2]);
+        water.push(u1[0]);
+        water.push(u1[1]);
+        water.push(u1[2]);
+        water.push(u2[0]);
+        water.push(u2[1]);
+        water.push(u2[2]);
+        water.push(u3[0]);
+        water.push(u3[1]);
+        water.push(u3[2]);
+        vec3.sub(a1, u2, u1);
+        vec3.sub(a2, u3, u1);
         vec3.cross(norm, a1, a2);
         vec3.normalize(norm, norm);
         for (var k = 0; k < 3; k++) {
-          terrainNormals.push(norm[0]);
-          terrainNormals.push(norm[1]);
-          terrainNormals.push(norm[2]);
-        }
-        // water
-        if (t) {
-          var y1 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i +     j      * nX1)) * amp;
-          var y2 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i +    (j + 1) * nX1)) * amp;
-          var y3 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i + 1 + j      * nX1)) * amp;
-          var u1 = vec3.fromValues(v1[0], y1, v1[2]);
-          var u2 = vec3.fromValues(v2[0], y2, v2[2]);
-          var u3 = vec3.fromValues(v3[0], y3, v3[2]);
-          water.push(u1[0]);
-          water.push(u1[1]);
-          water.push(u1[2]);
-          water.push(u2[0]);
-          water.push(u2[1]);
-          water.push(u2[2]);
-          water.push(u3[0]);
-          water.push(u3[1]);
-          water.push(u3[2]);
-          vec3.sub(a1, u2, u1);
-          vec3.sub(a2, u3, u1);
-          vec3.cross(norm, a1, a2);
-          vec3.normalize(norm, norm);
-          for (var k = 0; k < 3; k++) {
-            waterNormals.push(norm[0]);
-            waterNormals.push(norm[1]);
-            waterNormals.push(norm[2]);
-          }
+          waterNormals.push(norm[0]);
+          waterNormals.push(norm[1]);
+          waterNormals.push(norm[2]);
         }
       }
       /////////////////////////////////////////////////
       {
-        var v1 = level.terrain[i + 1 +  j      * nX1];
-        var v2 = level.terrain[i +     (j + 1) * nX1];
-        var v3 = level.terrain[i + 1 + (j + 1) * nX1];
-        // top left
-        terrain.push(v1[0]);
-        terrain.push(v1[1]);
-        terrain.push(v1[2]);
-        // bottom left
-        terrain.push(v2[0]);
-        terrain.push(v2[1]);
-        terrain.push(v2[2]);
-        // top right
-        terrain.push(v3[0]);
-        terrain.push(v3[1]);
-        terrain.push(v3[2]);
-        // intersection
-        if (mouseray !== null) {
-          var p = intersect(v1, v2, v3, mouseray);
-          if (p !== null) {
-            level.mouse = p;
-          }
-        }
-        // normal
-        const a1 = vec3.create();
-        const a2 = vec3.create();
-        const norm = vec3.create();
-        vec3.sub(a1, v2, v1);
-        vec3.sub(a2, v3, v1);
+        const v1 = terrain[i + 1 +  j      * nX1];
+        const v2 = terrain[i +     (j + 1) * nX1];
+        const v3 = terrain[i + 1 + (j + 1) * nX1];
+        const u1 = vec3.fromValues(v1[0], waterLevel, v1[2]);
+        const u2 = vec3.fromValues(v2[0], waterLevel, v2[2]);
+        const u3 = vec3.fromValues(v3[0], waterLevel, v3[2]);
+        water.push(u1[0]);
+        water.push(u1[1]);
+        water.push(u1[2]);
+        water.push(u2[0]);
+        water.push(u2[1]);
+        water.push(u2[2]);
+        water.push(u3[0]);
+        water.push(u3[1]);
+        water.push(u3[2]);
+        vec3.sub(a1, u2, u1);
+        vec3.sub(a2, u3, u1);
         vec3.cross(norm, a1, a2);
         vec3.normalize(norm, norm);
         for (var k = 0; k < 3; k++) {
-          terrainNormals.push(norm[0]);
-          terrainNormals.push(norm[1]);
-          terrainNormals.push(norm[2]);
-        }
-        // water
-        if (t) {
-          var y1 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i + 1 +  j      * nX1)) * amp;
-          var y2 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i +     (j + 1) * nX1)) * amp;
-          var y3 = level.waterLevel + Math.sin(t / (Math.PI / 2) * freq + (i + 1 + (j + 1) * nX1)) * amp;
-          var u1 = vec3.fromValues(v1[0], y1, v1[2]);
-          var u2 = vec3.fromValues(v2[0], y2, v2[2]);
-          var u3 = vec3.fromValues(v3[0], y3, v3[2]);
-          water.push(u1[0]);
-          water.push(u1[1]);
-          water.push(u1[2]);
-          water.push(u2[0]);
-          water.push(u2[1]);
-          water.push(u2[2]);
-          water.push(u3[0]);
-          water.push(u3[1]);
-          water.push(u3[2]);
-          vec3.sub(a1, u2, u1);
-          vec3.sub(a2, u3, u1);
-          vec3.cross(norm, a1, a2);
-          vec3.normalize(norm, norm);
-          for (var k = 0; k < 3; k++) {
-            waterNormals.push(norm[0]);
-            waterNormals.push(norm[1]);
-            waterNormals.push(norm[2]);
-          }
+          waterNormals.push(norm[0]);
+          waterNormals.push(norm[1]);
+          waterNormals.push(norm[2]);
         }
       }
     }
   }
-  if (t === null) {
-    
+  for (var i = 0; i < 2 * nX * nZ; i++) {
+    var R = Math.random() * (preset.COLOR_PRESET.R.max - preset.COLOR_PRESET.R.min) + preset.COLOR_PRESET.R.min;
+    var G = Math.random() * (preset.COLOR_PRESET.G.max - preset.COLOR_PRESET.G.min) + preset.COLOR_PRESET.G.min;
+    var B = Math.random() * (preset.COLOR_PRESET.B.max - preset.COLOR_PRESET.B.min) + preset.COLOR_PRESET.B.min;
+    var A = Math.random() * (preset.COLOR_PRESET.A.max - preset.COLOR_PRESET.A.min) + preset.COLOR_PRESET.A.min;
+    for (var j = 0; j < 3; j++) {
+      waterColors.push(R);
+      waterColors.push(G);
+      waterColors.push(B);
+      waterColors.push(A);
+    }
   }
+  for (var i = 0; i < 6 * nX * nZ; i++) {
+    waterIndices.push(i);
+  }
+  const shape = new Shape(
+    gl,
+    { 
+      vertexBuffer: waterVertices, 
+      indexBuffer:  waterIndices, 
+      normalBuffer: waterNormals,
+      colorBuffer:  waterColors
+    },
+    preset
+  );
+  shape.nX         = nX;
+  shape.nX1        = nX1;
+  shape.nZ         = nZ;
+  shape.freq       = 1.5;
+  shape.amp        = 0.05;
+  shape.waterLevel = waterLevel;
+  shape.prototype.animate = function(scene, t) {
+    const nX         = this.nX;
+    const nX1        = this.nX1;
+    const nZ         = this.nZ;
+    const waterLevel = this.waterLevel;
+
+    for (var i = 0; i < nX; i++) {
+      for (var j = 0; j < nZ; j++) {
+        const index = (i * nZ + j) * 18;
+        /////////////////////////////////////////////////
+        {
+          const i1 = i + 1 +  j      * nX1;
+          const i2 = i +     (j + 1) * nX1;
+          const i3 = i + 1 + (j + 1) * nX1;
+          const y1 =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i1) * amp;
+          const y2 =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i2) * amp;
+          const y3 =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i3) * amp;
+          this.vertices[index + 1] = y1;
+          this.vertices[index + 4] = y2;
+          this.vertices[index + 7] = y3;
+        }
+        /////////////////////////////////////////////////
+        {
+          const i1 = i + 1 +  j      * nX1;
+          const i2 = i +     (j + 1) * nX1;
+          const i3 = i + 1 + (j + 1) * nX1;
+          const y1 = waterLevel + Math.sin(t / (Math.PI / 2) * freq + i1) * amp;
+          const y2 = waterLevel + Math.sin(t / (Math.PI / 2) * freq + i2) * amp;
+          const y3 = waterLevel + Math.sin(t / (Math.PI / 2) * freq + i3) * amp;
+          this.vertices[index + 1] = y1;
+          this.vertices[index + 4] = y2;
+          this.vertices[index + 7] = y3;
+        }
+      }
+    }
+  }
+  return shape;
 }

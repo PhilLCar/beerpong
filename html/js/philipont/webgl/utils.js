@@ -30,3 +30,37 @@ function loadShader(gl, type, source) {
 
   return shader;
 }
+
+// https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
+function sign (p1, p2, p3)
+{
+  return (p1[0] - p3[0]) * (p2[2] - p3[2]) - (p2[0] - p3[0]) * (p1[2] - p3[2]);
+}
+
+function intersect(plane0, plane1, plane2, mouseray) {
+  const a0     = vec3.create();
+  const a1     = vec3.create();
+  const norm   = vec3.create();
+  vec3.sub(a0, plane1, plane0);
+  vec3.sub(a1, plane2, plane0);
+  vec3.cross(norm, a0, a1);
+  vec3.normalize(norm, norm);
+
+  const t = vec3.create();
+  vec3.sub(t, plane0, mouseray[0]);
+  const s = vec3.dot(mouseray[1], norm);
+  if (s == 0) return null;
+  const d = vec3.dot(t, norm) / s;
+  vec3.scale(t, mouseray[1], d);
+  vec3.add(t, mouseray[0], t);
+
+  var s1 = sign(t, plane0, plane1);
+  var s2 = sign(t, plane1, plane2);
+  var s3 = sign(t, plane2, plane0);
+
+  var neg = (s1 < 0) || (s2 < 0) || (s3 < 0);
+  var pos = (s1 > 0) || (s2 > 0) || (s3 > 0);
+
+  if (!(neg && pos)) return t;
+  return null;
+}
