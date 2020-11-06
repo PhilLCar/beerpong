@@ -106,13 +106,15 @@ function initTerrain(gl, level) {
     },
     material
   );
-  shape.nX       = nX;
-  shape.nX1      = nX1;
-  shape.nZ       = nZ;
-  shape.level    = level;
-  shape.prevmr   = null;
-  shape.colorRef = terrainColors;
-  shape.animate = function(scene, t) {
+  shape.nX        = nX;
+  shape.nX1       = nX1;
+  shape.nZ        = nZ;
+  shape.nZ1       = nZ + 1;
+  shape.level     = level;
+  shape.prevmr    = null;
+  shape.colorRef  = terrainColors;
+  shape.mouse     = null;
+  shape.doAnimate = function(scene, t) {
     const nX       = shape.nX;
     const nZ       = shape.nZ;
     const nX1      = shape.nX1;
@@ -120,120 +122,124 @@ function initTerrain(gl, level) {
     const terrain  = shape.level.terrain;
     const mouseray = scene.mouseray;
     const modArea  = scene.modArea;
-    const modApply = scene.modApply;
-    var   mouse    = null;
 
-    if (mouseray === null || mouseray == shape.prevmr) return;
-    shape.prevmr = mouseray;
-
-    // MOD ENABLED
-    ///////////////////////////////////////////////////////////////////////
-    if (scene.modEnabled) {
-      for (var i = 0; i < nX; i++) {
-        for (var j = 0; j < nZ; j++) {
-          {
-            const v1 = terrain[i +     j      * nX1];
-            const v2 = terrain[i +    (j + 1) * nX1];
-            const v3 = terrain[i + 1 + j      * nX1];
-            const p = intersect(v1, v2, v3, mouseray);
-            if (p !== null) {
-              mouse = p;
-              i = nX;
-              j = nZ;
-              break;
-            }
-          }
-          {
-            const v1 =terrain[i + 1 +  j      * nX1];
-            const v2 =terrain[i +     (j + 1) * nX1];
-            const v3 =terrain[i + 1 + (j + 1) * nX1];
-            const p = intersect(v1, v2, v3, mouseray);
-            if (p !== null) {
-              mouse = p;
-              i = nX;
-              j = nZ;
-              break;
-            }
-          }
-        }
-      }
-      if (mouse != null) {
-        const colors   = shape.colors;
-        const colorRef = shape.colorRef;
+    if (mouseray !== null && mouseray != shape.prevmr) {
+      shape.prevmr = mouseray;
+      // MOD ENABLED
+      ///////////////////////////////////////////////////////////////////////
+      if (scene.modEnabled) {
+        shape.mouse = null;
         for (var i = 0; i < nX; i++) {
           for (var j = 0; j < nZ; j++) {
-            const index = (i * nZ + j) * 24;
             {
               const v1 = terrain[i +     j      * nX1];
               const v2 = terrain[i +    (j + 1) * nX1];
               const v3 = terrain[i + 1 + j      * nX1];
-              const l1 = vec3.create();
-              const l2 = vec3.create();
-              const l3 = vec3.create();
-              vec3.sub(l1, v1, mouse);
-              vec3.sub(l2, v2, mouse);
-              vec3.sub(l3, v3, mouse);
-              if (vec3.length(l1) < modArea &&
-                  vec3.length(l2) < modArea &&
-                  vec3.length(l3) < modArea) {
-                for (var k = 0; k < 3; k++) {
-                  colors[index + 4 * k]     = colorRef[index + 4 * k]     + preset.R.add;
-                  colors[index + 4 * k + 1] = colorRef[index + 4 * k + 1] + preset.G.add;
-                  colors[index + 4 * k + 2] = colorRef[index + 4 * k + 2] + preset.B.add;
-                  colors[index + 4 * k + 3] = colorRef[index + 4 * k + 3] + preset.A.add;
-                }
-              } else {
-                for (var k = 0; k < 3; k++) {
-                  colors[index + 4 * k]     = colorRef[index + 4 * k];
-                  colors[index + 4 * k + 1] = colorRef[index + 4 * k + 1];
-                  colors[index + 4 * k + 2] = colorRef[index + 4 * k + 2];
-                  colors[index + 4 * k + 3] = colorRef[index + 4 * k + 3];
-                }
+              const p = intersect(v1, v2, v3, mouseray);
+              if (p !== null) {
+                shape.mouse = p;
+                i = nX;
+                j = nZ;
+                break;
               }
             }
             {
-              const v1 = terrain[i + 1 +  j      * nX1];
-              const v2 = terrain[i +     (j + 1) * nX1];
-              const v3 = terrain[i + 1 + (j + 1) * nX1];
-              const l1 = vec3.create();
-              const l2 = vec3.create();
-              const l3 = vec3.create();
-              vec3.sub(l1, v1, mouse);
-              vec3.sub(l2, v2, mouse);
-              vec3.sub(l3, v3, mouse);
-              if (vec3.length(l1) < modArea &&
-                  vec3.length(l2) < modArea &&
-                  vec3.length(l3) < modArea) {
-                for (var k = 0; k < 3; k++) {
-                  colors[index + 4 * k + 12] = colorRef[index + 4 * k + 12] + preset.R.add;
-                  colors[index + 4 * k + 13] = colorRef[index + 4 * k + 13] + preset.G.add;
-                  colors[index + 4 * k + 14] = colorRef[index + 4 * k + 14] + preset.B.add;
-                  colors[index + 4 * k + 15] = colorRef[index + 4 * k + 15] + preset.A.add;
+              const v1 =terrain[i + 1 +  j      * nX1];
+              const v2 =terrain[i +     (j + 1) * nX1];
+              const v3 =terrain[i + 1 + (j + 1) * nX1];
+              const p = intersect(v1, v2, v3, mouseray);
+              if (p !== null) {
+                shape.mouse = p;
+                i = nX;
+                j = nZ;
+                break;
+              }
+            }
+          }
+        }
+        if (shape.mouse != null) {
+          const colors   = shape.colorBuffer;
+          const colorRef = shape.colorRef;
+          const mouse    = shape.mouse;
+          for (var i = 0; i < nX; i++) {
+            for (var j = 0; j < nZ; j++) {
+              const index = (i * nZ + j) * 24;
+              {
+                const v1 = terrain[i +     j      * nX1];
+                const v2 = terrain[i +    (j + 1) * nX1];
+                const v3 = terrain[i + 1 + j      * nX1];
+                const l1 = vec3.create();
+                const l2 = vec3.create();
+                const l3 = vec3.create();
+                vec3.sub(l1, v1, mouse);
+                vec3.sub(l2, v2, mouse);
+                vec3.sub(l3, v3, mouse);
+                if (vec3.length(l1) < modArea &&
+                    vec3.length(l2) < modArea &&
+                    vec3.length(l3) < modArea) {
+                  for (var k = 0; k < 3; k++) {
+                    colors[index + 4 * k]     = colorRef[index + 4 * k]     + material.COLOR_PRESET.R.add;
+                    colors[index + 4 * k + 1] = colorRef[index + 4 * k + 1] + material.COLOR_PRESET.G.add;
+                    colors[index + 4 * k + 2] = colorRef[index + 4 * k + 2] + material.COLOR_PRESET.B.add;
+                    colors[index + 4 * k + 3] = colorRef[index + 4 * k + 3] + material.COLOR_PRESET.A.add;
+                  }
+                } else {
+                  for (var k = 0; k < 3; k++) {
+                    colors[index + 4 * k]     = colorRef[index + 4 * k];
+                    colors[index + 4 * k + 1] = colorRef[index + 4 * k + 1];
+                    colors[index + 4 * k + 2] = colorRef[index + 4 * k + 2];
+                    colors[index + 4 * k + 3] = colorRef[index + 4 * k + 3];
+                  }
                 }
-              } else {
-                for (var k = 0; k < 3; k++) {
-                  colors[index + 4 * k + 12] = colorRef[index + 4 * k + 12]
-                  colors[index + 4 * k + 13] = colorRef[index + 4 * k + 13];
-                  colors[index + 4 * k + 14] = colorRef[index + 4 * k + 14];
-                  colors[index + 4 * k + 15] = colorRef[index + 4 * k + 15];
+              }
+              {
+                const v1 = terrain[i + 1 +  j      * nX1];
+                const v2 = terrain[i +     (j + 1) * nX1];
+                const v3 = terrain[i + 1 + (j + 1) * nX1];
+                const l1 = vec3.create();
+                const l2 = vec3.create();
+                const l3 = vec3.create();
+                vec3.sub(l1, v1, mouse);
+                vec3.sub(l2, v2, mouse);
+                vec3.sub(l3, v3, mouse);
+                if (vec3.length(l1) < modArea &&
+                    vec3.length(l2) < modArea &&
+                    vec3.length(l3) < modArea) {
+                  for (var k = 0; k < 3; k++) {
+                    colors[index + 4 * k + 12] = colorRef[index + 4 * k + 12] + material.COLOR_PRESET.R.add;
+                    colors[index + 4 * k + 13] = colorRef[index + 4 * k + 13] + material.COLOR_PRESET.G.add;
+                    colors[index + 4 * k + 14] = colorRef[index + 4 * k + 14] + material.COLOR_PRESET.B.add;
+                    colors[index + 4 * k + 15] = colorRef[index + 4 * k + 15] + material.COLOR_PRESET.A.add;
+                  }
+                } else {
+                  for (var k = 0; k < 3; k++) {
+                    colors[index + 4 * k + 12] = colorRef[index + 4 * k + 12]
+                    colors[index + 4 * k + 13] = colorRef[index + 4 * k + 13];
+                    colors[index + 4 * k + 14] = colorRef[index + 4 * k + 14];
+                    colors[index + 4 * k + 15] = colorRef[index + 4 * k + 15];
+                  }
                 }
               }
             }
           }
+        } else {
+          this.colorBuffer = new Float32Array(this.colorRef);
         }
       }
     }
     // MOD APPLY
     ///////////////////////////////////////////////////////////////////////
     if (scene.modEnabled && scene.modApply) {
-      const vertices = shape.vertices;
-      if (mouse !== null) {
-        const d = vec3.create();
+      const vertices = shape.vertexBuffer;
+      if (shape.mouse !== null) {
+        const mouse = shape.mouse;
+        const d     = vec3.create();
         for (var i = 0; i < nX1; i++) {
           for (var j = 0; j < nZ1; j++) {
             const v = terrain[i + j * nX1];
             vec3.sub(d, v, mouse);
-            if (vec3.length(d) < modArea) {
+            const l = vec3.length(d);
+            if (l < modArea) {
               if (scene.modSubstract) {
                 vec3.sub(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
               } else {

@@ -8,7 +8,7 @@ class Atmosphere {
     this.programInfo = {
       program: atmosphericProgram,
       attribLocations: {
-        vertexPosition:   gl.getAttribLocation(atmosphericProgram,  'aVertexPosition'),
+        vertexPosition: gl.getAttribLocation(atmosphericProgram,  'aVertexPosition'),
       },
       uniformLocations: {
         viewport:      gl.getUniformLocation(atmosphericProgram, 'uViewport'),
@@ -90,7 +90,7 @@ class Atmosphere {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, VIEWPORT.indices);
 
     gl.useProgram(programInfo.program);
-    gl.uniform3fv(programInfo.uniformLocations.sunDirection, sunlight);
+    gl.uniform3fv(programInfo.uniformLocations.sunDirection, this.sunlight.position);
     gl.uniform2fv(programInfo.uniformLocations.viewport, new Float32Array([
       ATMOSPHERE_TEXTURE_SIZE,
       ATMOSPHERE_TEXTURE_SIZE

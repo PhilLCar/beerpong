@@ -41,11 +41,7 @@ class DisplayManager {
   async start() {
     while (true) {
       var ticks = new Date().getTime();
-      var buffers  = false;
-      var shadows  = false;
-      var scene    = false;
       await new Promise(resolve => setTimeout(resolve, 1000 / this.targetFrameRate));
-      this.syncStateVariables();
       if (this.animate) {
         this.renderLevel = RENDER_BUFFERS;
         if (this.delta === null) this.delta = 0;
@@ -53,6 +49,7 @@ class DisplayManager {
       } else {
         this.delta = null;
       }
+      if (this.scene.modApply) this.renderLevel = RENDER_BUFFERS;
       if (this.renderLevel >= RENDER_BUFFERS) {
         this.scene.updateBuffers(this.delta);
       }

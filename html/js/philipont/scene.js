@@ -158,8 +158,8 @@ class Scene {
     this.solids         = [];
     this.lines          = [];
     this.lights         = [];
-    this.atmosphere     = new Atmosphere(gl);
     this.lights.push(new Light(LIGHTS.SUN));
+    this.atmosphere     = new Atmosphere(gl, this.lights[0]);
     this.initFrameBuffers();
     ////////////////////////////////////////////////////////////////////////
     // INITIALIZE PCSS CONSTANTS
@@ -283,8 +283,8 @@ class Scene {
                 right,
                 bottom,
                 top,
-                zNear,
-                zFar);
+                ZNEAR,
+                ZFAR);
 
       const lightSource = vec3.create();
       if (this.lights[i].directional) {
@@ -343,7 +343,7 @@ class Scene {
       }
     }
     /// TODO: might fail
-    const shadowTransformsArray = new Float64Array(shadowTransforms.length * 16);
+    const shadowTransformsArray = new Float32Array(shadowTransforms.length * 16);
     for (var i = 0; i < shadowTransforms.length; i++) {
       shadowTransformsArray.set(shadowTransforms[i].buffer, 16 * i);
     }
@@ -427,24 +427,24 @@ class Scene {
     gl.uniformMatrix3fv(programInfo.uniformLocations.normalTransform,
                         false,
                         normalTransform3x3);
-    const shadowMap   = new Uint8Array(this.lights.length);
-    const directional = new Uint8Array(this.lights.length);
-    const position    = new Float64Array(this.lights.length * 3);
-    const color       = new Float64Array(this.lights.length * 3);
+    const shadowMap   = new Int32Array(this.lights.length);
+    const directional = new Int32Array(this.lights.length);
+    const position    = new Float32Array(this.lights.length * 3);
+    const color       = new Float32Array(this.lights.length * 3);
     for (var i = 0; i < this.lights.length; i++) {
       shadowMap[i]  = i;
       directional[i] = this.lights[i].directional ? 1 : 0;
-      positions.set(this.lights[i].getPosition().buffer, 3 * i);
-      colors.set(this.lights[i].getColor().buffer, 3 * i);
+      position.set(this.lights[i].getPosition().buffer, 3 * i);
+      color.set(this.lights[i].getColor().buffer, 3 * i);
       gl.activeTexture(gl[`TEXTURE${i}`]);
       gl.bindTexture(gl.TEXTURE_2D, this.depthBuffers[i]);
     }
-    gl.uniform1iv(programInfo.uniformLocations.shadowMap,        false, shadowMap);
-    gl.uniform1iv(programInfo.uniformLocations.lightDirectional, false, directional);
-    gl.uniform3fv(programInfo.uniformLocations.lightPosition,    false, position);
-    gl.uniform3fv(programInfo.uniformLocations.lightColor,       false, color);
-    gl.uniform1i(programInfo.uniformLocations.lightNum, this.lights.length);
-    gl.uniform1i(programInfo.uniformLocations.isLit,    this.isLit);
+    gl.uniform1iv(programInfo.uniformLocations.shadowMap,        shadowMap);
+    gl.uniform1iv(programInfo.uniformLocations.lightDirectional, directional);
+    gl.uniform3fv(programInfo.uniformLocations.lightPosition,    position);
+    gl.uniform3fv(programInfo.uniformLocations.lightColor,       color);
+    gl.uniform1ui(programInfo.uniformLocations.lightNum,         this.lights.length);
+    gl.uniform1i(programInfo.uniformLocations.isLit,             this.isLit);
 
     for (var shape of this.lines.concat(this.solids)) {
       if (shape.ignore) continue;
@@ -461,12 +461,12 @@ class Scene {
       //   gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
       //   gl.bindTexture(gl.TEXTURE_2D, shape.bumpMap);
       // }
-      gl.uniform3fv(programInfo.uniformLocations.materialAmbiant,      false, solid.ambiant);
-      gl.uniform3fv(programInfo.uniformLocations.materialDiffuse,      false, solid.diffuse);
-      gl.uniform2fv(programInfo.uniformLocations.materialSpecularSoft, false, solid.specularSoft);
-      gl.uniform2fv(programInfo.uniformLocations.materialSpecularHard, false, solid.specularHard);
-      gl.uniform3fv(programInfo.uniformLocations.objectCenter,         false, solid.center);
-      gl.uniform1i(programInfo.uniformLocations.objectType, shape.type);
+      gl.uniform3fv(programInfo.uniformLocations.materialAmbiant,      shape.ambiant);
+      gl.uniform3fv(programInfo.uniformLocations.materialDiffuse,      shape.diffuse);
+      gl.uniform2fv(programInfo.uniformLocations.materialSpecularSoft, shape.specularSoft);
+      gl.uniform2fv(programInfo.uniformLocations.materialSpecularHard, shape.specularHard);
+      gl.uniform3fv(programInfo.uniformLocations.objectCenter,         shape.center);
+      gl.uniform1ui(programInfo.uniformLocations.objectType,           shape.type);
 
       { // VERTICES
         const numComponents = 3;
@@ -656,6 +656,7 @@ class Scene {
   }
 
   setModApply(modApply) {
+    DM.renderLevel |= RENDER_BUFFERS;
     this.modApply = modApply;
   }
 
@@ -687,12 +688,12 @@ class Scene {
     const pos0   = vec3.create();
     const pos1   = vec3.create();
     const mRay   = vec3.create();
-    var x =  (e.clientX - canvas.clientLeft - canvas.clientWidth  / 2) / (canvas.clientWidth  / 2);
-    var y = -(e.clientY - canvas.clientTop  - canvas.clientHeight / 2) / (canvas.clientHeight / 2);
+    const u =  (x - canvas.clientLeft - canvas.clientWidth  / 2) / (canvas.clientWidth  / 2);
+    const v = -(y- canvas.clientTop  - canvas.clientHeight / 2) / (canvas.clientHeight / 2);
     mat4.mul(invMat, this.projectionMatrix, this.modelViewMatrix);
     mat4.invert(invMat, invMat);
-    vec4.transformMat4(posn, vec4.fromValues(x, y, -1, 1), invMat);
-    vec4.transformMat4(posf, vec4.fromValues(x, y,  1, 1), invMat);
+    vec4.transformMat4(posn, vec4.fromValues(u, v, -1, 1), invMat);
+    vec4.transformMat4(posf, vec4.fromValues(u, v,  1, 1), invMat);
     if (posn[3] == 0 || posf[3] == 0) {
       this.mouseray = null;
       return;
@@ -717,16 +718,17 @@ class Scene {
     this.atmo       = this.addSolid(initAtmo(this.gl, level));
     this.gridBack   = this.addSolid(initGridBack(this.gl, level));
     this.grid       = this.addLine(initGrid(this.gl, level));
-    this.gridHD     = this.addLine(initGridHD(this.gl, level));
+    this.hdGrid     = this.addLine(initGridHD(this.gl, level));
 
     this.waterWaves.ignore = true;
-    this.gridHD.ignore     = true;
+    this.hdGrid.ignore     = true;
     this.grid.ignore       = !this.gridOn;
     this.atmo.ignore       = !this.atmoOn;
 
-    DM.maxTranslation = level.terrainSizeX / 2;
-    DM.minZoom        = -2 * level.terrainSizeZ;
-    DM.modEnabled     = true; // TODO: TEMP
+    this.maxTranslation = level.terrainSizeX / 2;
+    this.minZoom        = -2 * level.terrainSizeZ;
+    this.modEnabled     = true;
+    DM.renderLevel |= RENDER_BUFFERS;
   }
 
   destroyBuffers() {
@@ -743,22 +745,24 @@ class Scene {
     this.atmo       = null;
     this.gridBack   = null;
     this.grid       = null;
-    this.gridHD     = null;
+    this.hdGrid     = null;
   }
 
   updateBuffers(t) {
     this.waterWaves.ignore = t === null;
     this.waterPlane.ignore = t !== null;
-    this.gridHD.ignore     = !this.gridHD || !this.gridOn;
+    this.hdGrid.ignore     = !this.gridHD || !this.gridOn;
     this.grid.ignore       = !this.gridOn;
     this.gridBack.ignore   = !this.gridOn;
     this.atmo.ignore       = !this.atmoOn;
 
     for (var solid of this.solids) {
+      if (solid.ignore) continue;
       solid.animate(this, t);
     }
     for (var line of this.lines) {
-      line.animate(t, null);
+      if (line.ignore) continue;
+      line.animate(this, t);
     }
   }
 }

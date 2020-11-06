@@ -154,42 +154,42 @@ function initWaterWaves(gl, level) {
   shape.nX         = nX;
   shape.nX1        = nX1;
   shape.nZ         = nZ;
+  shape.nZ1        = nZ + 1;
   shape.freq       = 1.5;
   shape.amp        = 0.05;
   shape.waterLevel = waterLevel;
-  shape.animate = function(scene, t) {
+  shape.doAnimate = function(scene, t) {
     const nX         = shape.nX;
     const nX1        = shape.nX1;
     const nZ         = shape.nZ;
+    const nZ1        = shape.nZ1;
     const waterLevel = shape.waterLevel;
-    const vertices   = shape.vertices;
+    const vertices   = shape.vertexBuffer;
+    const freq       = shape.freq;
+    const amp        = shape.amp;
 
-    for (var i = 0; i < nX; i++) {
-      for (var j = 0; j < nZ; j++) {
-        const index = (i * nZ + j) * 18;
-        /////////////////////////////////////////////////
-        {
-          const i1 = i + 1 +  j      * nX1;
-          const i2 = i +     (j + 1) * nX1;
-          const i3 = i + 1 + (j + 1) * nX1;
-          const y1 =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i1) * amp;
-          const y2 =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i2) * amp;
-          const y3 =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i3) * amp;
-          vertices[index + 1] = y1;
-          vertices[index + 4] = y2;
-          vertices[index + 7] = y3;
+    if (t === null) return;
+
+    for (var i = 0; i < nX1; i++) {
+      for (var j = 0; j < nZ1; j++) {
+        const i1 = (i * nZ + j) * 18 + 1;
+        const y  =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i1) * amp;
+        vertices[i1] = y;
+        if (i > 0) {
+          const i2 = ((i - 1) * nZ + j) * 18 + 7;
+          const i3 = i2 + 3;
+          vertices[i2] = y;
+          vertices[i3] = y;
         }
-        /////////////////////////////////////////////////
-        {
-          const i1 = i + 1 +  j      * nX1;
-          const i2 = i +     (j + 1) * nX1;
-          const i3 = i + 1 + (j + 1) * nX1;
-          const y1 = waterLevel + Math.sin(t / (Math.PI / 2) * freq + i1) * amp;
-          const y2 = waterLevel + Math.sin(t / (Math.PI / 2) * freq + i2) * amp;
-          const y3 = waterLevel + Math.sin(t / (Math.PI / 2) * freq + i3) * amp;
-          vertices[index + 10] = y1;
-          vertices[index + 13] = y2;
-          vertices[index + 16] = y3;
+        if (j > 0) {
+          const i4 = (i * nZ + j - 1) * 18 + 4;
+          const i5 = i4 + 9;
+          vertices[i4] = y;
+          vertices[i5] = y;
+        }
+        if (i > 0 && j > 0) {
+          const i6 = ((i - 1) * nZ + j - 1) * 18 + 16;
+          vertices[i6] = y;
         }
       }
     }

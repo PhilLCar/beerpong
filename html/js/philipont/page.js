@@ -59,7 +59,7 @@ function toggleGrid() {
 
 function toggleGridHD() {
   if (DM.scene === null) return;
-  DM.scene.toogleGridHD();
+  DM.scene.toggleGridHD();
 }
 
 function translateXY(event) {
@@ -93,7 +93,7 @@ function translateZ(event) {
   var e = event || window.event;
   var nTranslation = vec3.fromValues(0, 0, 0);
   nTranslation[2] -= e.deltaY / 10.0;
-  DM.scene.setTranslation(n);
+  DM.scene.setTranslation(nTranslation);
 }
 
 function startMovingSun(event) {
@@ -153,8 +153,8 @@ function canvasMouseDown(event) {
 function canvasMouseUp(event) {
   if (DM.scene === null) return;
   var e = event || window.event;
-  if (e.which == 2 || DM.rotEnabled) {
-    DM.scene.rotEnabled = !DM.rotEnabled;
+  if (e.which == 2 || DM.scene.rotEnabled) {
+    DM.scene.rotEnabled = !DM.scene.rotEnabled;
     DM.scene.previousCoords = null;
   }
   DM.scene.setModApply(false);
@@ -165,7 +165,7 @@ function canvasMouseMove(event) {
   var e = event || window.event;
   if (DM.scene.rotEnabled) {
     DM.scene.setRotation(e.clientX, e.clientY);
-  } else if (DM.modEnabled) {
+  } else if (DM.scene.modEnabled) {
     DM.scene.setMod(e.clientX, e.clientY);
   }
 }

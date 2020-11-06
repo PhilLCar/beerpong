@@ -24,18 +24,27 @@ class Shape {
     this.isLine      = false;
     this.ignore      = false;
     /// GL ///
+    this.bindBuffers();
+  }
+
+  bindBuffers() {
+    const gl = this.gl;
+    if (this.vertices) gl.deleteBuffer(this.vertices);
     this.vertices = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);
     gl.bufferData(gl.ARRAY_BUFFER, this.vertexBuffer, gl.STATIC_DRAW);
+    if (this.indices) gl.deleteBuffer(this.indices);
     this.indices = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.indices);
-    gl.bufferData(gl.ARRAY_BUFFER, this.indexBuffer, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indices);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer, gl.STATIC_DRAW);
     if (this.normalBuffer !== null) {
+      if (this.normals) gl.deleteBuffer(this.normals);
       this.normals = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, this.normals);
       gl.bufferData(gl.ARRAY_BUFFER, this.normalBuffer, gl.STATIC_DRAW);
     }
     if (this.colorBuffer !== null) {
+      if (this.colors) gl.deleteBuffer(this.colors);
       this.colors = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, this.colors);
       gl.bufferData(gl.ARRAY_BUFFER, this.colorBuffer, gl.STATIC_DRAW);
@@ -43,7 +52,10 @@ class Shape {
   }
 
   animate(scene, t) {
-    // do nothing
+    if (this.doAnimate) {
+      this.doAnimate(scene, t);
+      this.bindBuffers();
+    }
   }
 
   destroy() {
