@@ -1,4 +1,4 @@
-function initWaterPlane(gl, level) {
+function initWaterPlane(level) {
   const material = MATERIALS.WATER;
   const nX        = Math.floor(level.terrainSizeX / level.terrainRes);
   const nZ        = Math.floor(level.terrainSizeZ / level.terrainRes);
@@ -10,6 +10,12 @@ function initWaterPlane(gl, level) {
   const waterNormals  = [];
   const waterColors   = [];
   const waterIndices  = [];
+  const waterPosition = [];
+  const waterLighting = [];
+  const waterSpecSoft = [];
+  const waterSpecHard = [];
+  const waterTexture  = [];
+  const waterTexType  = [];
   waterVertices.push(tr[0]);
   waterVertices.push(level.waterLevel);
   waterVertices.push(tr[2]);
@@ -39,19 +45,34 @@ function initWaterPlane(gl, level) {
   waterIndices.push(0);
   waterIndices.push(2);
   waterIndices.push(3);
-  return new Shape(
-    gl,
-    { 
-      vertexBuffer: waterVertices, 
-      indexBuffer:  waterIndices, 
-      normalBuffer: waterNormals,
-      colorBuffer:  waterColors
-    },
-    material
-  );
+  for (var i = 0; i < 4; i++) {
+    waterPosition.push(0);
+    waterPosition.push(level.waterLevel);
+    waterPosition.push(0);
+    waterLighting.push(material.AMBIANT);
+    waterLighting.push(material.DIFFUSE);
+    waterSpecSoft.push(material.SPECULAR_SOFT[0]);
+    waterSpecSoft.push(material.SPECULAR_SOFT[1]);
+    waterSpecHard.push(material.SPECULAR_HARD[0]);
+    waterSpecHard.push(material.SPECULAR_HARD[1]);
+    waterTexture.push (material.TEXTURE);
+    waterTexType.push (material.TEXTYPE);
+  }
+  return new Shape({ 
+    vertexBuffer:   waterVertices, 
+    indexBuffer:    waterIndices, 
+    normalBuffer:   waterNormals,
+    colorBuffer:    waterColors,
+    positionBuffer: waterPosition,
+    lightingBuffer: waterLighting,
+    specSoftBuffer: waterSpecSoft,
+    specHardBuffer: waterSpecHard,
+    textureBuffer:  waterTexture,
+    texTypeBuffer:  waterTexType
+  });
 }
 
-function initWaterWaves(gl, level) {
+function initWaterWaves(level) {
   const material = MATERIALS.WATER;
   const nX       = Math.floor(level.terrainSizeX / level.terrainRes);
   const nZ       = Math.floor(level.terrainSizeZ / level.terrainRes);
@@ -60,7 +81,12 @@ function initWaterWaves(gl, level) {
   const waterNormals  = [];
   const waterColors   = [];
   const waterIndices  = [];
-  const terrain       = level.terrain;
+  const waterPosition = [];
+  const waterLighting = [];
+  const waterSpecSoft = [];
+  const waterSpecHard = [];
+  const waterTexture  = [];
+  const waterTexType  = [];
   const waterLevel    = level.waterLevel;
   for (var i = 0; i < nX; i++) {
     for (var j = 0; j < nZ; j++) {
@@ -140,17 +166,30 @@ function initWaterWaves(gl, level) {
   }
   for (var i = 0; i < 6 * nX * nZ; i++) {
     waterIndices.push(i);
+    waterPosition.push(0);
+    waterPosition.push(waterLevel);
+    waterPosition.push(0);
+    waterLighting.push(material.AMBIANT);
+    waterLighting.push(material.DIFFUSE);
+    waterSpecSoft.push(material.SPECULAR_SOFT[0]);
+    waterSpecSoft.push(material.SPECULAR_SOFT[1]);
+    waterSpecHard.push(material.SPECULAR_HARD[0]);
+    waterSpecHard.push(material.SPECULAR_HARD[1]);
+    waterTexture.push (material.TEXTURE);
+    waterTexType.push (material.TEXTYPE);
   }
-  const shape = new Shape(
-    gl,
-    { 
-      vertexBuffer: waterVertices, 
-      indexBuffer:  waterIndices, 
-      normalBuffer: waterNormals,
-      colorBuffer:  waterColors
-    },
-    material
-  );
+  const shape = new Shape({ 
+    vertexBuffer:   waterVertices, 
+    indexBuffer:    waterIndices, 
+    normalBuffer:   waterNormals,
+    colorBuffer:    waterColors,
+    positionBuffer: waterPosition,
+    lightingBuffer: waterLighting,
+    specSoftBuffer: waterSpecSoft,
+    specHardBuffer: waterSpecHard,
+    textureBuffer:  waterTexture,
+    texTypeBuffer:  waterTexType
+  });
   shape.nX         = nX;
   shape.nX1        = nX1;
   shape.nZ         = nZ;
@@ -158,8 +197,8 @@ function initWaterWaves(gl, level) {
   shape.freq       = 1.5;
   shape.amp        = 0.05;
   shape.waterLevel = waterLevel;
-  shape.doAnimate = function(scene, t) {
-    const nX         = shape.nX;
+  shape.animate = function(scene, t) {
+    const offset     = shape.offset;
     const nX1        = shape.nX1;
     const nZ         = shape.nZ;
     const nZ1        = shape.nZ1;
@@ -172,23 +211,23 @@ function initWaterWaves(gl, level) {
 
     for (var i = 0; i < nX1; i++) {
       for (var j = 0; j < nZ1; j++) {
-        const i1 = (i * nZ + j) * 18 + 1;
+        const i1 = offset + (i * nZ + j) * 18 + 1;
         const y  =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i1) * amp;
         vertices[i1] = y;
         if (i > 0) {
-          const i2 = ((i - 1) * nZ + j) * 18 + 7;
+          const i2 = offset + ((i - 1) * nZ + j) * 18 + 7;
           const i3 = i2 + 3;
           vertices[i2] = y;
           vertices[i3] = y;
         }
         if (j > 0) {
-          const i4 = (i * nZ + j - 1) * 18 + 4;
+          const i4 = offset + (i * nZ + j - 1) * 18 + 4;
           const i5 = i4 + 9;
           vertices[i4] = y;
           vertices[i5] = y;
         }
         if (i > 0 && j > 0) {
-          const i6 = ((i - 1) * nZ + j - 1) * 18 + 16;
+          const i6 = offset + ((i - 1) * nZ + j - 1) * 18 + 16;
           vertices[i6] = y;
         }
       }

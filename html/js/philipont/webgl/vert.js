@@ -1,7 +1,6 @@
-const MAX_NUM_LIGHTS      = 4;
-
 const shadowVertexSRC = `#version 300 es
   layout (location = 0) in vec4 aVertexPosition;
+  //layout (location = 10) in sampler2D aBumpMap;
 
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
@@ -22,6 +21,8 @@ const sceneVertexSRC = `#version 300 es
   layout (location = 0) in vec4      aVertexPosition;
   layout (location = 1) in vec4      aVertexColor;
   layout (location = 2) in vec3      aVertexNormal;
+  layout (location = 3) in vec3      aObjectCenter;
+  layout (location = 4) in uint      aTextureType;
 
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
@@ -71,7 +72,7 @@ const sceneVertexSRC = `#version 300 es
 `;
 
 const hdrVertexSRC=`#version 300 es
-  layout (location = 3) in vec4 aVertexPosition;
+  layout (location = 9) in vec4 aVertexPosition;
 
   void main(void) {
     gl_Position = aVertexPosition;
@@ -79,7 +80,7 @@ const hdrVertexSRC=`#version 300 es
 `;
 
 const atmoVertexSRC =`#version 300 es
-  layout (location = 4) in vec4 aVertexPosition;
+  layout (location = 10) in vec4 aVertexPosition;
 
   void main(void) {
     gl_Position = aVertexPosition;

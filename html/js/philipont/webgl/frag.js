@@ -18,16 +18,6 @@ const sceneFragmentSRC = `#version 300 es
   // Lights
   uniform vec3 uLightColor[MAX_NUM_LIGHTS];
 
-  // Material properties
-  uniform sampler2D uMaterialTextureMap;
-  uniform vec2      uMaterialSpecularSoft;
-  uniform vec2      uMaterialSpecularHard;
-  uniform vec3      uMaterialAmbiant;
-  uniform vec3      uMaterialDiffuse;
-
-  // Object properties
-  uniform uint uObjectType;
-
   in highp vec3 vPosition;
   in highp vec4 vColor;
   in highp vec3 vNormal;

@@ -93,7 +93,12 @@ class Scene {
         vertexPosition:   gl.getAttribLocation(shaderProgram,  'aVertexPosition'),
         vertexColor:      gl.getAttribLocation(shaderProgram,  'aVertexColor'),
         vertexNormal:     gl.getAttribLocation(shaderProgram,  'aVertexNormal'),
-        vertexMaterial:   gl.getAttribLocation(shaderProgram,  'aVertexMaterial')
+        objectCenter:     gl.getAttribLocation(shaderProgram,  'aObjectCenter'),
+        lighting:         gl.getAttribLocation(shaderProgram,  'aMaterialLighting'),
+        specularSoft:     gl.getAttribLocation(shaderProgram,  'aMaterialSpecularSoft'),
+        specularHard:     gl.getAttribLocation(shaderProgram,  'aMaterialSpecularHard'),
+        texture:          gl.getAttribLocation(shaderProgram,  'aMaterialTexture'),
+        texuteType:       gl.getAttribLocation(shaderProgram,  'aMaterialTextureApplyFunction')
       },
       uniformLocations: {
         modelViewMatrix:      gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
@@ -105,14 +110,6 @@ class Scene {
         lightPosition:        gl.getUniformLocation(shaderProgram, 'uLightPosition'),
         lightColor:           gl.getUniformLocation(shaderProgram, 'uLightColor'),
         lightNum:             gl.getUniformLocation(shaderProgram, 'uLightNum'),
-        materialTextureMap:   gl.getUniformLocation(shaderProgram, 'uMaterialTextureMap'),
-        materialBumpMap:      gl.getUniformLocation(shaderProgram, 'uMaterialBumpMap'),
-        materialAmbiant:      gl.getUniformLocation(shaderProgram, 'uMaterialAmbiant'),
-        materialDiffuse:      gl.getUniformLocation(shaderProgram, 'uMaterialDiffuse'),
-        materialSpecularSoft: gl.getUniformLocation(shaderProgram, 'uMaterialSpecularSoft'),
-        materialSpecularHard: gl.getUniformLocation(shaderProgram, 'uMaterialSpecularHard'),
-        objectCenter:         gl.getUniformLocation(shaderProgram, 'uObjectCenter'),
-        objectType:           gl.getUniformLocation(shaderProgram, 'uObjectType'),
         shadowMap:            gl.getUniformLocation(shaderProgram, 'uShadowMap'),
         poissonDisks:         gl.getUniformLocation(shaderProgram, 'POISSON_DISKS')
       }
@@ -137,29 +134,52 @@ class Scene {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, VIEWPORT.indices);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, VIEWPORT.indexBuffer, gl.STATIC_DRAW);
 
-    this.gl             = gl;
-    this.level          = null;
-    this.mouseray       = null;
-    this.rotEnabled     = false;
-    this.modEnabled     = false;
-    this.modSubstract   = true;
-    this.modApply       = false;
-    this.modArea        =  2.0;
-    this.maxTranslation = 10.0;
-    this.maxZoom        = -6.0;
-    this.minZoom        = -6.0;
-    this.previousCoords = null;
-    this.rotation       = vec3.fromValues(Math.PI / 20.0, 0.0, 0.0);
-    this.translation    = vec3.fromValues(0.0, 0.0, -6.0);
-    this.isLit          = true;
-    this.atmoOn         = true;
-    this.gridOn         = false;
-    this.gridHD         = false;
-    this.solids         = [];
-    this.lines          = [];
-    this.lights         = [];
+    this.gl                 = gl;
+    this.level              = null;
+    this.mouseray           = null;
+    this.rotEnabled         = false;
+    this.modEnabled         = false;
+    this.modSubstract       = true;
+    this.modApply           = false;
+    this.modArea            =  2.0;
+    this.maxTranslation     = 10.0;
+    this.maxZoom            = -6.0;
+    this.minZoom            = -6.0;
+    this.previousCoords     = null;
+    this.rotation           = vec3.fromValues(Math.PI / 20.0, 0.0, 0.0);
+    this.translation        = vec3.fromValues(0.0, 0.0, -6.0);
+    this.isLit              = true;
+    this.atmoOn             = true;
+    this.gridOn             = false;
+    this.gridHD             = false;
+    this.lineOffset         = 0;
+    this.vertexBuffer       = [];
+    this.vertices           = null;
+    this.normalBuffer       = [];
+    this.normals            = null;
+    this.colorBuffer        = [];
+    this.colors             = null;
+    this.indexBuffer        = [];
+    this.indices            = null;
+    this.positionBuffer     = [];
+    this.positions          = null;
+    this.lightingBuffer     = [];
+    this.lighting           = null;
+    this.specSoftBuffer     = [];
+    this.specSoft           = null;
+    this.specHardBuffer     = [];
+    this.specHard           = null;
+    this.textureBuffer      = [];
+    this.textures           = null;
+    this.texTypeBuffer      = [];
+    this.texTypes           = null;
+    this.materialTextures   = [];
+    this.solids             = [];
+    this.lines              = [];
+    this.lights             = [];
     this.lights.push(new Light(LIGHTS.SUN));
-    this.atmosphere     = new Atmosphere(gl, this.lights[0]);
+    this.atmosphere = new Atmosphere(gl, this.lights[0]);
+    this.addMaterialTexture(MATERIALS.ATMOSPHERE.TEXTURE, this.atmosphere.atmoBuffer);
     this.initFrameBuffers();
     ////////////////////////////////////////////////////////////////////////
     // INITIALIZE PCSS CONSTANTS
@@ -290,7 +310,7 @@ class Scene {
       if (this.lights[i].directional) {
         vec3.scale(lightSource, this.lights[i].position, size);
       } else {
-        vec3.scale(lightSource, this.lights[i].posiiton, 1.0);
+        vec3.scale(lightSource, this.lights[i].position, 1.0);
       }
       const modelViewMatrix = mat4.create();
       mat4.lookAt(modelViewMatrix,
@@ -314,32 +334,29 @@ class Scene {
                           false,
                           modelViewMatrix);
 
-      for (var solid of this.solids) {
-        if (solid.ignore) continue;
-        { // VERTICES
-          const numComponents = 3;
-          const type          = gl.FLOAT;
-          const normalize     = false;
-          const stride        = 0;
-          const offset        = 0;
-    
-          gl.bindBuffer(gl.ARRAY_BUFFER, solid.vertices);
-          gl.vertexAttribPointer(
-              shadowProgramInfo.attribLocations.vertexPosition,
-              numComponents,
-              type,
-              normalize,
-              stride,
-              offset);
-          gl.enableVertexAttribArray(shadowProgramInfo.attribLocations.vertexPosition);
-        }
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, solid.indices);
-        {
-          const vertexCount = solid.vertexCount;
-          const type        = gl.UNSIGNED_INT;
-          const offset      = solid.offset;
-          gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-        }
+      { // VERTICES
+        const numComponents = 3;
+        const type          = gl.FLOAT;
+        const normalize     = false;
+        const stride        = 0;
+        const offset        = 0;
+  
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);
+        gl.vertexAttribPointer(
+            shadowProgramInfo.attribLocations.vertexPosition,
+            numComponents,
+            type,
+            normalize,
+            stride,
+            offset);
+        gl.enableVertexAttribArray(shadowProgramInfo.attribLocations.vertexPosition);
+      }
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indices);
+      {
+        const vertexCount = this.lineOffset;
+        const type        = gl.UNSIGNED_INT;
+        const offset      = 0;
+        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
       }
     }
     /// TODO: might fail
@@ -432,7 +449,7 @@ class Scene {
     const position    = new Float32Array(this.lights.length * 3);
     const color       = new Float32Array(this.lights.length * 3);
     for (var i = 0; i < this.lights.length; i++) {
-      shadowMap[i]  = i;
+      shadowMap[i] = i;
       directional[i] = this.lights[i].directional ? 1 : 0;
       position.set(this.lights[i].getPosition().buffer, 3 * i);
       color.set(this.lights[i].getColor().buffer, 3 * i);
@@ -445,95 +462,91 @@ class Scene {
     gl.uniform3fv(programInfo.uniformLocations.lightColor,       color);
     gl.uniform1ui(programInfo.uniformLocations.lightNum,         this.lights.length);
     gl.uniform1i(programInfo.uniformLocations.isLit,             this.isLit);
+    if (shape.ignore) continue;
+    var textureOffset = this.lights.length;
+    if (shape.textureMap !== null) {
+      gl.uniform1i(programInfo.uniformLocations.materialTextureMap, textureOffset);
+      gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
+      gl.bindTexture(gl.TEXTURE_2D, shape.textureMap);
+      textureOffset++;
+    }
+    // This will need to go in the shadow renderer
+    // if (shape.bumpMap !== null) {
+    //   gl.uniform1i(programInfo.uniformLocations.materialTextureMap, textureOffset);
+    //   gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
+    //   gl.bindTexture(gl.TEXTURE_2D, shape.bumpMap);
+    // }
+    gl.uniform3fv(programInfo.uniformLocations.materialAmbiant,      shape.ambiant);
+    gl.uniform3fv(programInfo.uniformLocations.materialDiffuse,      shape.diffuse);
+    gl.uniform2fv(programInfo.uniformLocations.materialSpecularSoft, shape.specularSoft);
+    gl.uniform2fv(programInfo.uniformLocations.materialSpecularHard, shape.specularHard);
+    gl.uniform3fv(programInfo.uniformLocations.objectCenter,         shape.center);
+    gl.uniform1ui(programInfo.uniformLocations.objectType,           shape.type);
 
-    for (var shape of this.lines.concat(this.solids)) {
-      if (shape.ignore) continue;
-      var textureOffset = this.lights.length;
-      if (shape.textureMap !== null) {
-        gl.uniform1i(programInfo.uniformLocations.materialTextureMap, textureOffset);
-        gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
-        gl.bindTexture(gl.TEXTURE_2D, shape.textureMap);
-        textureOffset++;
-      }
-      // This will need to go in the shadow renderer
-      // if (shape.bumpMap !== null) {
-      //   gl.uniform1i(programInfo.uniformLocations.materialTextureMap, textureOffset);
-      //   gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
-      //   gl.bindTexture(gl.TEXTURE_2D, shape.bumpMap);
-      // }
-      gl.uniform3fv(programInfo.uniformLocations.materialAmbiant,      shape.ambiant);
-      gl.uniform3fv(programInfo.uniformLocations.materialDiffuse,      shape.diffuse);
-      gl.uniform2fv(programInfo.uniformLocations.materialSpecularSoft, shape.specularSoft);
-      gl.uniform2fv(programInfo.uniformLocations.materialSpecularHard, shape.specularHard);
-      gl.uniform3fv(programInfo.uniformLocations.objectCenter,         shape.center);
-      gl.uniform1ui(programInfo.uniformLocations.objectType,           shape.type);
+    { // VERTICES
+      const numComponents = 3;
+      const type          = gl.FLOAT;
+      const normalize     = false;
+      const stride        = 0;
+      const offset        = 0;
 
-      { // VERTICES
-        const numComponents = 3;
-        const type          = gl.FLOAT;
-        const normalize     = false;
-        const stride        = 0;
-        const offset        = 0;
-  
-        gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertices);
-        gl.vertexAttribPointer(
-            programInfo.attribLocations.vertexPosition,
-            numComponents,
-            type,
-            normalize,
-            stride,
-            offset);
-        gl.enableVertexAttribArray(
-            programInfo.attribLocations.vertexPosition);
-      }
-      if (shape.colors !== null) { // COLORS
-        const numComponents = 4;
-        const type          = gl.FLOAT;
-        const normalize     = false;
-        const stride        = 0;
-        const offset        = 0;
-        gl.bindBuffer(gl.ARRAY_BUFFER, shape.colors);
-        gl.vertexAttribPointer(
-            programInfo.attribLocations.vertexColor,
-            numComponents,
-            type,
-            normalize,
-            stride,
-            offset);
-        gl.enableVertexAttribArray(
-            programInfo.attribLocations.vertexColor);
-      }
-      if (shape.normals !== null) { // NORMALS
-        const numComponents = 3;
-        const type          = gl.FLOAT;
-        const normalize     = false;
-        const stride        = 0;
-        const offset        = 0;
-        gl.bindBuffer(gl.ARRAY_BUFFER, shape.normals);
-        gl.vertexAttribPointer(
-            programInfo.attribLocations.vertexNormal,
-            numComponents,
-            type,
-            normalize,
-            stride,
-            offset);
-        gl.enableVertexAttribArray(
-            programInfo.attribLocations.vertexNormal);
-      }
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.indices);
-
-
-      if (shape.isLine) {
-        const vertexCount = shape.vertexCount;
-        const type        = gl.UNSIGNED_INT;
-        const offset      = shape.offset;
-        gl.drawElements(gl.LINES, vertexCount, type, offset);
-      } else {
-        const vertexCount = shape.vertexCount;
-        const type        = gl.UNSIGNED_INT;
-        const offset      = shape.offset;
-        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertices);
+      gl.vertexAttribPointer(
+          programInfo.attribLocations.vertexPosition,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          programInfo.attribLocations.vertexPosition);
+    }
+    if (shape.colors !== null) { // COLORS
+      const numComponents = 4;
+      const type          = gl.FLOAT;
+      const normalize     = false;
+      const stride        = 0;
+      const offset        = 0;
+      gl.bindBuffer(gl.ARRAY_BUFFER, shape.colors);
+      gl.vertexAttribPointer(
+          programInfo.attribLocations.vertexColor,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          programInfo.attribLocations.vertexColor);
+    }
+    if (shape.normals !== null) { // NORMALS
+      const numComponents = 3;
+      const type          = gl.FLOAT;
+      const normalize     = false;
+      const stride        = 0;
+      const offset        = 0;
+      gl.bindBuffer(gl.ARRAY_BUFFER, shape.normals);
+      gl.vertexAttribPointer(
+          programInfo.attribLocations.vertexNormal,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          programInfo.attribLocations.vertexNormal);
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.indices);
+    {
+      const vertexCount = shape.vertexCount;
+      const type        = gl.UNSIGNED_INT;
+      const offset      = shape.offset;
+      gl.drawElements(gl.LINES, vertexCount, type, offset);
+    }
+    {
+      const vertexCount = shape.vertexCount;
+      const type        = gl.UNSIGNED_INT;
+      const offset      = shape.offset;
+      gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
 
     // ANTI ALIAS
@@ -595,16 +608,22 @@ class Scene {
     }
   }
 
+  addMaterialTexture (textureID, texture) {
+    this.materialTextures.push({
+      id: textureID,
+      texture: texture
+    });
+  }
+
   addSolid(solid) {
     this.solids.push(solid);
     return solid;
   }
 
-  removeSolid(solidID) {
+  removeSolid(solid) {
     for (var i = 0; i < this.solids.length; i++) {
-      if (this.solids[i].ID == solidID) {
-        const rem = this.solids.splice(i, i);
-        rem[0].destroy();
+      if (this.solids[i].ID == solid.id) {
+        this.solids.splice(i, i);
         break;
       }
     }
@@ -615,13 +634,53 @@ class Scene {
     return line;
   }
 
-  removeLine(lineID) {
+  removeLine(line) {
     for (var i = 0; i < this.lines.length; i++) {
-      if (this.lines[i].ID == lineID) {
-        const rem = this.lines.splice(i, i);
-        rem[0].destroy();
+      if (this.lines[i].ID == line.ID) {
+        this.lines.splice(i, i);
         break;
       }
+    }
+  }
+
+  refresh() {
+    for (var solid of this.solids) {
+      const tIndexBuffer = this.indexBuffer;
+      const sIndexBuffer = solid.indexBuffer;
+      const offset       = this.vertexBuffer.length;
+      solid.offset       = offset;
+      for (var i = 0; i < sIndexBuffer.length; i++) {
+        tIndexBuffer.push(offset + sIndexBuffer[i]);
+      }
+      this.vertexBuffer   = this.vertexBuffer.concat  (solid.vertexBuffer);
+      this.normalBuffer   = this.normalBuffer.concat  (solid.normalBuffer);
+      this.colorBuffer    = this.colorBuffer.concat   (solid.colorBuffer);
+      this.positionBuffer = this.positionBuffer.concat(solid.positionBuffer);
+      this.lightingBuffer = this.lightingBuffer.concat(solid.lightingBuffer);
+      this.specSoftBuffer = this.specSoftBuffer.concat(solid.specSoftBuffer);
+      this.specHardBuffer = this.specHardBuffer.concat(solid.specHardBuffer);
+      this.textureBuffer  = this.textureBuffer.concat (solid.textureBuffer);
+      this.texTypeBuffer  = this.texTypeBuffer.concat (solid.texTypeBuffer);
+      this.ignored = false;
+    }
+    this.lineOffset = this.indexBuffer.length;
+    for (var lines of this.lines) {
+      const tIndexBuffer = this.indexBuffer;
+      const lIndexBuffer = line.indexBuffer;
+      const offset       = this.vertexBuffer.length;
+      line.offset        = offset;
+      for (var i = 0; i < lIndexBuffer.length; i++) {
+        tIndexBuffer.push(offset + lIndexBuffer[i]);
+      }
+      this.vertexBuffer   = this.vertexBuffer.concat  (line.vertexBuffer);
+      this.normalBuffer   = this.normalBuffer.concat  (line.normalBuffer);
+      this.colorBuffer    = this.colorBuffer.concat   (line.colorBuffer);
+      this.positionBuffer = this.positionBuffer.concat(line.positionBuffer);
+      this.lightingBuffer = this.lightingBuffer.concat(line.lightingBuffer);
+      this.specSoftBuffer = this.specSoftBuffer.concat(line.specSoftBuffer);
+      this.specHardBuffer = this.specHardBuffer.concat(line.specHardBuffer);
+      this.textureBuffer  = this.textureBuffer.concat (line.textureBuffer);
+      this.texTypeBuffer  = this.texTypeBuffer.concat (line.texTypeBuffer);
     }
   }
 
@@ -712,23 +771,18 @@ class Scene {
 
   initBuffers(level) {
     this.level = level;
-    this.terrain    = this.addSolid(initTerrain(this.gl, level));
-    this.waterPlane = this.addSolid(initWaterPlane(this.gl, level));
-    this.waterWaves = this.addSolid(initWaterWaves(this.gl, level));
-    this.atmo       = this.addSolid(initAtmo(this.gl, level));
-    this.gridBack   = this.addSolid(initGridBack(this.gl, level));
-    this.grid       = this.addLine(initGrid(this.gl, level));
-    this.hdGrid     = this.addLine(initGridHD(this.gl, level));
-
-    this.waterWaves.ignore = true;
-    this.hdGrid.ignore     = true;
-    this.grid.ignore       = !this.gridOn;
-    this.atmo.ignore       = !this.atmoOn;
+    this.terrain    = this.addSolid(initTerrain(this, level));
+    this.waterPlane = this.addSolid(initWaterPlane(this, level));
+    this.waterWaves = this.addSolid(initWaterWaves(this, level));
+    this.atmo       = this.addSolid(initAtmo(this, level));
+    this.gridBack   = this.addSolid(initGridBack(this, level));
+    this.grid       = this.addLine(initGrid(this, level));
+    this.hdGrid     = this.addLine(initGridHD(this, level));
 
     this.maxTranslation = level.terrainSizeX / 2;
     this.minZoom        = -2 * level.terrainSizeZ;
     this.modEnabled     = true;
-    DM.renderLevel |= RENDER_BUFFERS;
+    DM.renderLevel     |= RENDER_BUFFERS;
   }
 
   destroyBuffers() {
@@ -749,20 +803,61 @@ class Scene {
   }
 
   updateBuffers(t) {
-    this.waterWaves.ignore = t === null;
-    this.waterPlane.ignore = t !== null;
-    this.hdGrid.ignore     = !this.gridHD || !this.gridOn;
-    this.grid.ignore       = !this.gridOn;
-    this.gridBack.ignore   = !this.gridOn;
-    this.atmo.ignore       = !this.atmoOn;
-
+    const gl  = this.gl;
+    var   ref = false;
+    if (this.gridOn !== this.prevGridOn) {
+      ref = true;
+      this.prevGridOn = this.gridOn;
+      this.grid.ignore = !this.gridOn;
+    }
+    if (this.gridHD !== this.prevGridHD) {
+      ref = true;
+      this.prevGridHD = this.gridHD;
+      this.hdGrid.ignore = !this.gridHD;
+    }
+    if (this.atmoOn !== this.prevAtmoOn) {
+      ref = true;
+      this.prevAtmoOn = this.atmoOn;
+      this.atmo.ignore = !this.atmoOn;
+    }
+    if (ref) {
+      this.refresh();
+    }
     for (var solid of this.solids) {
-      if (solid.ignore) continue;
       solid.animate(this, t);
     }
-    for (var line of this.lines) {
-      if (line.ignore) continue;
-      line.animate(this, t);
+    for (var lines of this.lines) {
+      lines.animate(this, t);
     }
+    if (this.vertices) gl.deleteBuffer(this.vertices);
+    this.vertices = gl.createBuffer();
+    gl.bufferData(this.vertices, new Float32Array(this.vertexBuffer), gl.STATIC_DRAW);
+    if (this.indices) gl.deleteBuffer(this.indices);
+    this.indices = gl.createBuffer();
+    gl.bufferData(this.indices, new Float32Array(this.indexBuffer), gl.STATIC_DRAW);
+    if (this.normals) gl.deleteBuffer(this.normals);
+    this.normals = gl.createBuffer();
+    gl.bufferData(this.normals, new Float32Array(this.normalBuffer), gl.STATIC_DRAW);
+    if (this.colors) gl.deleteBuffer(this.colors);
+    this.colors = gl.createBuffer();
+    gl.bufferData(this.colors, new Float32Array(this.colorBuffer), gl.STATIC_DRAW);
+    if (this.positions) gl.deleteBuffer(this.positions);
+    this.positons = gl.createBuffer();
+    gl.bufferData(this.positions, new Float32Array(this.positionBuffer), gl.STATIC_DRAW);
+    if (this.lighting) gl.deleteBuffer(this.lighting);
+    this.lighting = gl.createBuffer();
+    gl.bufferData(this.lighting, new Float32Array(this.lightingBuffer), gl.STATIC_DRAW);
+    if (this.specSoft) gl.deleteBuffer(this.specSoft);
+    this.specSoft = gl.createBuffer();
+    gl.bufferData(this.specSoft, new Float32Array(this.specSoftBuffer), gl.STATIC_DRAW);
+    if (this.specHard) gl.deleteBuffer(this.specHard);
+    this.specHard = gl.createBuffer();
+    gl.bufferData(this.specHard, new Float32Array(this.specHardBuffer), gl.STATIC_DRAW);
+    if (this.textures) gl.deleteBuffer(this.textures);
+    this.textures = gl.createBuffer();
+    gl.bufferData(this.textures, new Int32Array(this.textures), gl.STATIC_DRAW);
+    if (this.texTypes) gl.deleteBuffer(this.texTypes);
+    this.texTypes = gl.createBuffer();
+    gl.bufferData(this.texTypes, new Int32Array(this.texTypeBuffer), gl.STATIC_DRAW);
   }
 }

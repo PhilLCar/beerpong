@@ -4,6 +4,19 @@ const vec2 = glMatrix.vec2;
 const vec3 = glMatrix.vec3;
 const vec4 = glMatrix.vec4;
 
+const TEXTYPE_NONE   = 0;
+const TEXTYPE_PLANE  = 1;
+const TEXTYPE_SPHERE = 2;
+const TEXTYPE_ATMO   = 3;
+
+const MAX_NUM_LIGHTS = 4;
+
+var _unique_texture_id = MAX_NUM_LIGHTS;
+
+function getUniqueTextureID() {
+  return _unique_texture_id++;
+}
+
 function initShaderProgram(gl, vsSource, fsSource) {
   const vertexShader   = loadShader(gl, gl.VERTEX_SHADER,   vsSource);
   const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);

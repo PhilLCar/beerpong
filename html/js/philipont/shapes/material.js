@@ -7,11 +7,12 @@ const MATERIAL_ATMO    = 4;
 const MATERIALS = {
   DEFAULT: {
     TEXTURE:   null,
-    AMBIANT:   vec3.fromValues(0.2, 0.2, 0.2),
-    DIFFUSE:   vec3.fromValues(1.0, 1.0, 1.0),
+    AMBIANT:   0.2,
+    DIFFUSE:   1.0,
     SPEC_SOFT: vec2.fromValues(0.5, 32.0),
     SPEC_HARD: vec2.fromValues(0.0, 32.0),
     TYPE:      MATERIAL_GROUND,
+    TEXTYPE:   TEXTYPE_NONE,
     COLOR_PRESET : {
       R: { min: 0.5, max: 0.5, add: null },
       G: { min: 0.5, max: 0.5, add: null },
@@ -19,13 +20,35 @@ const MATERIALS = {
       A: { min: 1.0, max: 1.0, add: null }
     }
   },
+  GRID: {
+    TEXTURE:   null,
+    AMBIANT:   1.0,
+    DIFFUSE:   0.0,
+    SPEC_SOFT: vec2.fromValues(0.0, 32.0),
+    SPEC_HARD: vec2.fromValues(0.0, 32.0),
+    TYPE:      MATERIAL_GRID,
+    TEXTYPE:   TEXTYPE_NONE,
+    COLOR_PRESET : {
+      R: { min: 0.5, max: 1.0, add: null },
+      G: { min: 0.5, max: 1.0, add: null },
+      B: { min: 0.5, max: 1.0, add: null },
+      A: { min: 1.0, max: 1.0, add: null }
+    },
+    BACK: {
+      R: 0.0,
+      G: 0.0,
+      B: 0.0,
+      A: 0.2
+    }
+  },
   EARTH: {
     TEXTURE:   null,
-    AMBIANT:   vec3.fromValues(0.2, 0.2, 0.2),
-    DIFFUSE:   vec3.fromValues(1.0, 1.0, 1.0),
+    AMBIANT:   0.2,
+    DIFFUSE:   1.0,
     SPEC_SOFT: vec2.fromValues(0.4, 64.0),
     SPEC_HARD: vec2.fromValues(0.0, 32.0),
     TYPE:      MATERIAL_GROUND,
+    TEXTYPE:   TEXTYPE_NONE,
     COLOR_PRESET : {
       R: { min: 0,   max: 0.1, add: 0.8 },
       G: { min: 0.3, max: 0.7, add: 0.3 },
@@ -35,11 +58,12 @@ const MATERIALS = {
   },
   WATER: {
     TEXTURE:   null,
-    AMBIANT:   vec3.fromValues(0.2, 0.2, 0.2),
-    DIFFUSE:   vec3.fromValues(1.0, 1.0, 1.0),
+    AMBIANT:   0.2,
+    DIFFUSE:   1.0,
     SPEC_SOFT: vec2.fromValues(0.5,  256.0),
     SPEC_HARD: vec2.fromValues(8.0, 4096.0),
     TYPE:      MATERIAL_GROUND,
+    TEXTYPE:   TEXTYPE_NONE,
     COLOR_PRESET: {
       R: { min: 0,     max: 0.0, add: null },
       G: { min: 0,     max: 0.2, add: null },
@@ -48,12 +72,13 @@ const MATERIALS = {
     }
   },
   ATMOSPHERE: {
-    TEXTURE:   null,
-    AMBIANT:   vec3.fromValues(0.2, 0.2, 0.2),
-    DIFFUSE:   vec3.fromValues(1.0, 1.0, 1.0),
-    SPEC_SOFT: vec2.fromValues(0.5, 32.0),
+    TEXTURE:   getUniqueTextureID(),
+    AMBIANT:   0.0,
+    DIFFUSE:   0.0,
+    SPEC_SOFT: vec2.fromValues(0.0, 32.0),
     SPEC_HARD: vec2.fromValues(0.0, 32.0),
-    TYPE:      MATERIAL_GROUND,
+    TYPE:      MATERIAL_ATMO,
+    TEXTYPE:   TEXTYPE_ATMO,
     COLOR_PRESET : {
       R: { min: 0.0, max: 0.0, add: null },
       G: { min: 0.0, max: 0.0, add: null },

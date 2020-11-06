@@ -1,9 +1,15 @@
-function initSphere(gl, size = 1, resolution = 20, inverted = false, material = MATERIALS.DEFAULT, position = vec3.fromValues(0, 0, 0)) {
+function initSphere(size = 1, resolution = 20, inverted = false, material = MATERIALS.DEFAULT, position = vec3.fromValues(0, 0, 0)) {
   const preset = material.COLOR_PRESET;
   const vertices  = [];
   const normals   = [];
   const colors    = [];
   const indices   = [];
+  const positions = [];
+  const lighting  = [];
+  const specsoft  = [];
+  const spechard  = [];
+  const texture   = [];
+  const textype   = [];
 
   // Add top point
   vertices.push(position[0]);
@@ -103,15 +109,31 @@ function initSphere(gl, size = 1, resolution = 20, inverted = false, material = 
       indices.push(                       (resolution / 2 - 1) * resolution + 1);
     }
   }
-  return new Shape(gl,
-    {
-      vertexBuffer: vertices,
-      normalBuffer: normals,
-      colorBuffer:  colors,
-      indexBuffer:  indices
-    },
-    material
-  );
+  for (var i = 0; i < vertices.length; i++) {
+    positions.push(position[0]);
+    positions.push(position[1]);
+    positions.push(position[2]);
+    lighting.push(material.AMBIANT);
+    lighting.push(material.DIFFUSE);
+    specsoft.push(material.SPECULAR_SOFT[0]);
+    specsoft.push(material.SPECULAR_SOFT[1]);
+    spechard.push(material.SPECULAR_HARD[0]);
+    spechard.push(material.SPECULAR_HARD[1]);
+    texture.push (material.TEXTURE);
+    textype.push (material.TEXTYPE);
+  }
+  return new Shape({
+    vertexBuffer:   vertices,
+    normalBuffer:   normals,
+    colorBuffer:    colors,
+    indexBuffer:    indices,
+    positionBuffer: positions,
+    lightingBuffer: lighting,
+    specSoftBuffer: specsoft,
+    specHardBuffer: spechard,
+    textureBuffer:  texture,
+    texTypeBuffer:  textype
+  });
 }
 
 function initAtmo(gl, level) {

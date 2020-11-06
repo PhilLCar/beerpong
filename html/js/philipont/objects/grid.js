@@ -6,6 +6,12 @@ function initGridBack(gl, level) {
   const gridNormals  = [];
   const gridColors   = [];
   const gridIndices  = [];
+  const gridPosition = [];
+  const gridLighting = [];
+  const gridSpecSoft = [];
+  const gridSpecHard = [];
+  const gridTexture  = [];
+  const gridTexType  = [];
   // top right corner
   gridVertices.push(e);
   gridVertices.push(e);
@@ -28,10 +34,10 @@ function initGridBack(gl, level) {
     gridNormals.push(1);
   }
   for (var i = 0; i < gridVertices.length; i++) {
-    gridColors.push(0);
-    gridColors.push(0);
-    gridColors.push(0);
-    gridColors.push(0.2);
+    gridColors.push(MATERIALS.GRID.BACK.R);
+    gridColors.push(MATERIALS.GRID.BACK.G);
+    gridColors.push(MATERIALS.GRID.BACK.B);
+    gridColors.push(MATERIALS.GRID.BACK.A);
   }
   gridIndices.push(0);
   gridIndices.push(1);
@@ -39,11 +45,30 @@ function initGridBack(gl, level) {
   gridIndices.push(0);
   gridIndices.push(2);
   gridIndices.push(3);
-  return new Shape(gl, {
-    vertexBuffer: gridVertices, 
-    indexBuffer:  gridIndices, 
-    normalBuffer: gridNormals,
-    colorBuffer:  gridColors
+  for (var i = 0; i < 6 * nX * nZ; i++) {
+    gridPosition.push(0);
+    gridPosition.push(0);
+    gridPosition.push(level.gridZ);
+    gridLighting.push(MATERIALS.GRID.AMBIANT);
+    gridLighting.push(MATERIALS.GRID.DIFFUSE);
+    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[0]);
+    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[1]);
+    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[0]);
+    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[1]);
+    gridTexture.push (MATERIALS.GRID.TEXTURE);
+    gridTexType.push (MATERIALS.GRID.TEXTYPE);
+  }
+  return new Shape({
+    vertexBuffer:   gridVertices, 
+    indexBuffer:    gridIndices, 
+    normalBuffer:   gridNormals,
+    colorBuffer:    gridColors,
+    positionBuffer: gridPosition,
+    lightingBuffer: gridLighting,
+    specSoftBuffer: gridSpecSoft,
+    specHardBuffer: gridSpecHard,
+    textureBuffer:  gridTexture,
+    texTypeBuffer:  gridTexType
   });
 }
 
@@ -55,7 +80,13 @@ function initGrid(gl, level) {
   const gridNormals  = [];
   const gridColors   = [];
   const gridIndices  = [];
-  const mod = 1 / level.gridRes * 4;
+  const gridPosition = [];
+  const gridLighting = [];
+  const gridSpecSoft = [];
+  const gridSpecHard = [];
+  const gridTexture  = [];
+  const gridTexType  = [];
+  const mod = 1 / level.gridRes * 12;
   for (var i = 0; i <= gX; i++) {
     if (i % 2 == 1) continue;
     // top line
@@ -82,24 +113,39 @@ function initGrid(gl, level) {
   }
   for (var i = 0; i < gridVertices.length; i++) {
     var color;
-    if (i % mod < 4) color = 1;
-    else             color = 0.8;
+    if (i % mod < 4) color = MATERIALS.GRID.COLOR_PRESET.R.max;
+    else             color = (MATERIALS.GRID.COLOR_PRESET.R.max - MATERIALS.GRID.COLOR_PRESET.R.min) / 2;
     gridColors.push(color);
     gridColors.push(color);
     gridColors.push(color);
-    gridColors.push(1);
+    gridColors.push(MATERIALS.GRID.COLOR_PRESET.A.max);
   }
   for (var i = 0; i < gridVertices.length; i++) {
     gridIndices.push(i);
+    gridPosition.push(0);
+    gridPosition.push(0);
+    gridPosition.push(level.gridZ);
+    gridLighting.push(MATERIALS.GRID.AMBIANT);
+    gridLighting.push(MATERIALS.GRID.DIFFUSE);
+    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[0]);
+    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[1]);
+    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[0]);
+    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[1]);
+    gridTexture.push (MATERIALS.GRID.TEXTURE);
+    gridTexType.push (MATERIALS.GRID.TEXTYPE);
   }
-  const shape = new Shape(gl, {
-    vertexBuffer: gridVertices, 
-    indexBuffer:  gridIndices, 
-    normalBuffer: gridNormals,
-    colorBuffer:  gridColors
+  return new Shape({
+    vertexBuffer:   gridVertices, 
+    indexBuffer:    gridIndices, 
+    normalBuffer:   gridNormals,
+    colorBuffer:    gridColors,
+    positionBuffer: gridPosition,
+    lightingBuffer: gridLighting,
+    specSoftBuffer: gridSpecSoft,
+    specHardBuffer: gridSpecHard,
+    textureBuffer:  gridTexture,
+    texTypeBuffer:  gridTexType
   });
-  shape.isLine = true;
-  return shape;
 }
 
 function initGridHD(gl, level) {
@@ -110,6 +156,12 @@ function initGridHD(gl, level) {
   const gridNormals  = [];
   const gridColors   = [];
   const gridIndices  = [];
+  const gridPosition = [];
+  const gridLighting = [];
+  const gridSpecSoft = [];
+  const gridSpecHard = [];
+  const gridTexture  = [];
+  const gridTexType  = [];
   for (var i = 0; i <= gX; i++) {
     if (i % 2 == 0) continue;
     // top line
@@ -135,20 +187,37 @@ function initGridHD(gl, level) {
     gridNormals.push(1);
   }
   for (var i = 0; i < gridVertices.length; i++) {
-    gridColors.push(0.6);
-    gridColors.push(0.6);
-    gridColors.push(0.6);
-    gridColors.push(0.6);
+    var color;
+    color = MATERIALS.GRID.COLOR_PRESET.R.min;
+    gridColors.push(color);
+    gridColors.push(color);
+    gridColors.push(color);
+    gridColors.push(MATERIALS.GRID.COLOR_PRESET.A.max);
   }
   for (var i = 0; i < gridVertices.length; i++) {
     gridIndices.push(i);
+    gridPosition.push(0);
+    gridPosition.push(0);
+    gridPosition.push(level.gridZ);
+    gridLighting.push(MATERIALS.GRID.AMBIANT);
+    gridLighting.push(MATERIALS.GRID.DIFFUSE);
+    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[0]);
+    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[1]);
+    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[0]);
+    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[1]);
+    gridTexture.push (MATERIALS.GRID.TEXTURE);
+    gridTexType.push (MATERIALS.GRID.TEXTYPE);
   }
-  const shape = new Shape(gl, {
-    vertexBuffer: gridVertices, 
-    indexBuffer:  gridIndices, 
-    normalBuffer: gridNormals,
-    colorBuffer:  gridColors
+  return new Shape({
+    vertexBuffer:   gridVertices, 
+    indexBuffer:    gridIndices, 
+    normalBuffer:   gridNormals,
+    colorBuffer:    gridColors,
+    positionBuffer: gridPosition,
+    lightingBuffer: gridLighting,
+    specSoftBuffer: gridSpecSoft,
+    specHardBuffer: gridSpecHard,
+    textureBuffer:  gridTexture,
+    texTypeBuffer:  gridTexType
   });
-  shape.isLine = true;
-  return shape;
 }

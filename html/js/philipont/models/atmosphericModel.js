@@ -53,8 +53,6 @@ class Atmosphere {
     }
     this.atmoFrameBuffer = atmo_frame_buffer;
     this.atmoBuffer      = atmo_buffer;
-    // SET THE ATMOSPHERE TEXTURE
-    MATERIALS.ATMOSPHERE.TEXTURE = atmo_buffer;
 
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);

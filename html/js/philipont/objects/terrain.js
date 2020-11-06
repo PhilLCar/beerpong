@@ -5,7 +5,7 @@ const PRESET_LUT = [
   "VENUS"
 ]
 
-function initTerrain(gl, level) {
+function initTerrain(level) {
   const material = MATERIALS[PRESET_LUT[level.skin]];
   const nX       = Math.floor(level.terrainSizeX / level.terrainRes);
   const nZ       = Math.floor(level.terrainSizeZ / level.terrainRes);
@@ -14,6 +14,12 @@ function initTerrain(gl, level) {
   const terrainNormals  = [];
   const terrainColors   = [];
   const terrainIndices  = [];
+  const terrainPosition = [];
+  const terrainLighting = [];
+  const terrainSpecSoft = [];
+  const terrainSpecHard = [];
+  const terrainTexture  = [];
+  const terrainTexType  = [];
   const terrain         = level.terrain;
   for (var i = 0; i < nX; i++) {
     for (var j = 0; j < nZ; j++) {
@@ -94,31 +100,45 @@ function initTerrain(gl, level) {
     }
   }
   for (var i = 0; i < 6 * nX * nZ; i++) {
-    terrainIndices.push(i);
+    terrainIndices. push(i);
+    terrainPosition.push(0);
+    terrainPosition.push(0);
+    terrainPosition.push(0);
+    terrainLighting.push(material.AMBIANT);
+    terrainLighting.push(material.DIFFUSE);
+    terrainSpecSoft.push(material.SPECULAR_SOFT[0]);
+    terrainSpecSoft.push(material.SPECULAR_SOFT[1]);
+    terrainSpecHard.push(material.SPECULAR_HARD[0]);
+    terrainSpecHard.push(material.SPECULAR_HARD[1]);
+    terrainTexture.push (material.TEXTURE);
+    terrainTexType.push (material.TEXTYPE);
   }
-  const shape = new Shape(
-    gl,
-    { 
-      vertexBuffer: terrainVertices, 
-      indexBuffer:  terrainIndices, 
-      normalBuffer: terrainNormals,
-      colorBuffer:  terrainColors
-    },
-    material
-  );
-  shape.nX        = nX;
-  shape.nX1       = nX1;
-  shape.nZ        = nZ;
-  shape.nZ1       = nZ + 1;
-  shape.level     = level;
-  shape.prevmr    = null;
-  shape.colorRef  = terrainColors;
-  shape.mouse     = null;
-  shape.doAnimate = function(scene, t) {
+  const shape = new Shape({ 
+    vertexBuffer:   terrainVertices, 
+    indexBuffer:    terrainIndices, 
+    normalBuffer:   terrainNormals,
+    colorBuffer:    terrainColors,
+    positionBuffer: terrainPosition,
+    lightingBuffer: terrainLighting,
+    specSoftBuffer: terrainSpecSoft,
+    specHardBuffer: terrainSpecHard,
+    textureBuffer:  terrainTexture,
+    texTypeBuffer:  terrainTexType
+  });
+  shape.nX       = nX;
+  shape.nX1      = nX1;
+  shape.nZ       = nZ;
+  shape.nZ1      = nZ + 1;
+  shape.level    = level;
+  shape.prevmr   = null;
+  shape.colorRef = terrainColors;
+  shape.mouse    = null;
+  shape.animate  = function(scene, t) {
     const nX       = shape.nX;
     const nZ       = shape.nZ;
     const nX1      = shape.nX1;
     const nZ1      = shape.nZ1;
+    const offset   = shape.offset;
     const terrain  = shape.level.terrain;
     const mouseray = scene.mouseray;
     const modArea  = scene.modArea;
@@ -163,7 +183,7 @@ function initTerrain(gl, level) {
           const mouse    = shape.mouse;
           for (var i = 0; i < nX; i++) {
             for (var j = 0; j < nZ; j++) {
-              const index = (i * nZ + j) * 24;
+              const index = offset / 3 * 4 + (i * nZ + j) * 24;
               {
                 const v1 = terrain[i +     j      * nX1];
                 const v2 = terrain[i +    (j + 1) * nX1];
@@ -245,22 +265,22 @@ function initTerrain(gl, level) {
               } else {
                 vec3.add(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
               }
-              const i1 = (i * nZ + j) * 18 + 1;
+              const i1 = offset + (i * nZ + j) * 18 + 1;
               vertices[i1] = v[1];
               if (i > 0) {
-                const i2 = ((i - 1) * nZ + j) * 18 + 7;
+                const i2 = offset + ((i - 1) * nZ + j) * 18 + 7;
                 const i3 = i2 + 3;
                 vertices[i2] = v[1];
                 vertices[i3] = v[1];
               }
               if (j > 0) {
-                const i4 = (i * nZ + j - 1) * 18 + 4;
+                const i4 = offset + (i * nZ + j - 1) * 18 + 4;
                 const i5 = i4 + 9;
                 vertices[i4] = v[1];
                 vertices[i5] = v[1];
               }
               if (i > 0 && j > 0) {
-                const i6 = ((i - 1) * nZ + j - 1) * 18 + 16;
+                const i6 = offset + ((i - 1) * nZ + j - 1) * 18 + 16;
                 vertices[i6] = v[1];
               }
             }
