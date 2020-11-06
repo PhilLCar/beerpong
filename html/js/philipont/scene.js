@@ -94,11 +94,7 @@ class Scene {
         vertexColor:      gl.getAttribLocation(shaderProgram,  'aVertexColor'),
         vertexNormal:     gl.getAttribLocation(shaderProgram,  'aVertexNormal'),
         objectCenter:     gl.getAttribLocation(shaderProgram,  'aObjectCenter'),
-        lighting:         gl.getAttribLocation(shaderProgram,  'aMaterialLighting'),
-        specularSoft:     gl.getAttribLocation(shaderProgram,  'aMaterialSpecularSoft'),
-        specularHard:     gl.getAttribLocation(shaderProgram,  'aMaterialSpecularHard'),
-        texture:          gl.getAttribLocation(shaderProgram,  'aMaterialTexture'),
-        texuteType:       gl.getAttribLocation(shaderProgram,  'aMaterialTextureApplyFunction')
+        objectType:       gl.getAttribLocation(shaderProgram,  'aObjectType')
       },
       uniformLocations: {
         modelViewMatrix:      gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
@@ -111,6 +107,7 @@ class Scene {
         lightColor:           gl.getUniformLocation(shaderProgram, 'uLightColor'),
         lightNum:             gl.getUniformLocation(shaderProgram, 'uLightNum'),
         shadowMap:            gl.getUniformLocation(shaderProgram, 'uShadowMap'),
+        shadowMap:            gl.getUniformLocation(shaderProgram, 'uTextureMap'),
         poissonDisks:         gl.getUniformLocation(shaderProgram, 'POISSON_DISKS')
       }
     };
@@ -163,16 +160,8 @@ class Scene {
     this.indices            = null;
     this.positionBuffer     = [];
     this.positions          = null;
-    this.lightingBuffer     = [];
-    this.lighting           = null;
-    this.specSoftBuffer     = [];
-    this.specSoft           = null;
-    this.specHardBuffer     = [];
-    this.specHard           = null;
-    this.textureBuffer      = [];
-    this.textures           = null;
-    this.texTypeBuffer      = [];
-    this.texTypes           = null;
+    this.objTypeBuffer      = [];
+    this.objTypes           = null;
     this.materialTextures   = [];
     this.solids             = [];
     this.lines              = [];
@@ -656,15 +645,11 @@ class Scene {
       this.normalBuffer   = this.normalBuffer.concat  (solid.normalBuffer);
       this.colorBuffer    = this.colorBuffer.concat   (solid.colorBuffer);
       this.positionBuffer = this.positionBuffer.concat(solid.positionBuffer);
-      this.lightingBuffer = this.lightingBuffer.concat(solid.lightingBuffer);
-      this.specSoftBuffer = this.specSoftBuffer.concat(solid.specSoftBuffer);
-      this.specHardBuffer = this.specHardBuffer.concat(solid.specHardBuffer);
-      this.textureBuffer  = this.textureBuffer.concat (solid.textureBuffer);
-      this.texTypeBuffer  = this.texTypeBuffer.concat (solid.texTypeBuffer);
+      this.objTypeBuffer  = this.objTypeBuffer.concat (solid.objTypeBuffer);
       this.ignored = false;
     }
     this.lineOffset = this.indexBuffer.length;
-    for (var lines of this.lines) {
+    for (var line of this.lines) {
       const tIndexBuffer = this.indexBuffer;
       const lIndexBuffer = line.indexBuffer;
       const offset       = this.vertexBuffer.length;
@@ -676,11 +661,7 @@ class Scene {
       this.normalBuffer   = this.normalBuffer.concat  (line.normalBuffer);
       this.colorBuffer    = this.colorBuffer.concat   (line.colorBuffer);
       this.positionBuffer = this.positionBuffer.concat(line.positionBuffer);
-      this.lightingBuffer = this.lightingBuffer.concat(line.lightingBuffer);
-      this.specSoftBuffer = this.specSoftBuffer.concat(line.specSoftBuffer);
-      this.specHardBuffer = this.specHardBuffer.concat(line.specHardBuffer);
-      this.textureBuffer  = this.textureBuffer.concat (line.textureBuffer);
-      this.texTypeBuffer  = this.texTypeBuffer.concat (line.texTypeBuffer);
+      this.objTypeBuffer  = this.objTypeBuffer.concat (line.objTypeBuffer);
     }
   }
 
@@ -844,20 +825,8 @@ class Scene {
     if (this.positions) gl.deleteBuffer(this.positions);
     this.positons = gl.createBuffer();
     gl.bufferData(this.positions, new Float32Array(this.positionBuffer), gl.STATIC_DRAW);
-    if (this.lighting) gl.deleteBuffer(this.lighting);
-    this.lighting = gl.createBuffer();
-    gl.bufferData(this.lighting, new Float32Array(this.lightingBuffer), gl.STATIC_DRAW);
-    if (this.specSoft) gl.deleteBuffer(this.specSoft);
-    this.specSoft = gl.createBuffer();
-    gl.bufferData(this.specSoft, new Float32Array(this.specSoftBuffer), gl.STATIC_DRAW);
-    if (this.specHard) gl.deleteBuffer(this.specHard);
-    this.specHard = gl.createBuffer();
-    gl.bufferData(this.specHard, new Float32Array(this.specHardBuffer), gl.STATIC_DRAW);
-    if (this.textures) gl.deleteBuffer(this.textures);
-    this.textures = gl.createBuffer();
-    gl.bufferData(this.textures, new Int32Array(this.textures), gl.STATIC_DRAW);
-    if (this.texTypes) gl.deleteBuffer(this.texTypes);
-    this.texTypes = gl.createBuffer();
-    gl.bufferData(this.texTypes, new Int32Array(this.texTypeBuffer), gl.STATIC_DRAW);
+    if (this.objTypes) gl.deleteBuffer(this.objTypes);
+    this.objTypes = gl.createBuffer();
+    gl.bufferData(this.objTypes, new Int32Array(this.objTypeBuffer), gl.STATIC_DRAW);
   }
 }

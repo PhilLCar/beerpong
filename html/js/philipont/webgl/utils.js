@@ -10,6 +10,7 @@ const TEXTYPE_SPHERE = 2;
 const TEXTYPE_ATMO   = 3;
 
 const MAX_NUM_LIGHTS = 4;
+const MAX_TEXTURES   = 8;
 
 var _unique_texture_id = MAX_NUM_LIGHTS;
 

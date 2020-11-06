@@ -11,11 +11,7 @@ class Shape {
     this.normalBuffer   = buffers.normalBuffer;
     this.colorBuffer    = buffers.colorBuffer;
     this.positionBuffer = buffers.positionBuffer;
-    this.lightingBuffer = buffers.lightingBuffer;
-    this.specSoftBuffer = buffers.specSoftBuffer;
-    this.specHardBuffer = buffers.specHardBuffer;
-    this.textureBuffer  = buffers.textureBuffer;
-    this.texTypeBuffer  = buffers.texTypeBuffer;
+    this.objTypeBuffer  = buffers.objTypeBuffer;
   }
 
   animate(scene, t) {

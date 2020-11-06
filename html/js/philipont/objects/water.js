@@ -11,11 +11,7 @@ function initWaterPlane(level) {
   const waterColors   = [];
   const waterIndices  = [];
   const waterPosition = [];
-  const waterLighting = [];
-  const waterSpecSoft = [];
-  const waterSpecHard = [];
-  const waterTexture  = [];
-  const waterTexType  = [];
+  const waterObjType  = [];
   waterVertices.push(tr[0]);
   waterVertices.push(level.waterLevel);
   waterVertices.push(tr[2]);
@@ -49,14 +45,7 @@ function initWaterPlane(level) {
     waterPosition.push(0);
     waterPosition.push(level.waterLevel);
     waterPosition.push(0);
-    waterLighting.push(material.AMBIANT);
-    waterLighting.push(material.DIFFUSE);
-    waterSpecSoft.push(material.SPECULAR_SOFT[0]);
-    waterSpecSoft.push(material.SPECULAR_SOFT[1]);
-    waterSpecHard.push(material.SPECULAR_HARD[0]);
-    waterSpecHard.push(material.SPECULAR_HARD[1]);
-    waterTexture.push (material.TEXTURE);
-    waterTexType.push (material.TEXTYPE);
+    waterObjType.push(material.TYPE);
   }
   return new Shape({ 
     vertexBuffer:   waterVertices, 
@@ -64,11 +53,7 @@ function initWaterPlane(level) {
     normalBuffer:   waterNormals,
     colorBuffer:    waterColors,
     positionBuffer: waterPosition,
-    lightingBuffer: waterLighting,
-    specSoftBuffer: waterSpecSoft,
-    specHardBuffer: waterSpecHard,
-    textureBuffer:  waterTexture,
-    texTypeBuffer:  waterTexType
+    objTypeBuffer:  waterObjType
   });
 }
 
@@ -82,11 +67,7 @@ function initWaterWaves(level) {
   const waterColors   = [];
   const waterIndices  = [];
   const waterPosition = [];
-  const waterLighting = [];
-  const waterSpecSoft = [];
-  const waterSpecHard = [];
-  const waterTexture  = [];
-  const waterTexType  = [];
+  const waterObjType  = [];
   const waterLevel    = level.waterLevel;
   for (var i = 0; i < nX; i++) {
     for (var j = 0; j < nZ; j++) {
@@ -169,14 +150,7 @@ function initWaterWaves(level) {
     waterPosition.push(0);
     waterPosition.push(waterLevel);
     waterPosition.push(0);
-    waterLighting.push(material.AMBIANT);
-    waterLighting.push(material.DIFFUSE);
-    waterSpecSoft.push(material.SPECULAR_SOFT[0]);
-    waterSpecSoft.push(material.SPECULAR_SOFT[1]);
-    waterSpecHard.push(material.SPECULAR_HARD[0]);
-    waterSpecHard.push(material.SPECULAR_HARD[1]);
-    waterTexture.push (material.TEXTURE);
-    waterTexType.push (material.TEXTYPE);
+    waterObjType.push(material.TYPE);
   }
   const shape = new Shape({ 
     vertexBuffer:   waterVertices, 
@@ -184,11 +158,7 @@ function initWaterWaves(level) {
     normalBuffer:   waterNormals,
     colorBuffer:    waterColors,
     positionBuffer: waterPosition,
-    lightingBuffer: waterLighting,
-    specSoftBuffer: waterSpecSoft,
-    specHardBuffer: waterSpecHard,
-    textureBuffer:  waterTexture,
-    texTypeBuffer:  waterTexType
+    objTypeBuffer:  waterObjType
   });
   shape.nX         = nX;
   shape.nX1        = nX1;

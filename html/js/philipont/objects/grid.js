@@ -7,11 +7,7 @@ function initGridBack(gl, level) {
   const gridColors   = [];
   const gridIndices  = [];
   const gridPosition = [];
-  const gridLighting = [];
-  const gridSpecSoft = [];
-  const gridSpecHard = [];
-  const gridTexture  = [];
-  const gridTexType  = [];
+  const gridObjType  = [];
   // top right corner
   gridVertices.push(e);
   gridVertices.push(e);
@@ -49,14 +45,7 @@ function initGridBack(gl, level) {
     gridPosition.push(0);
     gridPosition.push(0);
     gridPosition.push(level.gridZ);
-    gridLighting.push(MATERIALS.GRID.AMBIANT);
-    gridLighting.push(MATERIALS.GRID.DIFFUSE);
-    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[0]);
-    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[1]);
-    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[0]);
-    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[1]);
-    gridTexture.push (MATERIALS.GRID.TEXTURE);
-    gridTexType.push (MATERIALS.GRID.TEXTYPE);
+    gridObjType.push(MATERIALS.GRID.TYPE);
   }
   return new Shape({
     vertexBuffer:   gridVertices, 
@@ -64,11 +53,7 @@ function initGridBack(gl, level) {
     normalBuffer:   gridNormals,
     colorBuffer:    gridColors,
     positionBuffer: gridPosition,
-    lightingBuffer: gridLighting,
-    specSoftBuffer: gridSpecSoft,
-    specHardBuffer: gridSpecHard,
-    textureBuffer:  gridTexture,
-    texTypeBuffer:  gridTexType
+    objTypeBuffer:  gridObjType
   });
 }
 
@@ -81,11 +66,7 @@ function initGrid(gl, level) {
   const gridColors   = [];
   const gridIndices  = [];
   const gridPosition = [];
-  const gridLighting = [];
-  const gridSpecSoft = [];
-  const gridSpecHard = [];
-  const gridTexture  = [];
-  const gridTexType  = [];
+  const gridObjType  = [];
   const mod = 1 / level.gridRes * 12;
   for (var i = 0; i <= gX; i++) {
     if (i % 2 == 1) continue;
@@ -125,14 +106,7 @@ function initGrid(gl, level) {
     gridPosition.push(0);
     gridPosition.push(0);
     gridPosition.push(level.gridZ);
-    gridLighting.push(MATERIALS.GRID.AMBIANT);
-    gridLighting.push(MATERIALS.GRID.DIFFUSE);
-    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[0]);
-    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[1]);
-    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[0]);
-    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[1]);
-    gridTexture.push (MATERIALS.GRID.TEXTURE);
-    gridTexType.push (MATERIALS.GRID.TEXTYPE);
+    gridObjType.push(MATERIALS.GRID.TYPE);
   }
   return new Shape({
     vertexBuffer:   gridVertices, 
@@ -140,11 +114,7 @@ function initGrid(gl, level) {
     normalBuffer:   gridNormals,
     colorBuffer:    gridColors,
     positionBuffer: gridPosition,
-    lightingBuffer: gridLighting,
-    specSoftBuffer: gridSpecSoft,
-    specHardBuffer: gridSpecHard,
-    textureBuffer:  gridTexture,
-    texTypeBuffer:  gridTexType
+    objTypeBuffer:  gridObjType
   });
 }
 
@@ -157,11 +127,7 @@ function initGridHD(gl, level) {
   const gridColors   = [];
   const gridIndices  = [];
   const gridPosition = [];
-  const gridLighting = [];
-  const gridSpecSoft = [];
-  const gridSpecHard = [];
-  const gridTexture  = [];
-  const gridTexType  = [];
+  const gridObjType  = [];
   for (var i = 0; i <= gX; i++) {
     if (i % 2 == 0) continue;
     // top line
@@ -199,14 +165,7 @@ function initGridHD(gl, level) {
     gridPosition.push(0);
     gridPosition.push(0);
     gridPosition.push(level.gridZ);
-    gridLighting.push(MATERIALS.GRID.AMBIANT);
-    gridLighting.push(MATERIALS.GRID.DIFFUSE);
-    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[0]);
-    gridSpecSoft.push(MATERIALS.GRID.SPECULAR_SOFT[1]);
-    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[0]);
-    gridSpecHard.push(MATERIALS.GRID.SPECULAR_HARD[1]);
-    gridTexture.push (MATERIALS.GRID.TEXTURE);
-    gridTexType.push (MATERIALS.GRID.TEXTYPE);
+    gridTexType.push (MATERIALS.GRID.TYPE);
   }
   return new Shape({
     vertexBuffer:   gridVertices, 
@@ -214,10 +173,6 @@ function initGridHD(gl, level) {
     normalBuffer:   gridNormals,
     colorBuffer:    gridColors,
     positionBuffer: gridPosition,
-    lightingBuffer: gridLighting,
-    specSoftBuffer: gridSpecSoft,
-    specHardBuffer: gridSpecHard,
-    textureBuffer:  gridTexture,
-    texTypeBuffer:  gridTexType
+    objTypeBuffer:  gridObjType
   });
 }

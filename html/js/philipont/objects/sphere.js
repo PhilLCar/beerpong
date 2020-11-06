@@ -5,11 +5,7 @@ function initSphere(size = 1, resolution = 20, inverted = false, material = MATE
   const colors    = [];
   const indices   = [];
   const positions = [];
-  const lighting  = [];
-  const specsoft  = [];
-  const spechard  = [];
-  const texture   = [];
-  const textype   = [];
+  const objtype   = [];
 
   // Add top point
   vertices.push(position[0]);
@@ -113,14 +109,7 @@ function initSphere(size = 1, resolution = 20, inverted = false, material = MATE
     positions.push(position[0]);
     positions.push(position[1]);
     positions.push(position[2]);
-    lighting.push(material.AMBIANT);
-    lighting.push(material.DIFFUSE);
-    specsoft.push(material.SPECULAR_SOFT[0]);
-    specsoft.push(material.SPECULAR_SOFT[1]);
-    spechard.push(material.SPECULAR_HARD[0]);
-    spechard.push(material.SPECULAR_HARD[1]);
-    texture.push (material.TEXTURE);
-    textype.push (material.TEXTYPE);
+    textype.push(material.TYPE);
   }
   return new Shape({
     vertexBuffer:   vertices,
@@ -128,11 +117,7 @@ function initSphere(size = 1, resolution = 20, inverted = false, material = MATE
     colorBuffer:    colors,
     indexBuffer:    indices,
     positionBuffer: positions,
-    lightingBuffer: lighting,
-    specSoftBuffer: specsoft,
-    specHardBuffer: spechard,
-    textureBuffer:  texture,
-    texTypeBuffer:  textype
+    objTypeBuffer:  textype
   });
 }
 

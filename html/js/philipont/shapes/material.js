@@ -4,6 +4,7 @@ const MATERIAL_WATER   = 2;
 const MATERIAL_GRID    = 3;
 const MATERIAL_ATMO    = 4;
 
+const ATMO_TEXTURE_ID = getUniqueTextureID();
 const MATERIALS = {
   DEFAULT: {
     TEXTURE:   null,
@@ -11,7 +12,7 @@ const MATERIALS = {
     DIFFUSE:   1.0,
     SPEC_SOFT: vec2.fromValues(0.5, 32.0),
     SPEC_HARD: vec2.fromValues(0.0, 32.0),
-    TYPE:      MATERIAL_GROUND,
+    TYPE:      MATERIAL_DEFAULT,
     TEXTYPE:   TEXTYPE_NONE,
     COLOR_PRESET : {
       R: { min: 0.5, max: 0.5, add: null },
@@ -62,7 +63,7 @@ const MATERIALS = {
     DIFFUSE:   1.0,
     SPEC_SOFT: vec2.fromValues(0.5,  256.0),
     SPEC_HARD: vec2.fromValues(8.0, 4096.0),
-    TYPE:      MATERIAL_GROUND,
+    TYPE:      MATERIAL_WATER,
     TEXTYPE:   TEXTYPE_NONE,
     COLOR_PRESET: {
       R: { min: 0,     max: 0.0, add: null },
@@ -72,13 +73,17 @@ const MATERIALS = {
     }
   },
   ATMOSPHERE: {
-    TEXTURE:   getUniqueTextureID(),
-    AMBIANT:   0.0,
+    TEXTURE:   ATMO_TEXTURE_ID,
+    AMBIANT:   1.0,
     DIFFUSE:   0.0,
     SPEC_SOFT: vec2.fromValues(0.0, 32.0),
     SPEC_HARD: vec2.fromValues(0.0, 32.0),
     TYPE:      MATERIAL_ATMO,
     TEXTYPE:   TEXTYPE_ATMO,
+    TEXTURE_APPLY_FUNC: `
+      highp float r = acos(vPosition.y - vCenter.y) / (PI / 2.0);
+      highp vec2  p = normalize(vPosition.xz - vCenter.xz) * vec2(1.0, -1.0);
+      FragColor = texture(uTextureMap[${ATMO_TEXTURE_ID}], (r * p + vec2(1.0, 1.0)) / 2.0);`,
     COLOR_PRESET : {
       R: { min: 0.0, max: 0.0, add: null },
       G: { min: 0.0, max: 0.0, add: null },

@@ -18,11 +18,11 @@ const shadowVertexSRC = `#version 300 es
 const sceneVertexSRC = `#version 300 es
   #define MAX_NUM_LIGHTS ${MAX_NUM_LIGHTS}
 
-  layout (location = 0) in vec4      aVertexPosition;
-  layout (location = 1) in vec4      aVertexColor;
-  layout (location = 2) in vec3      aVertexNormal;
-  layout (location = 3) in vec3      aObjectCenter;
-  layout (location = 4) in uint      aTextureType;
+  layout (location = 0) in vec4 aVertexPosition;
+  layout (location = 1) in vec4 aVertexColor;
+  layout (location = 2) in vec3 aVertexNormal;
+  layout (location = 3) in vec3 aObjectCenter;
+  layout (location = 4) in uint aObjectType;
 
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
@@ -35,9 +35,6 @@ const sceneVertexSRC = `#version 300 es
   uniform vec3 uLightPosition[MAX_NUM_LIGHTS];
   uniform uint uLightNum;
 
-  // Object properties
-  uniform vec3 uObjectCenter;
-
   out highp vec3 vPosition;
   out highp vec4 vColor;
   out highp vec3 vNormal;
@@ -46,12 +43,13 @@ const sceneVertexSRC = `#version 300 es
   out highp vec3 vShadowCoord[MAX_NUM_LIGHTS];
 
   flat out lowp uint vLightNum;
+  flat out lowp uint vObjectType;
 
   void main(void) {
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
     vPosition   = (uModelViewMatrix * aVertexPosition).xyz;
     vNormal     = normalize(uNormalTransform * aVertexNormal);
-    vCenter     = (uModelViewMatrix * vec4(uObjectCenter, 1.0)).xyz;
+    vCenter     = (uModelViewMatrix * vec4(aObjectCenter, 1.0)).xyz;
     vColor      = aVertexColor;
 
     if (uIsLit) {
@@ -72,7 +70,7 @@ const sceneVertexSRC = `#version 300 es
 `;
 
 const hdrVertexSRC=`#version 300 es
-  layout (location = 9) in vec4 aVertexPosition;
+  layout (location = 6) in vec4 aVertexPosition;
 
   void main(void) {
     gl_Position = aVertexPosition;
@@ -80,7 +78,7 @@ const hdrVertexSRC=`#version 300 es
 `;
 
 const atmoVertexSRC =`#version 300 es
-  layout (location = 10) in vec4 aVertexPosition;
+  layout (location = 7) in vec4 aVertexPosition;
 
   void main(void) {
     gl_Position = aVertexPosition;

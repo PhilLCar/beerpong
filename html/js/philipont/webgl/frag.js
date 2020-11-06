@@ -9,14 +9,21 @@ const shadowFragmentSRC = `#version 300 es
 const sceneFragmentSRC = `#version 300 es
   #define PI             3.141592653589793238462643383
   #define MAX_NUM_LIGHTS ${MAX_NUM_LIGHTS}
+  #define MAX_TEXTURES   ${MAX_TEXTURES}
 
   precision highp float;
   
-  // Shadows
+  uniform sampler2D uTextureMap[MAX_TEXTURES];
   uniform sampler2D uShadowMap[MAX_NUM_LIGHTS];
+  uniform vec3      uLightColor[MAX_NUM_LIGHTS];
 
-  // Lights
-  uniform vec3 uLightColor[MAX_NUM_LIGHTS];
+  // Material
+  struct Material {
+    highp float sAmbiant;
+    highp float sDiffuse;
+    highp vec2  sSpecSoft;
+    highp vec2  sSpecHard;
+  }
 
   in highp vec3 vPosition;
   in highp vec4 vColor;
@@ -27,6 +34,7 @@ const sceneFragmentSRC = `#version 300 es
   in highp vec3 vShadowCoord[MAX_NUM_LIGHTS];
 
   flat in lowp uint vLightNum;
+  flat in lowp uint vObjectType;
 
   out highp vec4 FragColor;
 
@@ -79,18 +87,33 @@ const sceneFragmentSRC = `#version 300 es
   }
 
   bool applyTexture(out vec4 FragColor) {
-    if (uObjectType == uint(${MATERIAL_ATMO})) {
-      highp float r = acos(vPosition.y - vCenter.y) / (PI / 2.0);
-      highp vec2  p = normalize(vPosition.xz - vCenter.xz) * vec2(1.0, -1.0);
-      FragColor = texture(uMaterialTextureMap, (r * p + vec2(1.0, 1.0)) / 2.0);
-      return true;
+    Material.sAmbiant =  ${};
+    Material.sDiffuse =  ${};
+    Material.sSpecSoft = vec2(${}, ${});
+    Material.sSpecHard = vec2(${}, ${});
+    switch (vObjecType) {
+      ${(function() {
+          for (var key of MATERIALS.keys()) {
+            if (MATERIALS[key].TEXTYPE == TEXTYPE_NONE) {
+              return `
+              case uint(${MATERIALS[key].TYPE}):
+                return true;`
+            } else {
+              return `
+              case uint(${MATERIALS[key].TYPE}):
+                ${MATERIALS[key].TEXTURE_APPLY_FUNC}
+                return true;`
+            }
+          }
+        })()}
+      default:
+        return false;
     }
-    return false;
   }
 
   void main(void) {
     FragColor = vColor;
-    if (!applyTexture(FragColor)) {
+    if (applyTexture(FragColor)) {
       highp vec3 viewDir = normalize(-vPosition);
       FragColor = vec4(uMaterialAmbiant * vColor.rgb, vColor.a);
       for (uint i = uint(0); i < vLightNum; i++) {

@@ -15,11 +15,7 @@ function initTerrain(level) {
   const terrainColors   = [];
   const terrainIndices  = [];
   const terrainPosition = [];
-  const terrainLighting = [];
-  const terrainSpecSoft = [];
-  const terrainSpecHard = [];
-  const terrainTexture  = [];
-  const terrainTexType  = [];
+  const terrainObjType  = [];
   const terrain         = level.terrain;
   for (var i = 0; i < nX; i++) {
     for (var j = 0; j < nZ; j++) {
@@ -104,14 +100,7 @@ function initTerrain(level) {
     terrainPosition.push(0);
     terrainPosition.push(0);
     terrainPosition.push(0);
-    terrainLighting.push(material.AMBIANT);
-    terrainLighting.push(material.DIFFUSE);
-    terrainSpecSoft.push(material.SPECULAR_SOFT[0]);
-    terrainSpecSoft.push(material.SPECULAR_SOFT[1]);
-    terrainSpecHard.push(material.SPECULAR_HARD[0]);
-    terrainSpecHard.push(material.SPECULAR_HARD[1]);
-    terrainTexture.push (material.TEXTURE);
-    terrainTexType.push (material.TEXTYPE);
+    terrainObjType.push(material.TYPE);
   }
   const shape = new Shape({ 
     vertexBuffer:   terrainVertices, 
@@ -119,11 +108,7 @@ function initTerrain(level) {
     normalBuffer:   terrainNormals,
     colorBuffer:    terrainColors,
     positionBuffer: terrainPosition,
-    lightingBuffer: terrainLighting,
-    specSoftBuffer: terrainSpecSoft,
-    specHardBuffer: terrainSpecHard,
-    textureBuffer:  terrainTexture,
-    texTypeBuffer:  terrainTexType
+    objTypeBuffer:  terrainObjType
   });
   shape.nX       = nX;
   shape.nX1      = nX1;
