@@ -48,70 +48,47 @@ function load() {
 }
 
 function toggleAnimation() {
-  DM.animateEnv = !DM.animateEnv;
+  DM.animate = !DM.animate;
 }
 
 function toggleGrid() {
-  DM.stateVariables.gridOn.actual = !DM.stateVariables.gridOn.actual;
+  DM.scene.toggleGridOn();
 }
 
 function toggleGridHD() {
-  DM.stateVariables.gridHD.actual = !DM.stateVariables.gridHD.actual;
+  DM.scene.toogleGridHD();
 }
 
 function translateXY(event) {
   var e = event || window.event;
   var step = 0.1;
   // Clone the translation vector to trigger the hasChanged method
-  var nTranslation = null;
-  var nRotation    = null;
+  var nTranslation = vec3.fromValues(0, 0, 0);
   switch (e.keyCode) {
     case 37: // LEFT
-      nTranslation = vec3.clone(DM.stateVariables.translation.actual);
-      if (nTranslation[0] + step < DM.maxTranslation) nTranslation[0] += step;
+      nTranslation[0] += step;
       break;
     case 38: // UP
-      nTranslation = vec3.clone(DM.stateVariables.translation.actual);
-      if (nTranslation[1] + step > -DM.maxTranslation) nTranslation[1] -= step;
+      nTranslation[1] -= step;
       break;
     case 39: // RIGHT
-      nTranslation = vec3.clone(DM.stateVariables.translation.actual);
-      if (nTranslation[0] + step > -DM.maxTranslation) nTranslation[0] -= step;
+      nTranslation[0] -= step;
       break;
     case 40: // DOWN
-      nTranslation = vec3.clone(DM.stateVariables.translation.actual);
-      if (nTranslation[1] + step < DM.maxTranslation) nTranslation[1] += step;
+      nTranslation[1] += step;
       break;
     case 82: // R
-      nTranslation = vec3.fromValues(0, 0, -6);
-      nRotation    = vec3.fromValues(10, 0, 0);
+      nTranslation = null;
+      DM.scene.setRotation(null, null);
   }
-  if (nTranslation !== null) {
-    DM.stateVariables.translation.actual = nTranslation;
-  }
-  if (nRotation !== null) {
-    DM.stateVariables.rotation.actual = nRotation;
-  }
+  DM.scene.setTranslation(nTranslation);
 }
 
 function translateZ(event) {
   var e = event || window.event;
-  var t = DM.stateVariables.translation.actual;
-  var n = null;
-  if (e.deltaY < 0) {
-    if (t[2] - (e.deltaY / 10.0) <= -6.0) {
-      n = vec3.clone(t);
-      n[2] -= e.deltaY / 10.0;
-    }
-  } else {
-    if (t[2] - (e.deltaY / 10.0) > DM.maxZoom) {
-      n = vec3.clone(t);
-      n[2] -= e.deltaY / 10.0;
-    }
-  }
-  if (n !== null) {
-    DM.stateVariables.translation.actual = n;
-  }
+  var nTranslation = vec3.fromValues(0, 0, 0);
+  nTranslation[2] -= e.deltaY / 10.0;
+  DM.scene.setTranslation(n);
 }
 
 function startMovingSun(event) {
@@ -149,8 +126,7 @@ function moveSun(event) {
     var nr = 160 - r;
     sunVector = vec3.fromValues(xc, -Math.sqrt(80 * 80 - nr * nr), yc);
   }
-  vec3.normalize(sunVector, sunVector);
-  DM.stateVariables.sunPosition.actual = sunVector;
+  DM.scene.setSun(sunVector);
 }
 
 function stopMovingSun() {
@@ -160,25 +136,25 @@ function stopMovingSun() {
 
 function canvasMouseDown(event) {
   var e = event || window.event;
-  if (e.which == 1 && DM.modEnabled && !DM.rotEnabled) {
-    DM.modApply = true;
+  if (e.which == 1 && DM.scene.modEnabled && !DM.scene.rotEnabled) {
+    DM.scene.setModApply(true);
   }
 }
 
 function canvasMouseUp(event) {
   var e = event || window.event;
   if (e.which == 2 || DM.rotEnabled) {
-    DM.rotEnabled = !DM.rotEnabled;
-    DM.previousCoords = null;
+    DM.scene.rotEnabled = !DM.rotEnabled;
+    DM.scene.previousCoords = null;
   }
-  DM.modApply = false;
+  DM.scene.setModApply(false);
 }
 
 function canvasMouseMove(event) {
   var e = event || window.event;
-  if (DM.rotEnabled) {
-    DM.display.rotate(e);
+  if (DM.scene.rotEnabled) {
+    DM.scene.setRotation(e.clientX, e.clientY);
   } else if (DM.modEnabled) {
-    DM.display.mod(e);
+    DM.scene.setMod(e.clientX, e.clientY);
   }
 }

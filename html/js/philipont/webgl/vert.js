@@ -35,8 +35,8 @@ const sceneVertexSRC = `#version 300 es
   uniform sampler2D uMaterialBumpMap;
   uniform vec3      uMaterialAmbiant;
   uniform vec3      uMaterialDiffuse;
-  uniform vec3      uMaterialSpecularSoft;
-  uniform vec3      uMaterialSpecularHard;
+  uniform vec2      uMaterialSpecularSoft;
+  uniform vec2      uMaterialSpecularHard;
 
   // Object properties
   uniform vec3      uObjectCenter;

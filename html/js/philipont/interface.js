@@ -38,8 +38,9 @@ class Interface {
         this.newLevel("WOOHOO!", "Phil za best", 10.0, 10.0, 0.5);
         break;
       case ACK_NEW_LEVEL:
+        DM.scene.destroyBuffers();
         this.level = this.parseLevel(response);
-        DM.stateVariables.level.actual = this.level;
+        DM.scene.initBuffers(level);
         break;
     }
   }
@@ -132,6 +133,7 @@ class Interface {
       }
       level.links.push(link);
     }
+    // TODO: Remove unused components;
     level.atmosphere = null;
     level.colors     = null;
     level.gridRes    = 0.1;

@@ -1,29 +1,18 @@
+const RENDER_BUFFERS  = 8;
+const RENDER_ATMO     = 4;
+const RENDER_SHADOWS  = 2;
+const RENDER_SCENE    = 1;
+
 class DisplayManager {
   constructor() {
     this.frameRateDisplay = null;
     this.targetFrameRate  = 30;
-    this.animateEnv       = false;
-    this.rotEnabled       = false;
-    this.modEnabled       = false;
-    this.modSubstract     = true;
-    this.modApply         = false;
-    this.maxTranslation   = 10;
-    this.maxZoom          = -6;
-    this.previousCoords   = null;
-    this.scene          = null;
-    this.atmosphere       = null;
+    this.scene            = null;
     this.stateVariables   = {};
     this.interface        = null;
     this.delta            = null;
-    this.addStateVariable("level",        null);
-    this.addStateVariable("isLit",        null);
-    this.addStateVariable("gridOn",       null);
-    this.addStateVariable("gridHD",       null);
-    this.addStateVariable("sunPosition",  null);
-    this.addStateVariable("mouseRay",     null);
-    this.addStateVariable("rotation",     null);
-    this.addStateVariable("translation",  null);
-    this.addStateVariable("atmoOn",       null);
+    this.animate          = false;
+    this.renderLevel      = 3;
   }
 
   addStateVariable(name, value) {
@@ -57,59 +46,27 @@ class DisplayManager {
       var scene    = false;
       await new Promise(resolve => setTimeout(resolve, 1000 / this.targetFrameRate));
       this.syncStateVariables();
-      if (this.animateEnv) {
-        buffers = true;
-        shadows = true;
-        scene   = true;
+      if (this.animate) {
+        this.renderLevel = RENDER_BUFFERS;
         if (this.delta === null) this.delta = 0;
         else                     this.delta += 1 / this.targetFrameRate;
-      } else if (this.modEnabled                              &&
-                 this.stateVariables.mouseRay.actual !== null &&
-                (this.stateVariables.mouseRay.hasChanged      ||
-                 this.modApply)) {
-        buffers = true;
-        shadows = true;
-        scene   = true;
-      } else if (this.stateVariables.level.hasChanged) {
-        buffers = true;
-        shadows = true;
-        scene   = true;
-      } else if (this.stateVariables.gridOn.hasChanged) {
-        buffers = true;
-        shadows = true;
-        scene   = true;
-      } else if (this.stateVariables.gridHD.hasChanged) {
-        buffers = true;
-        shadows = true;
-        scene   = true;
-      } else if (this.stateVariables.sunPosition.hasChanged) {
-        shadows = true;
-        scene   = true;
-      } else if (this.stateVariables.atmoOn.hasChanged) {
-        shadows = true;
-        scene   = true;
-      } else if (this.stateVariables.isLit.hasChanged) {
-        shadows = true;
-        scene   = true;
-      } else if (this.rotEnabled && this.stateVariables.rotation.hasChanged) {
-        scene = true;
-      } else if (this.stateVariables.translation.hasChanged) {
-        scene = true;
-      }
-      if (!this.animateEnv) {
+      } else {
         this.delta = null;
       }
-      if (buffers) {
-        this.display.updateBuffers(this.delta);
+      if (this.renderLevel >= RENDER_BUFFERS) {
+        this.scene.updateBuffers(this.delta);
       }
-      if (shadows) {
-        this.display.drawShadows();
-        this.atmosphere.drawAtmosphere();
+      if (this.renderLevel >= RENDER_ATMO) {
+        this.scene.atmosphere.drawAtmosphere();
       }
-      if (scene) {
-        this.display.drawScene();
-        this.display.drawHDR();
+      if (this.renderLevel >= RENDER_SHADOWS) {
+        this.scene.drawShadows();
       }
+      if (this.renderLevel >= RENDER_SCENE) {
+        this.scene.drawScene();
+        this.scene.drawHDR();
+      }
+      this.renderLevel = 0;
       ticks = new Date().getTime() - ticks;
       if (this.frameRateDisplay !== null) this.frameRateDisplay.innerHTML = (1000 / ticks).toFixed(1) + " FPS";
       if (ticks > 500) {
