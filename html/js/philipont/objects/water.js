@@ -69,6 +69,7 @@ function initWaterWaves(level) {
   const waterPosition = [];
   const waterObjType  = [];
   const waterLevel    = level.waterLevel;
+  const terrain       = level.terrain;
   for (var i = 0; i < nX; i++) {
     for (var j = 0; j < nZ; j++) {
       /////////////////////////////////////////////////
@@ -173,7 +174,7 @@ function initWaterWaves(level) {
     const nZ         = shape.nZ;
     const nZ1        = shape.nZ1;
     const waterLevel = shape.waterLevel;
-    const vertices   = shape.vertexBuffer;
+    const vertices   = scene.vertexBuffer;
     const freq       = shape.freq;
     const amp        = shape.amp;
 
@@ -181,16 +182,18 @@ function initWaterWaves(level) {
 
     for (var i = 0; i < nX1; i++) {
       for (var j = 0; j < nZ1; j++) {
-        const i1 = offset + (i * nZ + j) * 18 + 1;
-        const y  =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i1) * amp;
-        vertices[i1] = y;
-        if (i > 0) {
+        const y  =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i * j) * amp;
+        if (i < nX && j < nZ) {
+          const i1 = offset + (i * nZ + j) * 18 + 1;
+          vertices[i1] = y;
+        }
+        if (i > 0 && j < nZ) {
           const i2 = offset + ((i - 1) * nZ + j) * 18 + 7;
           const i3 = i2 + 3;
           vertices[i2] = y;
           vertices[i3] = y;
         }
-        if (j > 0) {
+        if (i < nX && j > 0) {
           const i4 = offset + (i * nZ + j - 1) * 18 + 4;
           const i5 = i4 + 9;
           vertices[i4] = y;

@@ -33,7 +33,7 @@ const MATERIALS = {
       R: { min: 0.5, max: 1.0, add: null },
       G: { min: 0.5, max: 1.0, add: null },
       B: { min: 0.5, max: 1.0, add: null },
-      A: { min: 1.0, max: 1.0, add: null }
+      A: { min: 0.5, max: 0.7, add: null }
     },
     BACK: {
       R: 0.0,

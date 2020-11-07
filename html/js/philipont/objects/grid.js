@@ -1,4 +1,4 @@
-function initGridBack(gl, level) {
+function initGridBack(level) {
   const gX = Math.floor(level.terrainSizeX / level.gridRes);
   const e  = gX * level.gridRes / 2;
   const s  = -e;
@@ -24,12 +24,12 @@ function initGridBack(gl, level) {
   gridVertices.push(e);
   gridVertices.push(s);
   gridVertices.push(level.gridZ);
-  for (var i = 0; i < gridVertices.length; i++) {
+  for (var i = 0; i < gridVertices.length / 3; i++) {
     gridNormals.push(0);
     gridNormals.push(0);
     gridNormals.push(1);
   }
-  for (var i = 0; i < gridVertices.length; i++) {
+  for (var i = 0; i < gridVertices.length / 3; i++) {
     gridColors.push(MATERIALS.GRID.BACK.R);
     gridColors.push(MATERIALS.GRID.BACK.G);
     gridColors.push(MATERIALS.GRID.BACK.B);
@@ -41,7 +41,7 @@ function initGridBack(gl, level) {
   gridIndices.push(0);
   gridIndices.push(2);
   gridIndices.push(3);
-  for (var i = 0; i < 6 * nX * nZ; i++) {
+  for (var i = 0; i < gridVertices.length / 3; i++) {
     gridPosition.push(0);
     gridPosition.push(0);
     gridPosition.push(level.gridZ);
@@ -57,7 +57,7 @@ function initGridBack(gl, level) {
   });
 }
 
-function initGrid(gl, level) {
+function initGrid(level) {
   const gX = Math.floor(level.terrainSizeX / level.gridRes);
   const e  = gX * level.gridRes / 2;
   const s  = -e;
@@ -67,7 +67,7 @@ function initGrid(gl, level) {
   const gridIndices  = [];
   const gridPosition = [];
   const gridObjType  = [];
-  const mod = 1 / level.gridRes * 12;
+  const mod = 1 / level.gridRes * 2;
   for (var i = 0; i <= gX; i++) {
     if (i % 2 == 1) continue;
     // top line
@@ -87,21 +87,21 @@ function initGrid(gl, level) {
     gridVertices.push(s + i * level.gridRes);
     gridVertices.push(level.gridZ);
   }
-  for (var i = 0; i < gridVertices.length; i++) {
+  for (var i = 0; i < gridVertices.length / 3; i++) {
     gridNormals.push(0);
     gridNormals.push(0);
     gridNormals.push(1);
   }
-  for (var i = 0; i < gridVertices.length; i++) {
+  for (var i = 0; i < gridVertices.length / 3; i++) {
     var color;
     if (i % mod < 4) color = MATERIALS.GRID.COLOR_PRESET.R.max;
-    else             color = (MATERIALS.GRID.COLOR_PRESET.R.max - MATERIALS.GRID.COLOR_PRESET.R.min) / 2;
+    else             color = (MATERIALS.GRID.COLOR_PRESET.R.max - MATERIALS.GRID.COLOR_PRESET.R.min) / 2 + MATERIALS.GRID.COLOR_PRESET.R.min;
     gridColors.push(color);
     gridColors.push(color);
     gridColors.push(color);
     gridColors.push(MATERIALS.GRID.COLOR_PRESET.A.max);
   }
-  for (var i = 0; i < gridVertices.length; i++) {
+  for (var i = 0; i < gridVertices.length / 3; i++) {
     gridIndices.push(i);
     gridPosition.push(0);
     gridPosition.push(0);
@@ -118,7 +118,7 @@ function initGrid(gl, level) {
   });
 }
 
-function initGridHD(gl, level) {
+function initGridHD(level) {
   const gX = Math.floor(level.terrainSizeX / level.gridRes);
   const e  = gX * level.gridRes / 2;
   const s  = -e;
@@ -147,12 +147,12 @@ function initGridHD(gl, level) {
     gridVertices.push(s + i * level.gridRes);
     gridVertices.push(level.gridZ);
   }
-  for (var i = 0; i < gridVertices.length; i++) {
+  for (var i = 0; i < gridVertices.length / 3; i++) {
     gridNormals.push(0);
     gridNormals.push(0);
     gridNormals.push(1);
   }
-  for (var i = 0; i < gridVertices.length; i++) {
+  for (var i = 0; i < gridVertices.length / 3; i++) {
     var color;
     color = MATERIALS.GRID.COLOR_PRESET.R.min;
     gridColors.push(color);
@@ -160,12 +160,12 @@ function initGridHD(gl, level) {
     gridColors.push(color);
     gridColors.push(MATERIALS.GRID.COLOR_PRESET.A.max);
   }
-  for (var i = 0; i < gridVertices.length; i++) {
+  for (var i = 0; i < gridVertices.length / 3; i++) {
     gridIndices.push(i);
     gridPosition.push(0);
     gridPosition.push(0);
     gridPosition.push(level.gridZ);
-    gridTexType.push (MATERIALS.GRID.TYPE);
+    gridObjType.push (MATERIALS.GRID.TYPE);
   }
   return new Shape({
     vertexBuffer:   gridVertices, 

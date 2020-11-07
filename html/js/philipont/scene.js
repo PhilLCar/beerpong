@@ -145,23 +145,23 @@ class Scene {
     this.previousCoords     = null;
     this.rotation           = vec3.fromValues(Math.PI / 20.0, 0.0, 0.0);
     this.translation        = vec3.fromValues(0.0, 0.0, -6.0);
-    this.isLit              = true;
-    this.atmoOn             = true;
+    this.isLit              = false;
+    this.atmoOn             = false;
     this.gridOn             = false;
     this.gridHD             = false;
     this.lineOffset         = 0;
     this.vertexBuffer       = [];
-    this.vertices           = null;
+    this.vertices           = gl.createBuffer();
     this.normalBuffer       = [];
-    this.normals            = null;
+    this.normals            = gl.createBuffer();
     this.colorBuffer        = [];
-    this.colors             = null;
+    this.colors             = gl.createBuffer();
     this.indexBuffer        = [];
-    this.indices            = null;
+    this.indices            = gl.createBuffer();
     this.positionBuffer     = [];
-    this.positions          = null;
+    this.positions          = gl.createBuffer();
     this.objTypeBuffer      = [];
-    this.objTypes           = null;
+    this.objTypes           = gl.createBuffer();
     this.materialTextures   = [];
     this.solids             = [];
     this.lines              = [];
@@ -451,27 +451,10 @@ class Scene {
     gl.uniform3fv(programInfo.uniformLocations.lightColor,       color);
     gl.uniform1ui(programInfo.uniformLocations.lightNum,         this.lights.length);
     gl.uniform1i(programInfo.uniformLocations.isLit,             this.isLit);
-    if (shape.ignore) continue;
-    var textureOffset = this.lights.length;
-    if (shape.textureMap !== null) {
-      gl.uniform1i(programInfo.uniformLocations.materialTextureMap, textureOffset);
-      gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
-      gl.bindTexture(gl.TEXTURE_2D, shape.textureMap);
-      textureOffset++;
+    for (var i = 0; i < this.materialTextures.length; i++) {
+      gl.activeTexture(gl[`TEXTURE${this.materialTextures[i].ID}`]);
+      gl.bindTexture(gl.TEXTURE_2D, this.materialTextures[i].texture);
     }
-    // This will need to go in the shadow renderer
-    // if (shape.bumpMap !== null) {
-    //   gl.uniform1i(programInfo.uniformLocations.materialTextureMap, textureOffset);
-    //   gl.activeTexture(gl[`TEXTURE${textureOffset}`]);
-    //   gl.bindTexture(gl.TEXTURE_2D, shape.bumpMap);
-    // }
-    gl.uniform3fv(programInfo.uniformLocations.materialAmbiant,      shape.ambiant);
-    gl.uniform3fv(programInfo.uniformLocations.materialDiffuse,      shape.diffuse);
-    gl.uniform2fv(programInfo.uniformLocations.materialSpecularSoft, shape.specularSoft);
-    gl.uniform2fv(programInfo.uniformLocations.materialSpecularHard, shape.specularHard);
-    gl.uniform3fv(programInfo.uniformLocations.objectCenter,         shape.center);
-    gl.uniform1ui(programInfo.uniformLocations.objectType,           shape.type);
-
     { // VERTICES
       const numComponents = 3;
       const type          = gl.FLOAT;
@@ -479,7 +462,7 @@ class Scene {
       const stride        = 0;
       const offset        = 0;
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, shape.vertices);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);
       gl.vertexAttribPointer(
           programInfo.attribLocations.vertexPosition,
           numComponents,
@@ -490,13 +473,13 @@ class Scene {
       gl.enableVertexAttribArray(
           programInfo.attribLocations.vertexPosition);
     }
-    if (shape.colors !== null) { // COLORS
+    { // COLORS
       const numComponents = 4;
       const type          = gl.FLOAT;
       const normalize     = false;
       const stride        = 0;
       const offset        = 0;
-      gl.bindBuffer(gl.ARRAY_BUFFER, shape.colors);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.colors);
       gl.vertexAttribPointer(
           programInfo.attribLocations.vertexColor,
           numComponents,
@@ -507,13 +490,13 @@ class Scene {
       gl.enableVertexAttribArray(
           programInfo.attribLocations.vertexColor);
     }
-    if (shape.normals !== null) { // NORMALS
+    { // NORMALS
       const numComponents = 3;
       const type          = gl.FLOAT;
       const normalize     = false;
       const stride        = 0;
       const offset        = 0;
-      gl.bindBuffer(gl.ARRAY_BUFFER, shape.normals);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.normals);
       gl.vertexAttribPointer(
           programInfo.attribLocations.vertexNormal,
           numComponents,
@@ -524,17 +507,51 @@ class Scene {
       gl.enableVertexAttribArray(
           programInfo.attribLocations.vertexNormal);
     }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.indices);
+    { // POSITIONS
+      const numComponents = 3;
+      const type          = gl.FLOAT;
+      const normalize     = false;
+      const stride        = 0;
+      const offset        = 0;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.positions);
+      gl.vertexAttribPointer(
+          programInfo.attribLocations.objectCenter,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          programInfo.attribLocations.objectCenter);
+    }
+    { // TYPES
+      const numComponents = 1;
+      const type          = gl.UNSIGNED_INT;
+      const normalize     = false;
+      const stride        = 0;
+      const offset        = 0;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.objTypes);
+      gl.vertexAttribIPointer(
+          programInfo.attribLocations.objectType,
+          numComponents,
+          type,
+          normalize,
+          stride,
+          offset);
+      gl.enableVertexAttribArray(
+          programInfo.attribLocations.objectType);
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indices);
     {
-      const vertexCount = shape.vertexCount;
+      const vertexCount = this.indexBuffer.length - this.lineOffset;
       const type        = gl.UNSIGNED_INT;
-      const offset      = shape.offset;
+      const offset      = this.lineOffset * 4;
       gl.drawElements(gl.LINES, vertexCount, type, offset);
     }
     {
-      const vertexCount = shape.vertexCount;
+      const vertexCount = this.lineOffset;
       const type        = gl.UNSIGNED_INT;
-      const offset      = shape.offset;
+      const offset      = 0;
       gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
 
@@ -599,7 +616,7 @@ class Scene {
 
   addMaterialTexture (textureID, texture) {
     this.materialTextures.push({
-      id: textureID,
+      ID: textureID,
       texture: texture
     });
   }
@@ -632,39 +649,6 @@ class Scene {
     }
   }
 
-  refresh() {
-    for (var solid of this.solids) {
-      const tIndexBuffer = this.indexBuffer;
-      const sIndexBuffer = solid.indexBuffer;
-      const offset       = this.vertexBuffer.length;
-      solid.offset       = offset;
-      for (var i = 0; i < sIndexBuffer.length; i++) {
-        tIndexBuffer.push(offset + sIndexBuffer[i]);
-      }
-      this.vertexBuffer   = this.vertexBuffer.concat  (solid.vertexBuffer);
-      this.normalBuffer   = this.normalBuffer.concat  (solid.normalBuffer);
-      this.colorBuffer    = this.colorBuffer.concat   (solid.colorBuffer);
-      this.positionBuffer = this.positionBuffer.concat(solid.positionBuffer);
-      this.objTypeBuffer  = this.objTypeBuffer.concat (solid.objTypeBuffer);
-      this.ignored = false;
-    }
-    this.lineOffset = this.indexBuffer.length;
-    for (var line of this.lines) {
-      const tIndexBuffer = this.indexBuffer;
-      const lIndexBuffer = line.indexBuffer;
-      const offset       = this.vertexBuffer.length;
-      line.offset        = offset;
-      for (var i = 0; i < lIndexBuffer.length; i++) {
-        tIndexBuffer.push(offset + lIndexBuffer[i]);
-      }
-      this.vertexBuffer   = this.vertexBuffer.concat  (line.vertexBuffer);
-      this.normalBuffer   = this.normalBuffer.concat  (line.normalBuffer);
-      this.colorBuffer    = this.colorBuffer.concat   (line.colorBuffer);
-      this.positionBuffer = this.positionBuffer.concat(line.positionBuffer);
-      this.objTypeBuffer  = this.objTypeBuffer.concat (line.objTypeBuffer);
-    }
-  }
-
   toggleGridOn() {
     DM.renderLevel |= RENDER_BUFFERS;
     this.gridOn = !this.gridOn;
@@ -691,6 +675,7 @@ class Scene {
   }
 
   setSun(sunVector) {
+    DM.renderLevel |= RENDER_ATMO;
     vec3.normalize(sunVector, sunVector);
     this.lights[0].position = sunVector;
   }
@@ -752,13 +737,13 @@ class Scene {
 
   initBuffers(level) {
     this.level = level;
-    this.terrain    = this.addSolid(initTerrain(this, level));
-    this.waterPlane = this.addSolid(initWaterPlane(this, level));
-    this.waterWaves = this.addSolid(initWaterWaves(this, level));
-    this.atmo       = this.addSolid(initAtmo(this, level));
-    this.gridBack   = this.addSolid(initGridBack(this, level));
-    this.grid       = this.addLine(initGrid(this, level));
-    this.hdGrid     = this.addLine(initGridHD(this, level));
+    this.terrain    = this.addSolid(initTerrain(level));
+    this.waterPlane = this.addSolid(initWaterPlane(level));
+    this.waterWaves = this.addSolid(initWaterWaves(level));
+    this.atmo       = this.addSolid(initAtmo(level));
+    this.gridBack   = this.addSolid(initGridBack(level));
+    this.grid       = this.addLine(initGrid(level));
+    this.hdGrid     = this.addLine(initGridHD(level));
 
     this.maxTranslation = level.terrainSizeX / 2;
     this.minZoom        = -2 * level.terrainSizeZ;
@@ -783,50 +768,94 @@ class Scene {
     this.hdGrid     = null;
   }
 
+  refresh() {
+    this.indexBuffer    = [];
+    this.vertexBuffer   = [];
+    this.normalBuffer   = [];
+    this.colorBuffer    = [];
+    this.positionBuffer = [];
+    this.objTypeBuffer  = [];
+    for (var solid of this.solids) {
+      if (solid.ignore) continue;
+      const tIndexBuffer = this.indexBuffer;
+      const sIndexBuffer = solid.indexBuffer;
+      const offset       = this.vertexBuffer.length / 3;
+      solid.offset       = this.vertexBuffer.length;
+      for (var i = 0; i < sIndexBuffer.length; i++) {
+        tIndexBuffer.push(offset + sIndexBuffer[i]);
+      }
+      this.vertexBuffer   = this.vertexBuffer.concat  (solid.vertexBuffer);
+      this.normalBuffer   = this.normalBuffer.concat  (solid.normalBuffer);
+      this.colorBuffer    = this.colorBuffer.concat   (solid.colorBuffer);
+      this.positionBuffer = this.positionBuffer.concat(solid.positionBuffer);
+      this.objTypeBuffer  = this.objTypeBuffer.concat (solid.objTypeBuffer);
+    }
+    this.lineOffset = this.indexBuffer.length;
+    for (var line of this.lines) {
+      if (line.ignore) continue;
+      const tIndexBuffer = this.indexBuffer;
+      const lIndexBuffer = line.indexBuffer;
+      const offset       = this.vertexBuffer.length / 3;
+      line.offset        = this.vertexBuffer.length;
+      for (var i = 0; i < lIndexBuffer.length; i++) {
+        tIndexBuffer.push(offset + lIndexBuffer[i]);
+      }
+      this.vertexBuffer   = this.vertexBuffer.concat  (line.vertexBuffer);
+      this.normalBuffer   = this.normalBuffer.concat  (line.normalBuffer);
+      this.colorBuffer    = this.colorBuffer.concat   (line.colorBuffer);
+      this.positionBuffer = this.positionBuffer.concat(line.positionBuffer);
+      this.objTypeBuffer  = this.objTypeBuffer.concat (line.objTypeBuffer);
+    }
+  }
+
   updateBuffers(t) {
     const gl  = this.gl;
     var   ref = false;
-    if (this.gridOn !== this.prevGridOn) {
+    if (this.gridOn != this.prevGridOn) {
       ref = true;
-      this.prevGridOn = this.gridOn;
-      this.grid.ignore = !this.gridOn;
+      this.prevGridOn      = this.gridOn;
+      this.grid.ignore     = !this.gridOn;
+      this.gridBack.ignore = !this.gridOn;
+      this.hdGrid.ignore   = !this.gridOn;
     }
-    if (this.gridHD !== this.prevGridHD) {
+    if (this.gridHD != this.prevGridHD) {
       ref = true;
       this.prevGridHD = this.gridHD;
-      this.hdGrid.ignore = !this.gridHD;
+      this.hdGrid.ignore = !this.gridHD || !this.gridOn;
     }
-    if (this.atmoOn !== this.prevAtmoOn) {
+    if (this.atmoOn != this.prevAtmoOn) {
       ref = true;
       this.prevAtmoOn = this.atmoOn;
       this.atmo.ignore = !this.atmoOn;
+    }
+    if (DM.animate != DM.prevAnimate) {
+      ref = true;
+      DM.prevAnimate = DM.animate;
+      this.waterPlane.ignore = DM.animate;
+      this.waterWaves.ignore = !DM.animate;
     }
     if (ref) {
       this.refresh();
     }
     for (var solid of this.solids) {
+      if (solid.ignore) continue;
       solid.animate(this, t);
     }
-    for (var lines of this.lines) {
-      lines.animate(this, t);
+    for (var line of this.lines) {
+      if (line.ignore) continue;
+      line.animate(this, t);
     }
-    if (this.vertices) gl.deleteBuffer(this.vertices);
-    this.vertices = gl.createBuffer();
-    gl.bufferData(this.vertices, new Float32Array(this.vertexBuffer), gl.STATIC_DRAW);
-    if (this.indices) gl.deleteBuffer(this.indices);
-    this.indices = gl.createBuffer();
-    gl.bufferData(this.indices, new Float32Array(this.indexBuffer), gl.STATIC_DRAW);
-    if (this.normals) gl.deleteBuffer(this.normals);
-    this.normals = gl.createBuffer();
-    gl.bufferData(this.normals, new Float32Array(this.normalBuffer), gl.STATIC_DRAW);
-    if (this.colors) gl.deleteBuffer(this.colors);
-    this.colors = gl.createBuffer();
-    gl.bufferData(this.colors, new Float32Array(this.colorBuffer), gl.STATIC_DRAW);
-    if (this.positions) gl.deleteBuffer(this.positions);
-    this.positons = gl.createBuffer();
-    gl.bufferData(this.positions, new Float32Array(this.positionBuffer), gl.STATIC_DRAW);
-    if (this.objTypes) gl.deleteBuffer(this.objTypes);
-    this.objTypes = gl.createBuffer();
-    gl.bufferData(this.objTypes, new Int32Array(this.objTypeBuffer), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertexBuffer), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indices);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int32Array(this.indexBuffer), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.normals);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.normalBuffer), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.colors);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.colorBuffer), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.positions);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.positionBuffer), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.objTypes);
+    gl.bufferData(gl.ARRAY_BUFFER, new Uint32Array(this.objTypeBuffer), gl.STATIC_DRAW);
   }
 }

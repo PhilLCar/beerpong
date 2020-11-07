@@ -105,11 +105,11 @@ function initSphere(size = 1, resolution = 20, inverted = false, material = MATE
       indices.push(                       (resolution / 2 - 1) * resolution + 1);
     }
   }
-  for (var i = 0; i < vertices.length; i++) {
+  for (var i = 0; i < vertices.length / 3; i++) {
     positions.push(position[0]);
     positions.push(position[1]);
     positions.push(position[2]);
-    textype.push(material.TYPE);
+    objtype.push(material.TYPE);
   }
   return new Shape({
     vertexBuffer:   vertices,
@@ -117,12 +117,12 @@ function initSphere(size = 1, resolution = 20, inverted = false, material = MATE
     colorBuffer:    colors,
     indexBuffer:    indices,
     positionBuffer: positions,
-    objTypeBuffer:  textype
+    objTypeBuffer:  objtype
   });
 }
 
-function initAtmo(gl, level) {
+function initAtmo(level) {
   const size = Math.sqrt(level.terrainSizeX * level.terrainSizeX +
                          level.terrainSizeZ * level.terrainSizeZ) * 3;
-  return initSphere(gl, size, 20, true, MATERIALS.ATMOSPHERE);
+  return initSphere(size, 20, true, MATERIALS.ATMOSPHERE);
 }

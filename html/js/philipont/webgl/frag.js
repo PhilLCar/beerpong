@@ -19,18 +19,17 @@ const sceneFragmentSRC = `#version 300 es
 
   // Material
   struct Material {
-    highp float sAmbiant;
-    highp float sDiffuse;
-    highp vec2  sSpecSoft;
-    highp vec2  sSpecHard;
-  }
+    highp float mAmbiant;
+    highp float mDiffuse;
+    highp vec2  mSpecSoft;
+    highp vec2  mSpecHard;
+  } sMaterial;
 
   in highp vec3 vPosition;
   in highp vec4 vColor;
   in highp vec3 vNormal;
   in highp vec3 vCenter;
   in highp vec3 vLightDir[MAX_NUM_LIGHTS];
-  in highp vec3 vLightColor[MAX_NUM_LIGHTS];
   in highp vec3 vShadowCoord[MAX_NUM_LIGHTS];
 
   flat in lowp uint vLightNum;
@@ -87,24 +86,30 @@ const sceneFragmentSRC = `#version 300 es
   }
 
   bool applyTexture(out vec4 FragColor) {
-    Material.sAmbiant =  ${};
-    Material.sDiffuse =  ${};
-    Material.sSpecSoft = vec2(${}, ${});
-    Material.sSpecHard = vec2(${}, ${});
-    switch (vObjecType) {
+    switch (vObjectType) {
       ${(function() {
-          for (var key of MATERIALS.keys()) {
+          var cases = "";
+          for (var key in MATERIALS) {
             if (MATERIALS[key].TEXTYPE == TEXTYPE_NONE) {
-              return `
+              cases += `
               case uint(${MATERIALS[key].TYPE}):
+                sMaterial.mAmbiant  =  ${MATERIALS[key].AMBIANT.toPrecision(16)};
+                sMaterial.mDiffuse  =  ${MATERIALS[key].DIFFUSE.toPrecision(16)};
+                sMaterial.mSpecSoft = vec2(${MATERIALS[key].SPEC_SOFT[0].toPrecision(16)}, ${MATERIALS[key].SPEC_SOFT[1].toPrecision(16)});
+                sMaterial.mSpecHard = vec2(${MATERIALS[key].SPEC_HARD[0].toPrecision(16)}, ${MATERIALS[key].SPEC_HARD[1].toPrecision(16)});
                 return true;`
             } else {
-              return `
+              cases += `
               case uint(${MATERIALS[key].TYPE}):
+                sMaterial.mAmbiant  =  ${MATERIALS[key].AMBIANT.toPrecision(16)};
+                sMaterial.mDiffuse  =  ${MATERIALS[key].DIFFUSE.toPrecision(16)};
+                sMaterial.mSpecSoft = vec2(${MATERIALS[key].SPEC_SOFT[0].toPrecision(16)}, ${MATERIALS[key].SPEC_SOFT[1].toPrecision(16)});
+                sMaterial.mSpecHard = vec2(${MATERIALS[key].SPEC_HARD[0].toPrecision(16)}, ${MATERIALS[key].SPEC_HARD[1].toPrecision(16)});
                 ${MATERIALS[key].TEXTURE_APPLY_FUNC}
                 return true;`
             }
           }
+          return cases;
         })()}
       default:
         return false;
@@ -112,26 +117,29 @@ const sceneFragmentSRC = `#version 300 es
   }
 
   void main(void) {
-    FragColor = vColor;
-    if (applyTexture(FragColor)) {
+    if (applyTexture(FragColor) && vLightNum != uint(0)) {
       highp vec3 viewDir = normalize(-vPosition);
-      FragColor = vec4(uMaterialAmbiant * vColor.rgb, vColor.a);
+      highp vec4 color   = FragColor;
+      // Ambiant
+      FragColor = sMaterial.mAmbiant * color;
       for (uint i = uint(0); i < vLightNum; i++) {
         highp float factor     = 0.0;
         highp float vis        = PCSS(uShadowMap[i], vShadowCoord[i]);
         highp vec3  reflectDir = reflect(-vLightDir[i], vNormal);
         highp float anglef     = max(dot(viewDir, reflectDir), 0.0);
         // Diffuse
-        FragColor += vec4((vec3(1.0, 1.0, 1.0) - uMaterialAmbiant) *
+        FragColor += vec4((1.0 - sMaterial.mAmbiant)            *
                           max(dot(vNormal, vLightDir[i]), 0.0) *
-                          uMaterialDiffuse *
-                          uLightColor[i] * vColor.rgb * vis, 0.0);
+                          sMaterial.mDiffuse                    *
+                          color.rgb * vis, 0.0);
         // Soft specular
-        factor += uMaterialSpecularSoft.y * pow(anglef, uMaterialSpecularSoft.y);
+        factor += sMaterial.mSpecSoft.x * pow(anglef, sMaterial.mSpecSoft.y);
         // Hard specular
-        factor += uMaterialSpecularHard.y * pow(anglef, uMaterialSpecularHard.y);
-        FragColor += vec4(vis * uLightColor[i] * factor, 0.0);
+        factor += sMaterial.mSpecHard.x * pow(anglef, sMaterial.mSpecHard.y);
+        FragColor += vec4(vis * factor * uLightColor[i], 0.0);
       }
+    } else {
+      FragColor = vColor;
     }
   }
 `;

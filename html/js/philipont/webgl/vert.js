@@ -51,6 +51,7 @@ const sceneVertexSRC = `#version 300 es
     vNormal     = normalize(uNormalTransform * aVertexNormal);
     vCenter     = (uModelViewMatrix * vec4(aObjectCenter, 1.0)).xyz;
     vColor      = aVertexColor;
+    vObjectType = aObjectType;
 
     if (uIsLit) {
       for (uint i = uint(0); i < uLightNum; ++i) {

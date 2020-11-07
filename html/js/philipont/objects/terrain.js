@@ -149,9 +149,9 @@ function initTerrain(level) {
               }
             }
             {
-              const v1 =terrain[i + 1 +  j      * nX1];
-              const v2 =terrain[i +     (j + 1) * nX1];
-              const v3 =terrain[i + 1 + (j + 1) * nX1];
+              const v1 = terrain[i + 1 +  j      * nX1];
+              const v2 = terrain[i +     (j + 1) * nX1];
+              const v3 = terrain[i + 1 + (j + 1) * nX1];
               const p = intersect(v1, v2, v3, mouseray);
               if (p !== null) {
                 shape.mouse = p;
@@ -163,7 +163,7 @@ function initTerrain(level) {
           }
         }
         if (shape.mouse != null) {
-          const colors   = shape.colorBuffer;
+          const colors   = scene.colorBuffer;
           const colorRef = shape.colorRef;
           const mouse    = shape.mouse;
           for (var i = 0; i < nX; i++) {
@@ -228,14 +228,16 @@ function initTerrain(level) {
             }
           }
         } else {
-          this.colorBuffer = new Float32Array(this.colorRef);
+          for (var i = 0; i < this.colorRef.length; i++) {
+            scene.colorBuffer[i + offset] = this.colorRef[i];
+          }
         }
       }
     }
     // MOD APPLY
     ///////////////////////////////////////////////////////////////////////
     if (scene.modEnabled && scene.modApply) {
-      const vertices = shape.vertexBuffer;
+      const vertices = scene.vertexBuffer;
       if (shape.mouse !== null) {
         const mouse = shape.mouse;
         const d     = vec3.create();
@@ -250,15 +252,17 @@ function initTerrain(level) {
               } else {
                 vec3.add(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
               }
-              const i1 = offset + (i * nZ + j) * 18 + 1;
-              vertices[i1] = v[1];
-              if (i > 0) {
+              if (i < nX && j < nZ) {
+                const i1 = offset + (i * nZ + j) * 18 + 1;
+                vertices[i1] = v[1];
+              }
+              if (i > 0 && j < nZ) {
                 const i2 = offset + ((i - 1) * nZ + j) * 18 + 7;
                 const i3 = i2 + 3;
                 vertices[i2] = v[1];
                 vertices[i3] = v[1];
               }
-              if (j > 0) {
+              if (i < nX && j > 0) {
                 const i4 = offset + (i * nZ + j - 1) * 18 + 4;
                 const i5 = i4 + 9;
                 vertices[i4] = v[1];
