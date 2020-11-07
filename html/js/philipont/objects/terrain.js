@@ -142,10 +142,17 @@ function initTerrain(level) {
               const v3 = terrain[i + 1 + j      * nX1];
               const p = intersect(v1, v2, v3, mouseray);
               if (p !== null) {
-                shape.mouse = p;
-                i = nX;
-                j = nZ;
-                break;
+                if (shape.mouse) {
+                  const z1  = vec3.create();
+                  const z2  = vec3.create();
+                  vec3.transformMat4(z1, p, scene.modelViewMatrix);
+                  vec3.transformMat4(z2, shape.mouse, scene.modelViewMatrix);
+                  if (vec3.length(z1) < vec3.length(z2)) {
+                    shape.mouse = p;
+                  }
+                } else {
+                  shape.mouse = p;
+                }
               }
             }
             {
@@ -154,10 +161,17 @@ function initTerrain(level) {
               const v3 = terrain[i + 1 + (j + 1) * nX1];
               const p = intersect(v1, v2, v3, mouseray);
               if (p !== null) {
-                shape.mouse = p;
-                i = nX;
-                j = nZ;
-                break;
+                if (shape.mouse) {
+                  const z1  = vec3.create();
+                  const z2  = vec3.create();
+                  vec3.transformMat4(z1, p, scene.modelViewMatrix);
+                  vec3.transformMat4(z2, shape.mouse, scene.modelViewMatrix);
+                  if (vec3.length(z1) < vec3.length(z2)) {
+                    shape.mouse = p;
+                  }
+                } else {
+                  shape.mouse = p;
+                }
               }
             }
           }
