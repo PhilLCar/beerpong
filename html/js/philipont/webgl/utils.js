@@ -12,6 +12,8 @@ const TEXTYPE_ATMO   = 3;
 const MAX_NUM_LIGHTS = 4;
 const MAX_TEXTURES   = 8;
 
+const MAX_INDICES    = 1 << 16; // test that for now
+
 var _unique_texture_id = MAX_NUM_LIGHTS;
 
 function getUniqueTextureID() {

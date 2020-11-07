@@ -169,12 +169,11 @@ function initWaterWaves(level) {
   shape.amp        = 0.05;
   shape.waterLevel = waterLevel;
   shape.animate = function(scene, t) {
-    const offset     = shape.offset;
     const nX1        = shape.nX1;
     const nZ         = shape.nZ;
     const nZ1        = shape.nZ1;
     const waterLevel = shape.waterLevel;
-    const vertices   = scene.vertexBuffer;
+    const vertices   = shape.vertexBuffer[0];
     const freq       = shape.freq;
     const amp        = shape.amp;
 
@@ -184,23 +183,23 @@ function initWaterWaves(level) {
       for (var j = 0; j < nZ1; j++) {
         const y  =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i * j) * amp;
         if (i < nX && j < nZ) {
-          const i1 = offset + (i * nZ + j) * 18 + 1;
+          const i1 = (i * nZ + j) * 18 + 1;
           vertices[i1] = y;
         }
         if (i > 0 && j < nZ) {
-          const i2 = offset + ((i - 1) * nZ + j) * 18 + 7;
+          const i2 = ((i - 1) * nZ + j) * 18 + 7;
           const i3 = i2 + 3;
           vertices[i2] = y;
           vertices[i3] = y;
         }
         if (i < nX && j > 0) {
-          const i4 = offset + (i * nZ + j - 1) * 18 + 4;
+          const i4 = (i * nZ + j - 1) * 18 + 4;
           const i5 = i4 + 9;
           vertices[i4] = y;
           vertices[i5] = y;
         }
         if (i > 0 && j > 0) {
-          const i6 = offset + ((i - 1) * nZ + j - 1) * 18 + 16;
+          const i6 = ((i - 1) * nZ + j - 1) * 18 + 16;
           vertices[i6] = y;
         }
       }

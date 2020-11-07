@@ -18,11 +18,11 @@ const shadowVertexSRC = `#version 300 es
 const sceneVertexSRC = `#version 300 es
   #define MAX_NUM_LIGHTS ${MAX_NUM_LIGHTS}
 
-  layout (location = 0) in vec4 aVertexPosition;
-  layout (location = 1) in vec4 aVertexColor;
-  layout (location = 2) in vec3 aVertexNormal;
-  layout (location = 3) in vec3 aObjectCenter;
-  layout (location = 4) in uint aObjectType;
+  layout (location = 0) in highp vec4 aVertexPosition;
+  layout (location = 1) in highp vec4 aVertexColor;
+  layout (location = 2) in highp vec3 aVertexNormal;
+  layout (location = 3) in highp vec3 aObjectCenter;
+  layout (location = 4) in lowp  uint aObjectType;
 
   uniform mat4 uModelViewMatrix;
   uniform mat4 uProjectionMatrix;
