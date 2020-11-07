@@ -1,4 +1,4 @@
-function initWaterPlane(level) {
+function initWaterPlane(scene, level) {
   const material = MATERIALS.WATER;
   const nX        = Math.floor(level.terrainSizeX / level.terrainRes);
   const nZ        = Math.floor(level.terrainSizeZ / level.terrainRes);
@@ -47,17 +47,17 @@ function initWaterPlane(level) {
     waterPosition.push(0);
     waterObjType.push(material.TYPE);
   }
-  return new Shape({ 
+  return new Shape(scene, { 
     vertexBuffer:   waterVertices, 
     indexBuffer:    waterIndices, 
     normalBuffer:   waterNormals,
     colorBuffer:    waterColors,
     positionBuffer: waterPosition,
     objTypeBuffer:  waterObjType
-  });
+  }, false);
 }
 
-function initWaterWaves(level) {
+function initWaterWaves(scene, level) {
   const material = MATERIALS.WATER;
   const nX       = Math.floor(level.terrainSizeX / level.terrainRes);
   const nZ       = Math.floor(level.terrainSizeZ / level.terrainRes);
@@ -153,14 +153,14 @@ function initWaterWaves(level) {
     waterPosition.push(0);
     waterObjType.push(material.TYPE);
   }
-  const shape = new Shape({ 
+  const shape = new Shape(scene, { 
     vertexBuffer:   waterVertices, 
     indexBuffer:    waterIndices, 
     normalBuffer:   waterNormals,
     colorBuffer:    waterColors,
     positionBuffer: waterPosition,
     objTypeBuffer:  waterObjType
-  });
+  }, false);
   shape.nX         = nX;
   shape.nX1        = nX1;
   shape.nZ         = nZ;

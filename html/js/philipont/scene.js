@@ -145,11 +145,10 @@ class Scene {
     this.previousCoords     = null;
     this.rotation           = vec3.fromValues(Math.PI / 20.0, 0.0, 0.0);
     this.translation        = vec3.fromValues(0.0, 0.0, -6.0);
-    this.isLit              = false;
-    this.atmoOn             = false;
+    this.isLit              = true;
+    this.atmoOn             = true;
     this.gridOn             = false;
     this.gridHD             = false;
-    this.lineOffset         = 0;
     this.lineStop           = 0;
     this.vertexBuffer       = new Buffer(MAX_INDICES * 3, Buffer.FLOAT);
     this.vertices           = gl.createBuffer();
@@ -343,7 +342,7 @@ class Scene {
       }
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indices);
       {
-        const vertexCount = this.lineOffset;
+        const vertexCount = this.indexBuffer.lineOffset;
         const type        = gl.UNSIGNED_INT;
         const offset      = 0;
         gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
@@ -544,13 +543,13 @@ class Scene {
     }
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indices);
     {
-      const vertexCount = this.indexBuffer.length - this.lineOffset;
+      const vertexCount = this.indexBuffer.offset - this.indexBuffer.lineOffset;
       const type        = gl.UNSIGNED_INT;
-      const offset      = this.lineOffset * 4;
+      const offset      = this.indexBuffer.lineOffset * 4;
       gl.drawElements(gl.LINES, vertexCount, type, offset);
     }
     {
-      const vertexCount = this.lineOffset;
+      const vertexCount = this.indexBuffer.lineOffset;
       const type        = gl.UNSIGNED_INT;
       const offset      = 0;
       gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
@@ -630,7 +629,8 @@ class Scene {
   removeSolid(solid) {
     for (var i = 0; i < this.solids.length; i++) {
       if (this.solids[i].ID == solid.id) {
-        this.solids.splice(i, i);
+        var rem = this.solids.splice(i, 1);
+        rem[0].destroy();
         break;
       }
     }
@@ -644,7 +644,8 @@ class Scene {
   removeLine(line) {
     for (var i = 0; i < this.lines.length; i++) {
       if (this.lines[i].ID == line.ID) {
-        this.lines.splice(i, i);
+        var rem = this.lines.splice(i, 1);
+        rem[0].destroy();
         break;
       }
     }
@@ -738,13 +739,13 @@ class Scene {
 
   initBuffers(level) {
     this.level = level;
-    this.terrain    = this.addSolid(initTerrain(level));
-    this.waterPlane = this.addSolid(initWaterPlane(level));
-    this.waterWaves = this.addSolid(initWaterWaves(level));
-    this.atmo       = this.addSolid(initAtmo(level));
-    this.gridBack   = this.addSolid(initGridBack(level));
-    this.grid       = this.addLine(initGrid(level));
-    this.hdGrid     = this.addLine(initGridHD(level));
+    this.terrain    = this.addSolid(initTerrain(this, level));
+    this.waterPlane = this.addSolid(initWaterPlane(this, level));
+    this.waterWaves = this.addSolid(initWaterWaves(this, level));
+    this.atmo       = this.addSolid(initAtmo(this, level));
+    this.gridBack   = this.addSolid(initGridBack(this, level));
+    this.grid       = this.addLine(initGrid(this, level));
+    this.hdGrid     = this.addLine(initGridHD(this, level));
 
     this.maxTranslation = level.terrainSizeX / 2;
     this.minZoom        = -2 * level.terrainSizeZ;
@@ -771,39 +772,32 @@ class Scene {
 
   updateBuffers(t) {
     const gl  = this.gl;
-    var   ref = false;
     if (this.gridOn != this.prevGridOn) {
-      ref = true;
       this.prevGridOn      = this.gridOn;
-      this.grid.ignore     = !this.gridOn;
-      this.gridBack.ignore = !this.gridOn;
-      this.hdGrid.ignore   = !this.gridOn;
+      this.grid.ignore(!this.gridOn);
+      this.gridBack.ignore(!this.gridOn);
+      this.hdGrid.ignore(!this.gridOn || ! this.gridHD);
     }
     if (this.gridHD != this.prevGridHD) {
-      ref = true;
       this.prevGridHD = this.gridHD;
-      this.hdGrid.ignore = !this.gridHD || !this.gridOn;
+      this.hdGrid.ignore(!this.gridOn || ! this.gridHD);
     }
     if (this.atmoOn != this.prevAtmoOn) {
-      ref = true;
       this.prevAtmoOn = this.atmoOn;
-      this.atmo.ignore = !this.atmoOn;
+      this.atmo.ignore(!this.atmoOn);
     }
     if (DM.animate != DM.prevAnimate) {
-      ref = true;
+      DM.renderLevel |= RENDER_BUFFERS;
       DM.prevAnimate = DM.animate;
-      this.waterPlane.ignore = DM.animate;
-      this.waterWaves.ignore = !DM.animate;
-    }
-    if (ref) {
-      this.refresh();
+      this.waterPlane.ignore(DM.animate);
+      this.waterWaves.ignore(!DM.animate);
     }
     for (var solid of this.solids) {
-      if (solid.ignore) continue;
+      if (solid.ignored) continue;
       solid.animate(this, t);
     }
     for (var line of this.lines) {
-      if (line.ignore) continue;
+      if (line.ignored) continue;
       line.animate(this, t);
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices);

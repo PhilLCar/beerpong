@@ -5,7 +5,7 @@ const PRESET_LUT = [
   "VENUS"
 ]
 
-function initTerrain(level) {
+function initTerrain(scene, level) {
   const material = MATERIALS[PRESET_LUT[level.skin]];
   const nX       = Math.floor(level.terrainSizeX / level.terrainRes);
   const nZ       = Math.floor(level.terrainSizeZ / level.terrainRes);
@@ -102,14 +102,14 @@ function initTerrain(level) {
     terrainPosition.push(0);
     terrainObjType.push(material.TYPE);
   }
-  const shape = new Shape({ 
+  const shape = new Shape(scene, { 
     vertexBuffer:   terrainVertices, 
     indexBuffer:    terrainIndices, 
     normalBuffer:   terrainNormals,
     colorBuffer:    terrainColors,
     positionBuffer: terrainPosition,
     objTypeBuffer:  terrainObjType
-  });
+  }, false);
   shape.nX       = nX;
   shape.nX1      = nX1;
   shape.nZ       = nZ;

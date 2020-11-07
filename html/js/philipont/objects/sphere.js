@@ -1,4 +1,4 @@
-function initSphere(size = 1, resolution = 20, inverted = false, material = MATERIALS.DEFAULT, position = vec3.fromValues(0, 0, 0)) {
+function initSphere(scene, size = 1, resolution = 20, inverted = false, material = MATERIALS.DEFAULT, position = vec3.fromValues(0, 0, 0)) {
   const preset = material.COLOR_PRESET;
   const vertices  = [];
   const normals   = [];
@@ -111,18 +111,18 @@ function initSphere(size = 1, resolution = 20, inverted = false, material = MATE
     positions.push(position[2]);
     objtype.push(material.TYPE);
   }
-  return new Shape({
+  return new Shape(scene, {
     vertexBuffer:   vertices,
     normalBuffer:   normals,
     colorBuffer:    colors,
     indexBuffer:    indices,
     positionBuffer: positions,
     objTypeBuffer:  objtype
-  });
+  }, false);
 }
 
-function initAtmo(level) {
+function initAtmo(scene, level) {
   const size = Math.sqrt(level.terrainSizeX * level.terrainSizeX +
                          level.terrainSizeZ * level.terrainSizeZ) * 3;
-  return initSphere(size, 20, true, MATERIALS.ATMOSPHERE);
+  return initSphere(scene, size, 20, true, MATERIALS.ATMOSPHERE);
 }

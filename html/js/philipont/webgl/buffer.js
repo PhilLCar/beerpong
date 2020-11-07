@@ -46,26 +46,11 @@ class Buffer {
     return buffer;
   }
 
-  elementOffset(offset = this.buffer.byteOffset) {
-    switch (this.type) {
-      case Buffer.BYTE:
-      case Buffer.UNSIGNED_BYTE:
-        return offset;
-      case Buffer.SHORT:
-      case Buffer.UNSIGNED_SHORT:
-        return offset / 2;
-      case Buffer.INT:
-      case Buffer.UNSIGNED_INT:
-      case Buffer.FLOAT:
-        return offset / 4;
-      case Buffer.LONG:
-      case Buffer.UNSIGNED_LONG:
-      case Buffer.DOUBLE:
-        return offset / 8;
-    }
+  elementOffset(buffer = this.buffer) {
+    return buffer.byteOffset / buffer.BYTES_PER_ELEMENT;
   }
 
-  malloc(size, line = true) {
+  malloc(size, line = true, nVertex = size) {
     while (this.offset + size > this.size) {
       const buffer = this.new(this.size * 2, this.type);
       for (var i = 0; i < this.size; i++) {
@@ -75,7 +60,8 @@ class Buffer {
       this.size   = 2 * size;
     }
     if (line) {
-      const pointer = [ this.buffer.subarray(this.offset, this.offset += size) ];
+      const pointer = [ this.buffer.subarray(this.offset, this.offset + size), line, nVertex ];
+      this.offset += size;
       this.pointers.push(pointer);
       return pointer;
     } else {
@@ -84,20 +70,21 @@ class Buffer {
       const index  = this.lineOffset;
       for (var i = offset - 1; i >= index; i--) {
         if (this.index) {
-          buffer[i + size] = buffer[i] + size;
+          buffer[i + size] = buffer[i] + nVertex;
         } else {
           buffer[i + size] = buffer[i];
         }
       }
-      for (var pointer of this.pointers) {
-        const elem_offset = this.elementOffset(pointer[0].byteOffset);
-        const length      = pointer[0].length;
+      for (var ptr of this.pointers) {
+        const elem_offset = this.elementOffset(ptr[0]);
+        const length      = ptr[0].length;
         if (elem_offset >= index) {
-          pointer[0] = this.buffer.subarray(elem_offset + size, elem_offset + size + length);
+          ptr[0] = this.buffer.subarray(elem_offset + size, elem_offset + size + length);
         }
       }
-      this.offset += size;
-      const pointer = [ this.buffer.subarray(index, index + size) ];
+      this.lineOffset += size;
+      this.offset     += size;
+      const pointer = [ this.buffer.subarray(index, index + size), line, nVertex ];
       this.pointers.push(pointer);
       return pointer;
     }
@@ -105,27 +92,29 @@ class Buffer {
 
   free(ptr) {
     const elem        = ptr[0];
-    const elem_offset = this.elementOffset(elem.byteOffset);
+    const elem_offset = this.elementOffset(elem);
+    const nVertex     = ptr[2];
     const length      = elem.length;
     const buffer      = this.buffer;
     const offset      = this.offset - length;
     for (var i = elem_offset; i < offset; i++) {
       if (this.index) {
-        buffer[i] = buffer[i + length] - length;
+        buffer[i] = buffer[i + length] - nVertex;
       } else {
         buffer[i] = buffer[i + length];
       }
     }
     for (var i = 0; i < this.pointers.length; i++) {
-      const ptr_elem_offset = this.elementOffset(this.pointers[i][0].byteOffset);
+      const ptr_elem_offset = this.elementOffset(this.pointers[i][0]);
       const ptr_length      = this.pointers[i][0].length;
       if (ptr_elem_offset == elem_offset) { // the one being deleted right now
-        this.pointers.splice(i, i);
+        this.pointers.splice(i, 1);
         i--;
       } else if (ptr_elem_offset > elem_offset) {
         this.pointers[i][0] = this.buffer.subarray(ptr_elem_offset - length, ptr_elem_offset - length + ptr_length);
       }
     }
+    if (!ptr[1]) this.lineOffset -= length;
     this.offset = offset;
     return null;
   }

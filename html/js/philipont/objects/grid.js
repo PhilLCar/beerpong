@@ -1,4 +1,4 @@
-function initGridBack(level) {
+function initGridBack(scene, level) {
   const gX = Math.floor(level.terrainSizeX / level.gridRes);
   const e  = gX * level.gridRes / 2;
   const s  = -e;
@@ -47,17 +47,17 @@ function initGridBack(level) {
     gridPosition.push(level.gridZ);
     gridObjType.push(MATERIALS.GRID.TYPE);
   }
-  return new Shape({
+  return new Shape(scene, {
     vertexBuffer:   gridVertices, 
     indexBuffer:    gridIndices, 
     normalBuffer:   gridNormals,
     colorBuffer:    gridColors,
     positionBuffer: gridPosition,
     objTypeBuffer:  gridObjType
-  });
+  }, false);
 }
 
-function initGrid(level) {
+function initGrid(scene, level) {
   const gX = Math.floor(level.terrainSizeX / level.gridRes);
   const e  = gX * level.gridRes / 2;
   const s  = -e;
@@ -108,7 +108,7 @@ function initGrid(level) {
     gridPosition.push(level.gridZ);
     gridObjType.push(MATERIALS.GRID.TYPE);
   }
-  return new Shape({
+  return new Shape(scene, {
     vertexBuffer:   gridVertices, 
     indexBuffer:    gridIndices, 
     normalBuffer:   gridNormals,
@@ -118,7 +118,7 @@ function initGrid(level) {
   });
 }
 
-function initGridHD(level) {
+function initGridHD(scene, level) {
   const gX = Math.floor(level.terrainSizeX / level.gridRes);
   const e  = gX * level.gridRes / 2;
   const s  = -e;
@@ -167,7 +167,7 @@ function initGridHD(level) {
     gridPosition.push(level.gridZ);
     gridObjType.push (MATERIALS.GRID.TYPE);
   }
-  return new Shape({
+  return new Shape(scene, {
     vertexBuffer:   gridVertices, 
     indexBuffer:    gridIndices, 
     normalBuffer:   gridNormals,
