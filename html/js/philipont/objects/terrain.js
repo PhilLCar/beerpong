@@ -251,6 +251,7 @@ function initTerrain(scene, level) {
     ///////////////////////////////////////////////////////////////////////
     if (scene.modEnabled && scene.modApply) {
       const vertices = shape.vertexBuffer[0];
+      const normals  = shape.normalBuffer[0];
       if (shape.mouse !== null) {
         const mouse = shape.mouse;
         const d     = vec3.create();
@@ -284,6 +285,46 @@ function initTerrain(scene, level) {
               if (i > 0 && j > 0) {
                 const i6 = ((i - 1) * nZ + j - 1) * 18 + 16;
                 vertices[i6] = v[1];
+              }
+            }
+          }
+        }
+        // Normals
+        for (var i = 0; i < nX; i++) {
+          for (var j = 0; j < nZ; j++) {
+            const index = (i * nZ + j) * 18;
+            {
+              const v1 = terrain[i +     j      * nX1];
+              const v2 = terrain[i +    (j + 1) * nX1];
+              const v3 = terrain[i + 1 + j      * nX1];
+              const a1   = vec3.create();
+              const a2   = vec3.create();
+              const norm = vec3.create();
+              vec3.sub(a1, v2, v1);
+              vec3.sub(a2, v3, v1);
+              vec3.cross(norm, a1, a2);
+              vec3.normalize(norm, norm);
+              for (var k = 0; k < 3; k++) {
+                normals[index + k * 3]     = norm[0];
+                normals[index + k * 3 + 1] = norm[1];
+                normals[index + k * 3 + 2] = norm[2];
+              }
+            }
+            {
+              const v1 = terrain[i + 1 +  j      * nX1];
+              const v2 = terrain[i +     (j + 1) * nX1];
+              const v3 = terrain[i + 1 + (j + 1) * nX1];
+              const a1   = vec3.create();
+              const a2   = vec3.create();
+              const norm = vec3.create();
+              vec3.sub(a1, v2, v1);
+              vec3.sub(a2, v3, v1);
+              vec3.cross(norm, a1, a2);
+              vec3.normalize(norm, norm);
+              for (var k = 0; k < 3; k++) {
+                normals[index + k * 3 + 9]  = norm[0];
+                normals[index + k * 3 + 10] = norm[1];
+                normals[index + k * 3 + 11] = norm[2];
               }
             }
           }

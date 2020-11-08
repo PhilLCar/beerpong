@@ -83,7 +83,7 @@ const MATERIALS = {
     TEXTURE_APPLY_FUNC: `
       highp float r = acos(vPosition.y - vCenter.y) / (PI / 2.0);
       highp vec2  p = normalize(vPosition.xz - vCenter.xz) * vec2(1.0, -1.0);
-      FragColor = texture(uTextureMap[${ATMO_TEXTURE_ID}], (r * p + vec2(1.0, 1.0)) / 2.0);`,
+      FragColor = texture(uTextureMap[${ATMO_TEXTURE_ID - MAX_NUM_LIGHTS}], (r * p + vec2(1.0, 1.0)) / 2.0);`,
     COLOR_PRESET : {
       R: { min: 0.0, max: 0.0, add: null },
       G: { min: 0.0, max: 0.0, add: null },

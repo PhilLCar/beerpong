@@ -90,24 +90,16 @@ const sceneFragmentSRC = `#version 300 es
       ${(function() {
           var cases = "";
           for (var key in MATERIALS) {
-            if (MATERIALS[key].TEXTYPE == TEXTYPE_NONE) {
-              cases += `
-              case uint(${MATERIALS[key].TYPE}):
-                sMaterial.mAmbiant  =  ${MATERIALS[key].AMBIANT.toPrecision(16)};
-                sMaterial.mDiffuse  =  ${MATERIALS[key].DIFFUSE.toPrecision(16)};
-                sMaterial.mSpecSoft = vec2(${MATERIALS[key].SPEC_SOFT[0].toPrecision(16)}, ${MATERIALS[key].SPEC_SOFT[1].toPrecision(16)});
-                sMaterial.mSpecHard = vec2(${MATERIALS[key].SPEC_HARD[0].toPrecision(16)}, ${MATERIALS[key].SPEC_HARD[1].toPrecision(16)});
-                return true;`
-            } else {
-              cases += `
-              case uint(${MATERIALS[key].TYPE}):
-                sMaterial.mAmbiant  =  ${MATERIALS[key].AMBIANT.toPrecision(16)};
-                sMaterial.mDiffuse  =  ${MATERIALS[key].DIFFUSE.toPrecision(16)};
-                sMaterial.mSpecSoft = vec2(${MATERIALS[key].SPEC_SOFT[0].toPrecision(16)}, ${MATERIALS[key].SPEC_SOFT[1].toPrecision(16)});
-                sMaterial.mSpecHard = vec2(${MATERIALS[key].SPEC_HARD[0].toPrecision(16)}, ${MATERIALS[key].SPEC_HARD[1].toPrecision(16)});
-                ${MATERIALS[key].TEXTURE_APPLY_FUNC}
-                return true;`
-            }
+            cases += `
+            case uint(${MATERIALS[key].TYPE}):
+              sMaterial.mAmbiant  = ${MATERIALS[key].AMBIANT.toPrecision(16)};
+              sMaterial.mDiffuse  = ${MATERIALS[key].DIFFUSE.toPrecision(16)};
+              sMaterial.mSpecSoft = vec2(${MATERIALS[key].SPEC_SOFT[0].toPrecision(16)}, ${MATERIALS[key].SPEC_SOFT[1].toPrecision(16)});
+              sMaterial.mSpecHard = vec2(${MATERIALS[key].SPEC_HARD[0].toPrecision(16)}, ${MATERIALS[key].SPEC_HARD[1].toPrecision(16)});
+              ${MATERIALS[key].TEXTYPE == TEXTYPE_NONE ? 
+                "FragColor = vColor;" : 
+                MATERIALS[key].TEXTURE_APPLY_FUNC}
+              return true;`
           }
           return cases;
         })()}
@@ -119,25 +111,25 @@ const sceneFragmentSRC = `#version 300 es
   void main(void) {
     if (applyTexture(FragColor) && vLightNum != uint(0)) {
       highp vec3 viewDir = normalize(-vPosition);
-      highp vec4 color   = FragColor;
       // Ambiant
-      FragColor = sMaterial.mAmbiant * color;
+      FragColor = vec4(sMaterial.mAmbiant * FragColor.rgb, FragColor.a);
       for (uint i = uint(0); i < vLightNum; i++) {
         highp float factor     = 0.0;
-        highp float vis        = PCSS(uShadowMap[i], vShadowCoord[i]);
+        highp float vis        = 1.0;//PCSS(uShadowMap[i], vShadowCoord[i]);
         highp vec3  reflectDir = reflect(-vLightDir[i], vNormal);
         highp float anglef     = max(dot(viewDir, reflectDir), 0.0);
         // Diffuse
-        FragColor += vec4((1.0 - sMaterial.mAmbiant)            *
+        FragColor += vec4((1.0 - sMaterial.mAmbiant)           *
                           max(dot(vNormal, vLightDir[i]), 0.0) *
-                          sMaterial.mDiffuse                    *
-                          color.rgb * vis, 0.0);
+                          sMaterial.mDiffuse                   *
+                          vColor.rgb * vis, 0.0);
         // Soft specular
         factor += sMaterial.mSpecSoft.x * pow(anglef, sMaterial.mSpecSoft.y);
         // Hard specular
         factor += sMaterial.mSpecHard.x * pow(anglef, sMaterial.mSpecHard.y);
         FragColor += vec4(vis * factor * uLightColor[i], 0.0);
       }
+      FragColor = vec4(vNormal, 1.0);
     } else {
       FragColor = vColor;
     }

@@ -64,6 +64,7 @@ const sceneVertexSRC = `#version 300 es
         vLightDir[i]    = uNormalTransform * lightDir;
         vShadowCoord[i] = (uShadowTransform[i] * aVertexPosition).xyz;
       }
+      vLightNum = uLightNum;
     } else {
       vLightNum = uint(0);
     }

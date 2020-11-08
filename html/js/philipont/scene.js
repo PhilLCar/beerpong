@@ -107,7 +107,7 @@ class Scene {
         lightColor:           gl.getUniformLocation(shaderProgram, 'uLightColor'),
         lightNum:             gl.getUniformLocation(shaderProgram, 'uLightNum'),
         shadowMap:            gl.getUniformLocation(shaderProgram, 'uShadowMap'),
-        shadowMap:            gl.getUniformLocation(shaderProgram, 'uTextureMap'),
+        textureMap:           gl.getUniformLocation(shaderProgram, 'uTextureMap'),
         poissonDisks:         gl.getUniformLocation(shaderProgram, 'POISSON_DISKS')
       }
     };
@@ -351,7 +351,7 @@ class Scene {
     /// TODO: might fail
     const shadowTransformsArray = new Float32Array(shadowTransforms.length * 16);
     for (var i = 0; i < shadowTransforms.length; i++) {
-      shadowTransformsArray.set(shadowTransforms[i].buffer, 16 * i);
+      shadowTransformsArray.set(shadowTransforms[i], 16 * i);
     }
     // Save shadow transform for later
     gl.useProgram(programInfo.program);
@@ -440,21 +440,24 @@ class Scene {
     for (var i = 0; i < this.lights.length; i++) {
       shadowMap[i] = i;
       directional[i] = this.lights[i].directional ? 1 : 0;
-      position.set(this.lights[i].getPosition().buffer, 3 * i);
-      color.set(this.lights[i].getColor().buffer, 3 * i);
+      position.set(this.lights[i].getPosition(), 3 * i);
+      color.set(this.lights[i].getColor(), 3 * i);
       gl.activeTexture(gl[`TEXTURE${i}`]);
       gl.bindTexture(gl.TEXTURE_2D, this.depthBuffers[i]);
     }
+    const textureMap = new Int32Array(this.materialTextures.length);
+    for (var i = 0; i < this.materialTextures.length; i++) {
+      textureMap[i] = this.materialTextures[i].ID;
+      gl.activeTexture(gl[`TEXTURE${textureMap[i]}`]);
+      gl.bindTexture(gl.TEXTURE_2D, this.materialTextures[i].texture);
+    }
+    gl.uniform1iv(programInfo.uniformLocations.textureMap,       textureMap);
     gl.uniform1iv(programInfo.uniformLocations.shadowMap,        shadowMap);
     gl.uniform1iv(programInfo.uniformLocations.lightDirectional, directional);
     gl.uniform3fv(programInfo.uniformLocations.lightPosition,    position);
     gl.uniform3fv(programInfo.uniformLocations.lightColor,       color);
     gl.uniform1ui(programInfo.uniformLocations.lightNum,         this.lights.length);
     gl.uniform1i(programInfo.uniformLocations.isLit,             this.isLit);
-    for (var i = 0; i < this.materialTextures.length; i++) {
-      gl.activeTexture(gl[`TEXTURE${this.materialTextures[i].ID}`]);
-      gl.bindTexture(gl.TEXTURE_2D, this.materialTextures[i].texture);
-    }
     { // VERTICES
       const numComponents = 3;
       const type          = gl.FLOAT;
