@@ -8,6 +8,7 @@ const shadowFragmentSRC = `#version 300 es
 
 const sceneFragmentSRC = `#version 300 es
   #define PI             3.141592653589793238462643383
+  #define PHI            1.61803398874989484820459
   #define MAX_NUM_LIGHTS ${MAX_NUM_LIGHTS}
   #define MAX_TEXTURES   ${MAX_TEXTURES}
 
@@ -38,12 +39,24 @@ const sceneFragmentSRC = `#version 300 es
 
   out highp vec4 FragColor;
 
+  // https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
+  float gold_noise(in vec2 xy, in float seed) {
+    return (fract(tan(distance(xy * PHI, xy) * seed) * xy.x) - 0.5) * 2.0;
+  }
+
+  void rand(out vec2 init, in float seed) {
+    init = vec2(
+      gold_noise(init, seed),
+      gold_noise(init, seed + PHI)
+    );
+  }
+
   /// PCSS ///
   // http://developer.download.nvidia.com/whitepapers/2008/PCSS_Integration.pdf
-  #define BLOCKER_SEARCH_NUM_SAMPLES 8
-  #define PCF_NUM_SAMPLES            8
+  #define BLOCKER_SEARCH_NUM_SAMPLES 16
+  #define PCF_NUM_SAMPLES            32
   #define NEAR_PLANE                 ${ZNEAR}
-  #define LIGHT_SIZE_UV              0.02
+  #define LIGHT_SIZE_UV              0.005
 
   uniform highp vec2 POISSON_DISKS[16];
 
@@ -56,8 +69,8 @@ const sceneFragmentSRC = `#version 300 es
     float blockerSum = 0.0;
     numBlockers = 0.0;
     for (int i = 0; i < BLOCKER_SEARCH_NUM_SAMPLES; ++i) {
-      float depth = texture(shadowMap, uv + POISSON_DISKS[i] * searchWidth).x;
-      if (depth < zReceiver) {
+      float depth = texture(shadowMap, uv + POISSON_DISKS[i] * searchWidth * float(i)).x;
+      if (depth < zReceiver - 1.0) {
         blockerSum += depth;
         ++numBlockers;
       }
@@ -68,7 +81,9 @@ const sceneFragmentSRC = `#version 300 es
   float PCF_Filter(sampler2D shadowMap, vec2 uv, float zReceiver, float filterRadiusUV) {
     float sum = 0.0;
     for (int i = 0; i < PCF_NUM_SAMPLES; ++i) {
-      vec2 offset = POISSON_DISKS[i] * filterRadiusUV;
+      vec2 offset = uv;
+      rand(offset, float(i));
+      offset *= filterRadiusUV;
       sum += texture(shadowMap, uv + offset).x < zReceiver ? 0.0 : 1.0;
     }
     return sum / float(PCF_NUM_SAMPLES);
@@ -79,7 +94,7 @@ const sceneFragmentSRC = `#version 300 es
     float zReceiver = coords.z;
     float avgBlockerDepth = 0.0;
     float numBlockers     = 0.0;
-    findBlocker(shadowMap, avgBlockerDepth, numBlockers, uv, zReceiver);
+    findBlocker(shadowMap, avgBlockerDepth, numBlockers, uv, zReceiver + 1.0);
     if (numBlockers < 1.0) return 1.0;
     float penumbraRatio  = penumbraSize(zReceiver, avgBlockerDepth);
     float filterRadiusUV = penumbraRatio * LIGHT_SIZE_UV * NEAR_PLANE / zReceiver;
