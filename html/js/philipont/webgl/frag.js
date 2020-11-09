@@ -40,8 +40,8 @@ const sceneFragmentSRC = `#version 300 es
 
   /// PCSS ///
   // http://developer.download.nvidia.com/whitepapers/2008/PCSS_Integration.pdf
-  #define BLOCKER_SEARCH_NUM_SAMPLES 16
-  #define PCF_NUM_SAMPLES            16
+  #define BLOCKER_SEARCH_NUM_SAMPLES 8
+  #define PCF_NUM_SAMPLES            8
   #define NEAR_PLANE                 ${ZNEAR}
   #define LIGHT_SIZE_UV              0.02
 
