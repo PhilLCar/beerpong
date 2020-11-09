@@ -25,6 +25,7 @@ const sceneFragmentSRC = `#version 300 es
     highp vec2  mSpecHard;
   } sMaterial;
 
+  in highp vec3 vVMPosition;
   in highp vec3 vPosition;
   in highp vec4 vColor;
   in highp vec3 vNormal;
@@ -41,8 +42,8 @@ const sceneFragmentSRC = `#version 300 es
   // http://developer.download.nvidia.com/whitepapers/2008/PCSS_Integration.pdf
   #define BLOCKER_SEARCH_NUM_SAMPLES 16
   #define PCF_NUM_SAMPLES            16
-  #define NEAR_PLANE                 0.01
-  #define LIGHT_SIZE_UV              0.18
+  #define NEAR_PLANE                 ${ZNEAR}
+  #define LIGHT_SIZE_UV              0.02
 
   uniform highp vec2 POISSON_DISKS[16];
 
@@ -81,7 +82,7 @@ const sceneFragmentSRC = `#version 300 es
     findBlocker(shadowMap, avgBlockerDepth, numBlockers, uv, zReceiver);
     if (numBlockers < 1.0) return 1.0;
     float penumbraRatio  = penumbraSize(zReceiver, avgBlockerDepth);
-    float filterRadiusUV = penumbraRatio * LIGHT_SIZE_UV * NEAR_PLANE / coords.z;
+    float filterRadiusUV = penumbraRatio * LIGHT_SIZE_UV * NEAR_PLANE / zReceiver;
     return PCF_Filter(shadowMap, uv, zReceiver, filterRadiusUV);
   }
 
@@ -110,12 +111,12 @@ const sceneFragmentSRC = `#version 300 es
 
   void main(void) {
     if (applyTexture(FragColor) && vLightNum != uint(0)) {
-      highp vec3 viewDir = normalize(-vPosition);
+      highp vec3 viewDir = normalize(-vVMPosition);
       // Ambiant
       FragColor = vec4(sMaterial.mAmbiant * FragColor.rgb, FragColor.a);
       for (uint i = uint(0); i < vLightNum; i++) {
         highp float factor     = 0.0;
-        highp float vis        = 1.0;//PCSS(uShadowMap[i], vShadowCoord[i]);
+        highp float vis        = PCSS(uShadowMap[i], vShadowCoord[i]);
         highp vec3  reflectDir = reflect(-vLightDir[i], vNormal);
         highp float anglef     = max(dot(viewDir, reflectDir), 0.0);
         // Diffuse
@@ -129,7 +130,6 @@ const sceneFragmentSRC = `#version 300 es
         factor += sMaterial.mSpecHard.x * pow(anglef, sMaterial.mSpecHard.y);
         FragColor += vec4(vis * factor * uLightColor[i], 0.0);
       }
-      FragColor = vec4(vNormal, 1.0);
     } else {
       FragColor = vColor;
     }

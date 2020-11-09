@@ -289,7 +289,7 @@ function initTerrain(scene, level) {
             }
           }
         }
-        // Normals
+        // Normals // Optimizable
         for (var i = 0; i < nX; i++) {
           for (var j = 0; j < nZ; j++) {
             const index = (i * nZ + j) * 18;

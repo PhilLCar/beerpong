@@ -174,6 +174,7 @@ function initWaterWaves(scene, level) {
     const nZ1        = shape.nZ1;
     const waterLevel = shape.waterLevel;
     const vertices   = shape.vertexBuffer[0];
+    const normals    = shape.normalBuffer[0];
     const freq       = shape.freq;
     const amp        = shape.amp;
 
@@ -201,6 +202,46 @@ function initWaterWaves(scene, level) {
         if (i > 0 && j > 0) {
           const i6 = ((i - 1) * nZ + j - 1) * 18 + 16;
           vertices[i6] = y;
+        }
+      }
+    }
+    // Normals // Optimizable
+    for (var i = 0; i < nX; i++) {
+      for (var j = 0; j < nZ; j++) {
+        const index = (i * nZ + j) * 18;
+        {
+          const v1 = vec3.fromValues(vertices[index],     vertices[index + 1], vertices[index + 2]);
+          const v2 = vec3.fromValues(vertices[index + 3], vertices[index + 4], vertices[index + 5]);
+          const v3 = vec3.fromValues(vertices[index + 6], vertices[index + 7], vertices[index + 8]);
+          const a1   = vec3.create();
+          const a2   = vec3.create();
+          const norm = vec3.create();
+          vec3.sub(a1, v2, v1);
+          vec3.sub(a2, v3, v1);
+          vec3.cross(norm, a1, a2);
+          vec3.normalize(norm, norm);
+          for (var k = 0; k < 3; k++) {
+            normals[index + k * 3]     = norm[0];
+            normals[index + k * 3 + 1] = norm[1];
+            normals[index + k * 3 + 2] = norm[2];
+          }
+        }
+        {
+          const v1 = vec3.fromValues(vertices[index + 9],  vertices[index + 10], vertices[index + 11]);
+          const v2 = vec3.fromValues(vertices[index + 12], vertices[index + 13], vertices[index + 14]);
+          const v3 = vec3.fromValues(vertices[index + 15], vertices[index + 16], vertices[index + 17]);
+          const a1   = vec3.create();
+          const a2   = vec3.create();
+          const norm = vec3.create();
+          vec3.sub(a1, v2, v1);
+          vec3.sub(a2, v3, v1);
+          vec3.cross(norm, a1, a2);
+          vec3.normalize(norm, norm);
+          for (var k = 0; k < 3; k++) {
+            normals[index + k * 3 + 9]  = norm[0];
+            normals[index + k * 3 + 10] = norm[1];
+            normals[index + k * 3 + 11] = norm[2];
+          }
         }
       }
     }

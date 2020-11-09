@@ -35,6 +35,7 @@ const sceneVertexSRC = `#version 300 es
   uniform vec3 uLightPosition[MAX_NUM_LIGHTS];
   uniform uint uLightNum;
 
+  out highp vec3 vVMPosition;
   out highp vec3 vPosition;
   out highp vec4 vColor;
   out highp vec3 vNormal;
@@ -47,22 +48,24 @@ const sceneVertexSRC = `#version 300 es
 
   void main(void) {
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vPosition   = (uModelViewMatrix * aVertexPosition).xyz;
+    vVMPosition = (uModelViewMatrix * aVertexPosition).xyz;
+    vPosition   = aVertexPosition.xyz;
     vNormal     = normalize(uNormalTransform * aVertexNormal);
-    vCenter     = (uModelViewMatrix * vec4(aObjectCenter, 1.0)).xyz;
+    vCenter     = aObjectCenter;
     vColor      = aVertexColor;
     vObjectType = aObjectType;
 
     if (uIsLit) {
       for (uint i = uint(0); i < uLightNum; ++i) {
         vec3 lightDir;
+        vec4 shadowCoord = uShadowTransform[i] * aVertexPosition;
         if (uLightDirectional[i]) {
           lightDir = uLightPosition[i];
         } else {
           lightDir = normalize(uLightPosition[i] - aVertexPosition.xyz);
         }
         vLightDir[i]    = uNormalTransform * lightDir;
-        vShadowCoord[i] = (uShadowTransform[i] * aVertexPosition).xyz;
+        vShadowCoord[i] = shadowCoord.xyz / shadowCoord.w;
       }
       vLightNum = uLightNum;
     } else {

@@ -14,6 +14,9 @@ const MAX_TEXTURES   = 8;
 
 const MAX_INDICES    = 1 << 16; // test that for now
 
+const ZNEAR = 0.1;
+const ZFAR  = 100.0;
+
 var _unique_texture_id = MAX_NUM_LIGHTS;
 
 function getUniqueTextureID() {

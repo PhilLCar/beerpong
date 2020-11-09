@@ -38,9 +38,6 @@ const VIEWPORT = {
 
 const SHADOW_TEXTURE_SIZE = 1024;
 
-const ZNEAR = 0.1;
-const ZFAR  = 100.0;
-
 class Scene {
   constructor(canvas) {
     this.canvas = canvas;
@@ -304,7 +301,7 @@ class Scene {
       const modelViewMatrix = mat4.create();
       mat4.lookAt(modelViewMatrix,
                   lightSource,
-                  vec3.fromValues(0, 0, 0),
+                  vec3.fromValues(0, 0, 0), // todo: eventually allow lights to focus elsewhere
                   vec3.fromValues(0, 1, 0));
 
       const shadowTransform = mat4.fromValues(0.5, 0.0, 0.0, 0.0,
@@ -348,7 +345,6 @@ class Scene {
         gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
       }
     }
-    /// TODO: might fail
     const shadowTransformsArray = new Float32Array(shadowTransforms.length * 16);
     for (var i = 0; i < shadowTransforms.length; i++) {
       shadowTransformsArray.set(shadowTransforms[i], 16 * i);
@@ -609,7 +605,7 @@ class Scene {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.hdrBuffer);
 
-    { // Draw lines first
+    {
       const vertexCount = VIEWPORT.vertexCount;
       const type        = gl.UNSIGNED_INT;
       const offset      = VIEWPORT.offset;
