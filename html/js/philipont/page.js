@@ -62,6 +62,10 @@ function toggleGridHD() {
   DM.scene.toggleGridHD();
 }
 
+function toggleMod() {
+  DM.scene.modSubstract = ! DM.scene.modSubstract;
+}
+
 function translateXY(event) {
   if (DM.scene === null) return;
   var e = event || window.event;

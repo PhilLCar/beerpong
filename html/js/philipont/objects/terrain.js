@@ -116,10 +116,10 @@ function initTerrain(scene, level) {
       terrainVertices.push(v2[1]);
       terrainVertices.push(v2[2]);
       terrainVertices.push(v1[0]);
-      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(-level.terrainSizeZ);
       terrainVertices.push(v1[2]);
       terrainVertices.push(v2[0]);
-      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(-level.terrainSizeZ);
       terrainVertices.push(v2[2]);
       terrainIndices.push(terrainVertices.length / 3 - 4);
       terrainIndices.push(terrainVertices.length / 3 - 3);
@@ -145,7 +145,7 @@ function initTerrain(scene, level) {
     {
       const v1 = terrain[i     + nZ * nX1];
       const v2 = terrain[i + 1 + nZ * nX1];
-      const i1 = (i * nZ + nZ - 1) * 6 + 3;
+      const i1 = (i * nZ + nZ - 1) * 6 + 4;
       terrainVertices.push(v1[0]);
       terrainVertices.push(v1[1]);
       terrainVertices.push(v1[2]);
@@ -153,10 +153,10 @@ function initTerrain(scene, level) {
       terrainVertices.push(v2[1]);
       terrainVertices.push(v2[2]);
       terrainVertices.push(v1[0]);
-      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(-level.terrainSizeZ);
       terrainVertices.push(v1[2]);
       terrainVertices.push(v2[0]);
-      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(-level.terrainSizeZ);
       terrainVertices.push(v2[2]);
       terrainIndices.push(terrainVertices.length / 3 - 3);
       terrainIndices.push(terrainVertices.length / 3 - 4);
@@ -193,10 +193,10 @@ function initTerrain(scene, level) {
       terrainVertices.push(v2[1]);
       terrainVertices.push(v2[2]);
       terrainVertices.push(v1[0]);
-      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(-level.terrainSizeZ);
       terrainVertices.push(v1[2]);
       terrainVertices.push(v2[0]);
-      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(-level.terrainSizeZ);
       terrainVertices.push(v2[2]);
       terrainIndices.push(terrainVertices.length / 3 - 3);
       terrainIndices.push(terrainVertices.length / 3 - 4);
@@ -222,7 +222,7 @@ function initTerrain(scene, level) {
     {
       const v1 = terrain[nX +  j      * nX1];
       const v2 = terrain[nX + (j + 1) * nX1];
-      const i1 = (nX * nZ + j) * 6 + 5;
+      const i1 = ((nX - 1) * nZ + j) * 6 + 5;
       // 1
       terrainVertices.push(v1[0]);
       terrainVertices.push(v1[1]);
@@ -231,10 +231,10 @@ function initTerrain(scene, level) {
       terrainVertices.push(v2[1]);
       terrainVertices.push(v2[2]);
       terrainVertices.push(v1[0]);
-      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(-level.terrainSizeZ);
       terrainVertices.push(v1[2]);
       terrainVertices.push(v2[0]);
-      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(-level.terrainSizeZ);
       terrainVertices.push(v2[2]);
       terrainIndices.push(terrainVertices.length / 3 - 4);
       terrainIndices.push(terrainVertices.length / 3 - 3);

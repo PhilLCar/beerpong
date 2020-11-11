@@ -132,7 +132,7 @@ class Scene {
     this.mouseray           = null;
     this.rotEnabled         = false;
     this.modEnabled         = false;
-    this.modSubstract       = false;
+    this.modSubstract       = true;
     this.modApply           = false;
     this.modArea            =  2.0;
     this.maxTranslation     = 10.0;

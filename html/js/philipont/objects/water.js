@@ -1,3 +1,5 @@
+const epsilon = 0.01;
+
 function initWaterPlane(scene, level) {
   const material = MATERIALS.WATER;
   const nX        = Math.floor(level.terrainSizeX / level.terrainRes);
@@ -12,18 +14,18 @@ function initWaterPlane(scene, level) {
   const waterIndices  = [];
   const waterPosition = [];
   const waterObjType  = [];
-  waterVertices.push(tr[0]);
+  waterVertices.push(tr[0] - epsilon);
   waterVertices.push(level.waterLevel);
-  waterVertices.push(tr[2]);
-  waterVertices.push(tl[0]);
+  waterVertices.push(tr[2] + epsilon);
+  waterVertices.push(tl[0] + epsilon);
   waterVertices.push(level.waterLevel);
-  waterVertices.push(tl[2]);
-  waterVertices.push(bl[0]);
+  waterVertices.push(tl[2] + epsilon);
+  waterVertices.push(bl[0] + epsilon);
   waterVertices.push(level.waterLevel);
-  waterVertices.push(bl[2]);
-  waterVertices.push(br[0]);
+  waterVertices.push(bl[2] - epsilon);
+  waterVertices.push(br[0] - epsilon);
   waterVertices.push(level.waterLevel);
-  waterVertices.push(br[2]);
+  waterVertices.push(br[2] - epsilon);
   for (var i = 0; i < 4; i++) {
     waterNormals.push(0);
     waterNormals.push(1);
@@ -46,6 +48,138 @@ function initWaterPlane(scene, level) {
     waterPosition.push(level.waterLevel);
     waterPosition.push(0);
     waterObjType.push(material.TYPE);
+  }
+  { // backface
+    waterVertices.push(tr[0] - epsilon);
+    waterVertices.push(level.waterLevel);
+    waterVertices.push(tr[2] + epsilon);
+    waterVertices.push(tl[0] + epsilon);
+    waterVertices.push(level.waterLevel);
+    waterVertices.push(tl[2] + epsilon);
+    waterVertices.push(tr[0] - epsilon);
+    waterVertices.push(-level.terrainSizeZ);
+    waterVertices.push(tr[2] + epsilon);
+    waterVertices.push(tl[0] + epsilon);
+    waterVertices.push(-level.terrainSizeZ);
+    waterVertices.push(tl[2] + epsilon);
+    waterIndices.push(4);
+    waterIndices.push(6);
+    waterIndices.push(5);
+    waterIndices.push(5);
+    waterIndices.push(6);
+    waterIndices.push(7);
+    for (var i = 0; i < 4; i++) {
+      waterNormals.push(0);
+      waterNormals.push(0);
+      waterNormals.push(-1);
+      waterColors.push(material.COLOR_PRESET.R.max);
+      waterColors.push(material.COLOR_PRESET.G.max);
+      waterColors.push(material.COLOR_PRESET.B.max);
+      waterColors.push(material.COLOR_PRESET.A.max);
+      waterPosition.push(0);
+      waterPosition.push(level.waterLevel);
+      waterPosition.push(0);
+      waterObjType.push(material.TYPE);
+    }
+  }
+  { // frontface
+    waterVertices.push(br[0] - epsilon);
+    waterVertices.push(level.waterLevel);
+    waterVertices.push(br[2] - epsilon);
+    waterVertices.push(bl[0] + epsilon);
+    waterVertices.push(level.waterLevel);
+    waterVertices.push(bl[2] - epsilon);
+    waterVertices.push(br[0] - epsilon);
+    waterVertices.push(-level.terrainSizeZ);
+    waterVertices.push(br[2] - epsilon);
+    waterVertices.push(bl[0] + epsilon);
+    waterVertices.push(-level.terrainSizeZ);
+    waterVertices.push(bl[2] - epsilon);
+    waterIndices.push(8);
+    waterIndices.push(9);
+    waterIndices.push(10);
+    waterIndices.push(9);
+    waterIndices.push(11);
+    waterIndices.push(10);
+    for (var i = 0; i < 4; i++) {
+      waterNormals.push(0);
+      waterNormals.push(0);
+      waterNormals.push(1);
+      waterColors.push(material.COLOR_PRESET.R.max);
+      waterColors.push(material.COLOR_PRESET.G.max);
+      waterColors.push(material.COLOR_PRESET.B.max);
+      waterColors.push(material.COLOR_PRESET.A.max);
+      waterPosition.push(0);
+      waterPosition.push(level.waterLevel);
+      waterPosition.push(0);
+      waterObjType.push(material.TYPE);
+    }
+  }
+  { // leftface
+    waterVertices.push(tl[0] + epsilon);
+    waterVertices.push(level.waterLevel);
+    waterVertices.push(tl[2] + epsilon);
+    waterVertices.push(bl[0] + epsilon);
+    waterVertices.push(level.waterLevel);
+    waterVertices.push(bl[2] - epsilon);
+    waterVertices.push(tl[0] + epsilon);
+    waterVertices.push(-level.terrainSizeZ);
+    waterVertices.push(tl[2] + epsilon);
+    waterVertices.push(bl[0] + epsilon);
+    waterVertices.push(-level.terrainSizeZ);
+    waterVertices.push(bl[2] - epsilon);
+    waterIndices.push(13);
+    waterIndices.push(12);
+    waterIndices.push(14);
+    waterIndices.push(13);
+    waterIndices.push(14);
+    waterIndices.push(15);
+    for (var i = 0; i < 4; i++) {
+      waterNormals.push(-1);
+      waterNormals.push(0);
+      waterNormals.push(0);
+      waterColors.push(material.COLOR_PRESET.R.max);
+      waterColors.push(material.COLOR_PRESET.G.max);
+      waterColors.push(material.COLOR_PRESET.B.max);
+      waterColors.push(material.COLOR_PRESET.A.max);
+      waterPosition.push(0);
+      waterPosition.push(level.waterLevel);
+      waterPosition.push(0);
+      waterObjType.push(material.TYPE);
+    }
+  }
+  { // rightface
+    waterVertices.push(tr[0] - epsilon);
+    waterVertices.push(level.waterLevel);
+    waterVertices.push(tr[2] + epsilon);
+    waterVertices.push(br[0] - epsilon);
+    waterVertices.push(level.waterLevel);
+    waterVertices.push(br[2] - epsilon);
+    waterVertices.push(tr[0] - epsilon);
+    waterVertices.push(-level.terrainSizeZ);
+    waterVertices.push(tr[2] + epsilon);
+    waterVertices.push(br[0] - epsilon);
+    waterVertices.push(-level.terrainSizeZ);
+    waterVertices.push(br[2] - epsilon);
+    waterIndices.push(16);
+    waterIndices.push(17);
+    waterIndices.push(18);
+    waterIndices.push(17);
+    waterIndices.push(19);
+    waterIndices.push(18);
+    for (var i = 0; i < 4; i++) {
+      waterNormals.push(1);
+      waterNormals.push(0);
+      waterNormals.push(0);
+      waterColors.push(material.COLOR_PRESET.R.max);
+      waterColors.push(material.COLOR_PRESET.G.max);
+      waterColors.push(material.COLOR_PRESET.B.max);
+      waterColors.push(material.COLOR_PRESET.A.max);
+      waterPosition.push(0);
+      waterPosition.push(level.waterLevel);
+      waterPosition.push(0);
+      waterObjType.push(material.TYPE);
+    }
   }
   return new Shape(scene, { 
     vertexBuffer:   waterVertices, 
@@ -80,6 +214,18 @@ function initWaterWaves(scene, level) {
         const u1   = vec3.fromValues(v1[0], waterLevel, v1[2]);
         const u2   = vec3.fromValues(v2[0], waterLevel, v2[2]);
         const u3   = vec3.fromValues(v3[0], waterLevel, v3[2]);
+        if (i == 0) {
+          u1[0] += epsilon;
+          u2[0] += epsilon;
+        } else if (i == nX - 1) {
+          u3[0] -= epsilon;
+        }
+        if (j == 0) {
+          u1[2] += epsilon;
+          u3[2] += epsilon;
+        } else if (j == nZ - 1) {
+          u2[2] -= epsilon;
+        }
         const a1   = vec3.create();
         const a2   = vec3.create();
         const norm = vec3.create();
@@ -110,6 +256,18 @@ function initWaterWaves(scene, level) {
         const u1   = vec3.fromValues(v1[0], waterLevel, v1[2]);
         const u2   = vec3.fromValues(v2[0], waterLevel, v2[2]);
         const u3   = vec3.fromValues(v3[0], waterLevel, v3[2]);
+        if (i == 0) {
+          u2[0] += epsilon;
+        } else if (i == nX - 1) {
+          u1[0] -= epsilon
+          u3[0] -= epsilon;
+        }
+        if (j == 0) {
+          u1[2] += epsilon;
+        } else if (j == nZ - 1) {
+          u2[2] -= epsilon;
+          u3[2] -= epsilon;
+        }
         const a1   = vec3.create();
         const a2   = vec3.create();
         const norm = vec3.create();
@@ -153,6 +311,151 @@ function initWaterWaves(scene, level) {
     waterPosition.push(0);
     waterObjType.push(material.TYPE);
   }
+  // BORDERS
+  for (var i = 0; i < nX; i++) {
+    /////////////////////////////////////////////////
+    {
+      const i1 = i * nZ * 6;
+      waterVertices.push(waterVertices[i1 * 3]);
+      waterVertices.push(waterVertices[i1 * 3 + 1]);
+      waterVertices.push(waterVertices[i1 * 3 + 2]);
+      waterVertices.push(waterVertices[i1 * 3 + 6]);
+      waterVertices.push(waterVertices[i1 * 3 + 7]);
+      waterVertices.push(waterVertices[i1 * 3 + 8]);
+      waterVertices.push(waterVertices[i1 * 3]);
+      waterVertices.push(-level.terrainSizeZ);
+      waterVertices.push(waterVertices[i1 * 3 + 2]);
+      waterVertices.push(waterVertices[i1 * 3 + 6]);
+      waterVertices.push(-level.terrainSizeZ);
+      waterVertices.push(waterVertices[i1 * 3 + 8]);
+      waterIndices.push(waterVertices.length / 3 - 4);
+      waterIndices.push(waterVertices.length / 3 - 3);
+      waterIndices.push(waterVertices.length / 3 - 2);
+      waterIndices.push(waterVertices.length / 3 - 3);
+      waterIndices.push(waterVertices.length / 3 - 1);
+      waterIndices.push(waterVertices.length / 3 - 2);
+      for (var j = 0; j < 4; j++) {
+        waterNormals.push(0);
+        waterNormals.push(0);
+        waterNormals.push(-1);
+        waterColors.push(waterColors[i1 * 4]);
+        waterColors.push(waterColors[i1 * 4 + 1]);
+        waterColors.push(waterColors[i1 * 4 + 2]);
+        waterColors.push(waterColors[i1 * 4 + 3]);
+        waterPosition.push(0);
+        waterPosition.push(level.waterLevel);
+        waterPosition.push(0);
+        waterObjType.push(material.TYPE);
+      }
+    }
+    /////////////////////////////////////////////////
+    {
+      const i1 = (i * nZ + nZ - 1) * 6 + 4;
+      waterVertices.push(waterVertices[i1 * 3]);
+      waterVertices.push(waterVertices[i1 * 3 + 1]);
+      waterVertices.push(waterVertices[i1 * 3 + 2]);
+      waterVertices.push(waterVertices[i1 * 3 + 3]);
+      waterVertices.push(waterVertices[i1 * 3 + 4]);
+      waterVertices.push(waterVertices[i1 * 3 + 5]);
+      waterVertices.push(waterVertices[i1 * 3]);
+      waterVertices.push(-level.terrainSizeZ);
+      waterVertices.push(waterVertices[i1 * 3 + 2]);
+      waterVertices.push(waterVertices[i1 * 3 + 3]);
+      waterVertices.push(-level.terrainSizeZ);
+      waterVertices.push(waterVertices[i1 * 3 + 5]);
+      waterIndices.push(waterVertices.length / 3 - 3);
+      waterIndices.push(waterVertices.length / 3 - 4);
+      waterIndices.push(waterVertices.length / 3 - 2);
+      waterIndices.push(waterVertices.length / 3 - 3);
+      waterIndices.push(waterVertices.length / 3 - 2);
+      waterIndices.push(waterVertices.length / 3 - 1);
+      for (var j = 0; j < 4; j++) {
+        waterNormals.push(0);
+        waterNormals.push(0);
+        waterNormals.push(1);
+        waterColors.push(waterColors[i1 * 4]);
+        waterColors.push(waterColors[i1 * 4 + 1]);
+        waterColors.push(waterColors[i1 * 4 + 2]);
+        waterColors.push(waterColors[i1 * 4 + 3]);
+        waterPosition.push(0);
+        waterPosition.push(level.waterLevel);
+        waterPosition.push(0);
+        waterObjType.push(material.TYPE);
+      }
+    }
+  }
+  for (var j = 0; j < nZ; j++) {
+    /////////////////////////////////////////////////
+    {
+      const i1 = j * 6;
+      waterVertices.push(waterVertices[i1 * 3]);
+      waterVertices.push(waterVertices[i1 * 3 + 1]);
+      waterVertices.push(waterVertices[i1 * 3 + 2]);
+      waterVertices.push(waterVertices[i1 * 3 + 3]);
+      waterVertices.push(waterVertices[i1 * 3 + 4]);
+      waterVertices.push(waterVertices[i1 * 3 + 5]);
+      waterVertices.push(waterVertices[i1 * 3]);
+      waterVertices.push(-level.terrainSizeZ);
+      waterVertices.push(waterVertices[i1 * 3 + 2]);
+      waterVertices.push(waterVertices[i1 * 3 + 3]);
+      waterVertices.push(-level.terrainSizeZ);
+      waterVertices.push(waterVertices[i1 * 3 + 5]);
+      waterIndices.push(waterVertices.length / 3 - 3);
+      waterIndices.push(waterVertices.length / 3 - 4);
+      waterIndices.push(waterVertices.length / 3 - 2);
+      waterIndices.push(waterVertices.length / 3 - 3);
+      waterIndices.push(waterVertices.length / 3 - 2);
+      waterIndices.push(waterVertices.length / 3 - 1);
+      for (var i = 0; i < 4; i++) {
+        waterNormals.push(-1);
+        waterNormals.push(0);
+        waterNormals.push(0);
+        waterColors.push(waterColors[i1 * 4]);
+        waterColors.push(waterColors[i1 * 4 + 1]);
+        waterColors.push(waterColors[i1 * 4 + 2]);
+        waterColors.push(waterColors[i1 * 4 + 3]);
+        waterPosition.push(0);
+        waterPosition.push(level.waterLevel);
+        waterPosition.push(0);
+        waterObjType.push(material.TYPE);
+      }
+    }
+    /////////////////////////////////////////////////
+    {
+      const i1 = ((nX - 1) * nZ + j) * 6 + 3;
+      waterVertices.push(waterVertices[i1 * 3]);
+      waterVertices.push(waterVertices[i1 * 3 + 1]);
+      waterVertices.push(waterVertices[i1 * 3 + 2]);
+      waterVertices.push(waterVertices[i1 * 3 + 6]);
+      waterVertices.push(waterVertices[i1 * 3 + 7]);
+      waterVertices.push(waterVertices[i1 * 3 + 8]);
+      waterVertices.push(waterVertices[i1 * 3]);
+      waterVertices.push(-level.terrainSizeZ);
+      waterVertices.push(waterVertices[i1 * 3 + 2]);
+      waterVertices.push(waterVertices[i1 * 3 + 6]);
+      waterVertices.push(-level.terrainSizeZ);
+      waterVertices.push(waterVertices[i1 * 3 + 8]);
+      waterIndices.push(waterVertices.length / 3 - 4);
+      waterIndices.push(waterVertices.length / 3 - 3);
+      waterIndices.push(waterVertices.length / 3 - 2);
+      waterIndices.push(waterVertices.length / 3 - 3);
+      waterIndices.push(waterVertices.length / 3 - 1);
+      waterIndices.push(waterVertices.length / 3 - 2);
+      for (var i = 0; i < 4; i++) {
+        waterNormals.push(1);
+        waterNormals.push(0);
+        waterNormals.push(0);
+        waterColors.push(waterColors[i1 * 4]);
+        waterColors.push(waterColors[i1 * 4 + 1]);
+        waterColors.push(waterColors[i1 * 4 + 2]);
+        waterColors.push(waterColors[i1 * 4 + 3]);
+        waterPosition.push(0);
+        waterPosition.push(level.waterLevel);
+        waterPosition.push(0);
+        waterObjType.push(material.TYPE);
+      }
+    }
+  }
   const shape = new Shape(scene, { 
     vertexBuffer:   waterVertices, 
     indexBuffer:    waterIndices, 
@@ -182,7 +485,29 @@ function initWaterWaves(scene, level) {
 
     for (var i = 0; i < nX1; i++) {
       for (var j = 0; j < nZ1; j++) {
-        const y  =  waterLevel + Math.sin(t / (Math.PI / 2) * freq + i * j) * amp;
+        const y  =  waterLevel + Math.sin((t + i * i + j) / (Math.PI / 2) * freq) * amp;
+        if (i == 0) {
+          const i1 = 18 * nX * nZ + 24 * nX + 24 * j + 1;
+          const i2 = i1 - 21;
+          vertices[i1] = y;
+          if (j > 0) vertices[i2] = y;
+        } else if (i == nX) {
+          const i1 = 18 * nX * nZ + 24 * nX + 24 * j + 13;
+          const i2 = i1 - 21;
+          vertices[i1] = y;
+          if (j > 0) vertices[i2] = y;
+        }
+        if (j == 0) {
+          const i1 = 18 * nX * nZ + 24 * i + 1;
+          const i2 = i1 - 21;
+          vertices[i1] = y;
+          if (i > 0) vertices[i2] = y;
+        } else if (j == nZ) {
+          const i1 = 18 * nX * nZ + 24 * i + 13;
+          const i2 = i1 - 21;
+          vertices[i1] = y;
+          if (i > 0) vertices[i2] = y;
+        }
         if (i < nX && j < nZ) {
           const i1 = (i * nZ + j) * 18 + 1;
           vertices[i1] = y;
