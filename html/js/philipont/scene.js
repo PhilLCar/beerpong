@@ -36,8 +36,6 @@ const VIEWPORT = {
   offset: 0
 };
 
-const SHADOW_TEXTURE_SIZE = 1024;
-
 class Scene {
   constructor(canvas) {
     this.canvas = canvas;
@@ -97,6 +95,7 @@ class Scene {
         modelViewMatrix:      gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
         projectionMatrix:     gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
         shadowTransform:      gl.getUniformLocation(shaderProgram, 'uShadowTransform'),
+        shadowTransformVM:    gl.getUniformLocation(shaderProgram, 'uShadowTransformVM'),
         normalTransform:      gl.getUniformLocation(shaderProgram, 'uNormalTransform'),
         isLit:                gl.getUniformLocation(shaderProgram, 'uIsLit'),
         lightDirectional:     gl.getUniformLocation(shaderProgram, 'uLightDirectional'),
@@ -133,7 +132,7 @@ class Scene {
     this.mouseray           = null;
     this.rotEnabled         = false;
     this.modEnabled         = false;
-    this.modSubstract       = true;
+    this.modSubstract       = false;
     this.modApply           = false;
     this.modArea            =  2.0;
     this.maxTranslation     = 10.0;
@@ -265,6 +264,7 @@ class Scene {
     const shadowProgramInfo = this.shadowProgramInfo;
     const level             = this.level;
     const shadowTransforms  = [];
+    this.shadowTransforms   = shadowTransforms;
     if (this.level === null) return;
 
     for (var i = 0; i < this.lights.length; i++) {
@@ -415,7 +415,12 @@ class Scene {
 
     const normalTransform    = mat4.create();
     const normalTransform3x3 = mat3.create();
+    const shadowTransformsVM = [];
     mat4.invert(normalTransform, modelViewMatrix);
+    for (var i = 0; i < this.shadowTransforms.length; i++) {
+      shadowTransformsVM.push(mat4.create());
+      mat4.mul(shadowTransformsVM[i], this.shadowTransforms[i], normalTransform);
+    }
     mat4.transpose(normalTransform, normalTransform);
     mat3.fromMat4(normalTransform3x3, normalTransform);
 
@@ -429,6 +434,15 @@ class Scene {
     gl.uniformMatrix3fv(programInfo.uniformLocations.normalTransform,
                         false,
                         normalTransform3x3);
+    const shadowTransformsArray = new Float32Array(shadowTransformsVM.length * 16);
+    for (var i = 0; i < shadowTransformsVM.length; i++) {
+      shadowTransformsArray.set(shadowTransformsVM[i], 16 * i);
+    }
+    // Save shadow transform for later
+    gl.useProgram(programInfo.program);
+    gl.uniformMatrix4fv(programInfo.uniformLocations.shadowTransformVM,
+                        false,
+                        shadowTransformsArray);
     const shadowMap   = new Int32Array(this.lights.length);
     const directional = new Int32Array(this.lights.length);
     const position    = new Float32Array(this.lights.length * 3);
@@ -697,7 +711,7 @@ class Scene {
       vec3.add(this.previousCoords, this.rotation, this.previousCoords);
       this.rotation = this.previousCoords;
       if (this.previousCoords[0] >  Math.PI / 2)  this.previousCoords[0] =  Math.PI / 2;
-      if (this.previousCoords[0] <  Math.PI / 20) this.previousCoords[0] =  Math.PI / 20;
+      if (this.previousCoords[0] <  0)            this.previousCoords[0] =  0;
       if (this.previousCoords[1] >  Math.PI / 2)  this.previousCoords[1] =  Math.PI / 2;
       if (this.previousCoords[1] < -Math.PI / 2)  this.previousCoords[1] = -Math.PI / 2;
       this.rotation = this.previousCoords;

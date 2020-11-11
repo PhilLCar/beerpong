@@ -82,7 +82,7 @@ const MATERIALS = {
     TEXTYPE:   TEXTYPE_ATMO,
     TEXTURE_APPLY_FUNC: `
       highp float s = length(vPosition - vCenter);
-      highp float r = acos((vPosition.y - vCenter.y) / s) / (PI / 2.0);
+      highp float r = acos((vPosition.y - vCenter.y) / s) / (PI / 2.0) * ${((ATMOSPHERE_TEXTURE_SIZE - ATMO_PADDING) / ATMOSPHERE_TEXTURE_SIZE).toPrecision(16)};
       highp vec2  p = normalize(vPosition.xz - vCenter.xz) * vec2(1.0, -1.0);
       FragColor = texture(uTextureMap[${ATMO_TEXTURE_ID - MAX_NUM_LIGHTS}], (r * p + vec2(1.0, 1.0)) / 2.0);`,
     COLOR_PRESET : {

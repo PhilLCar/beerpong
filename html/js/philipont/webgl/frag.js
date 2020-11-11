@@ -16,6 +16,7 @@ const sceneFragmentSRC = `#version 300 es
   
   uniform sampler2D uTextureMap[MAX_TEXTURES];
   uniform sampler2D uShadowMap[MAX_NUM_LIGHTS];
+  uniform mat4      uShadowTransformVM[MAX_NUM_LIGHTS];
   uniform vec3      uLightColor[MAX_NUM_LIGHTS];
 
   // Material
@@ -54,9 +55,9 @@ const sceneFragmentSRC = `#version 300 es
   /// PCSS ///
   // http://developer.download.nvidia.com/whitepapers/2008/PCSS_Integration.pdf
   #define BLOCKER_SEARCH_NUM_SAMPLES 16
-  #define PCF_NUM_SAMPLES            32
+  #define PCF_NUM_SAMPLES            16
   #define NEAR_PLANE                 ${ZNEAR}
-  #define LIGHT_SIZE_UV              0.005
+  #define LIGHT_SIZE_UV              0.004
 
   uniform highp vec2 POISSON_DISKS[16];
 
@@ -70,7 +71,7 @@ const sceneFragmentSRC = `#version 300 es
     numBlockers = 0.0;
     for (int i = 0; i < BLOCKER_SEARCH_NUM_SAMPLES; ++i) {
       float depth = texture(shadowMap, uv + POISSON_DISKS[i] * searchWidth * float(i)).x;
-      if (depth < zReceiver - 1.0) {
+      if (depth < (zReceiver - 1.0)) {
         blockerSum += depth;
         ++numBlockers;
       }
@@ -83,7 +84,7 @@ const sceneFragmentSRC = `#version 300 es
     for (int i = 0; i < PCF_NUM_SAMPLES; ++i) {
       vec2 offset = uv;
       rand(offset, float(i));
-      offset *= filterRadiusUV;
+      offset *= filterRadiusUV * float(i) / float(PCF_NUM_SAMPLES);
       sum += texture(shadowMap, uv + offset).x < zReceiver ? 0.0 : 1.0;
     }
     return sum / float(PCF_NUM_SAMPLES);
@@ -99,6 +100,38 @@ const sceneFragmentSRC = `#version 300 es
     float penumbraRatio  = penumbraSize(zReceiver, avgBlockerDepth);
     float filterRadiusUV = penumbraRatio * LIGHT_SIZE_UV * NEAR_PLANE / zReceiver;
     return PCF_Filter(shadowMap, uv, zReceiver, filterRadiusUV);
+  }
+
+  /// VOLUMETRIC LIGHT ///
+  // http://www.alexandre-pestana.com/volumetric-lights/
+  #define RAY_MARCHING_STEPS 64
+  #define SCATTERING         0.6
+
+  float ComputeScattering(float lightDotView) {
+    float S2     = SCATTERING * SCATTERING;
+    float result = 1.0 - S2;
+    result /= (4.0 * PI * pow(1.0 + S2 - 2.0 * SCATTERING * lightDotView, 1.5));
+    return result;
+  }
+
+  vec3 VolumetricFog(uint light) {
+    vec3  rayVector = vVMPosition;
+    float rayLength = length(rayVector);
+    vec3  rayDir = rayVector / rayLength;
+    float stepLength = rayLength / float(RAY_MARCHING_STEPS);
+    vec3  step = rayDir * stepLength;
+    vec3  position = vec3(0.0, 0.0, 0.0);
+    vec3  fog      = vec3(0.0, 0.0, 0.0);
+    for (int i = 0; i < RAY_MARCHING_STEPS; ++i) {
+      vec4 tmp = uShadowTransformVM[light] * vec4(position, 1.0);
+      vec3 posInLightSpace = tmp.xyz / tmp.w;
+      float depth = texture(uShadowMap[light], posInLightSpace.xy).x;
+      if (depth > posInLightSpace.z) {
+        fog += ComputeScattering(dot(vLightDir[light], rayDir)) * uLightColor[light];
+      }
+      position += step;
+    }
+    return fog/ float(RAY_MARCHING_STEPS);
   }
 
   bool applyTexture(out vec4 FragColor) {
@@ -144,6 +177,7 @@ const sceneFragmentSRC = `#version 300 es
         // Hard specular
         factor += sMaterial.mSpecHard.x * pow(anglef, sMaterial.mSpecHard.y);
         FragColor += vec4(vis * factor * uLightColor[i], 0.0);
+        FragColor += vec4(VolumetricFog(i), 0.0);
       }
     } else {
       FragColor = vColor;
@@ -282,7 +316,7 @@ const atmoFragmentSRC = `#version 300 es
   }
 
   void main(void) {
-    vec2  coords = (gl_FragCoord.xy / uViewport * 2.0 - vec2(1.0, 1.0)) * uViewport.x / (uViewport.x - 32.0);
+    vec2  coords = (gl_FragCoord.xy / uViewport * 2.0 - vec2(1.0, 1.0)) * uViewport.x / (uViewport.x - ${ATMO_PADDING.toPrecision(16)});
     float z2     = coords.x * coords.x + coords.y * coords.y;
     float phi    = atan(-coords.y, coords.x);
     float theta  = acos(1.0 - z2);

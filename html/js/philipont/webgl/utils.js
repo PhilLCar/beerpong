@@ -9,6 +9,11 @@ const TEXTYPE_PLANE  = 1;
 const TEXTYPE_SPHERE = 2;
 const TEXTYPE_ATMO   = 3;
 
+const SHADOW_TEXTURE_SIZE = 1024;
+const ATMOSPHERE_TEXTURE_SIZE = 1024;
+
+const ATMO_PADDING = 32;
+
 const MAX_NUM_LIGHTS = 4;
 const MAX_TEXTURES   = 8;
 

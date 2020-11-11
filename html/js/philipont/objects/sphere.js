@@ -124,5 +124,5 @@ function initSphere(scene, size = 1, resolution = 20, inverted = false, material
 function initAtmo(scene, level) {
   const size = Math.sqrt(level.terrainSizeX * level.terrainSizeX +
                          level.terrainSizeZ * level.terrainSizeZ) * 3;
-  return initSphere(scene, size, 20, true, MATERIALS.ATMOSPHERE);
+  return initSphere(scene, size, 20, true, MATERIALS.ATMOSPHERE, vec3.fromValues(0, level.waterLevel, 0));
 }

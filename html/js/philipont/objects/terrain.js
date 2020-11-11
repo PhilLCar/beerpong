@@ -102,6 +102,161 @@ function initTerrain(scene, level) {
     terrainPosition.push(0);
     terrainObjType.push(material.TYPE);
   }
+  // BORDERS
+  for (var i = 0; i < nX; i++) {
+    /////////////////////////////////////////////////
+    {
+      const v1 = terrain[i];
+      const v2 = terrain[i + 1];
+      const i1 = i * nZ * 6;
+      terrainVertices.push(v1[0]);
+      terrainVertices.push(v1[1]);
+      terrainVertices.push(v1[2]);
+      terrainVertices.push(v2[0]);
+      terrainVertices.push(v2[1]);
+      terrainVertices.push(v2[2]);
+      terrainVertices.push(v1[0]);
+      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(v1[2]);
+      terrainVertices.push(v2[0]);
+      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(v2[2]);
+      terrainIndices.push(terrainVertices.length / 3 - 4);
+      terrainIndices.push(terrainVertices.length / 3 - 3);
+      terrainIndices.push(terrainVertices.length / 3 - 2);
+      terrainIndices.push(terrainVertices.length / 3 - 3);
+      terrainIndices.push(terrainVertices.length / 3 - 1);
+      terrainIndices.push(terrainVertices.length / 3 - 2);
+      for (var j = 0; j < 4; j++) {
+        terrainNormals.push(0);
+        terrainNormals.push(0);
+        terrainNormals.push(-1);
+        terrainColors.push(terrainColors[i1 * 4]);
+        terrainColors.push(terrainColors[i1 * 4 + 1]);
+        terrainColors.push(terrainColors[i1 * 4 + 2]);
+        terrainColors.push(terrainColors[i1 * 4 + 3]);
+        terrainPosition.push(0);
+        terrainPosition.push(0);
+        terrainPosition.push(0);
+        terrainObjType.push(material.TYPE);
+      }
+    }
+    /////////////////////////////////////////////////
+    {
+      const v1 = terrain[i     + nZ * nX1];
+      const v2 = terrain[i + 1 + nZ * nX1];
+      const i1 = (i * nZ + nZ - 1) * 6 + 3;
+      terrainVertices.push(v1[0]);
+      terrainVertices.push(v1[1]);
+      terrainVertices.push(v1[2]);
+      terrainVertices.push(v2[0]);
+      terrainVertices.push(v2[1]);
+      terrainVertices.push(v2[2]);
+      terrainVertices.push(v1[0]);
+      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(v1[2]);
+      terrainVertices.push(v2[0]);
+      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(v2[2]);
+      terrainIndices.push(terrainVertices.length / 3 - 3);
+      terrainIndices.push(terrainVertices.length / 3 - 4);
+      terrainIndices.push(terrainVertices.length / 3 - 2);
+      terrainIndices.push(terrainVertices.length / 3 - 3);
+      terrainIndices.push(terrainVertices.length / 3 - 2);
+      terrainIndices.push(terrainVertices.length / 3 - 1);
+      for (var j = 0; j < 4; j++) {
+        terrainNormals.push(0);
+        terrainNormals.push(0);
+        terrainNormals.push(1);
+        terrainColors.push(terrainColors[i1 * 4]);
+        terrainColors.push(terrainColors[i1 * 4 + 1]);
+        terrainColors.push(terrainColors[i1 * 4 + 2]);
+        terrainColors.push(terrainColors[i1 * 4 + 3]);
+        terrainPosition.push(0);
+        terrainPosition.push(0);
+        terrainPosition.push(0);
+        terrainObjType.push(material.TYPE);
+      }
+    }
+  }
+  for (var j = 0; j < nZ; j++) {
+    /////////////////////////////////////////////////
+    {
+      const v1 = terrain[ j      * nX1];
+      const v2 = terrain[(j + 1) * nX1];
+      const i1 = j * 6;
+      // 1
+      terrainVertices.push(v1[0]);
+      terrainVertices.push(v1[1]);
+      terrainVertices.push(v1[2]);
+      terrainVertices.push(v2[0]);
+      terrainVertices.push(v2[1]);
+      terrainVertices.push(v2[2]);
+      terrainVertices.push(v1[0]);
+      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(v1[2]);
+      terrainVertices.push(v2[0]);
+      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(v2[2]);
+      terrainIndices.push(terrainVertices.length / 3 - 3);
+      terrainIndices.push(terrainVertices.length / 3 - 4);
+      terrainIndices.push(terrainVertices.length / 3 - 2);
+      terrainIndices.push(terrainVertices.length / 3 - 3);
+      terrainIndices.push(terrainVertices.length / 3 - 2);
+      terrainIndices.push(terrainVertices.length / 3 - 1);
+      for (var i = 0; i < 4; i++) {
+        terrainNormals.push(-1);
+        terrainNormals.push(0);
+        terrainNormals.push(0);
+        terrainColors.push(terrainColors[i1 * 4]);
+        terrainColors.push(terrainColors[i1 * 4 + 1]);
+        terrainColors.push(terrainColors[i1 * 4 + 2]);
+        terrainColors.push(terrainColors[i1 * 4 + 3]);
+        terrainPosition.push(0);
+        terrainPosition.push(0);
+        terrainPosition.push(0);
+        terrainObjType.push(material.TYPE);
+      }
+    }
+    /////////////////////////////////////////////////
+    {
+      const v1 = terrain[nX +  j      * nX1];
+      const v2 = terrain[nX + (j + 1) * nX1];
+      const i1 = (nX * nZ + j) * 6 + 5;
+      // 1
+      terrainVertices.push(v1[0]);
+      terrainVertices.push(v1[1]);
+      terrainVertices.push(v1[2]);
+      terrainVertices.push(v2[0]);
+      terrainVertices.push(v2[1]);
+      terrainVertices.push(v2[2]);
+      terrainVertices.push(v1[0]);
+      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(v1[2]);
+      terrainVertices.push(v2[0]);
+      terrainVertices.push(-level.terrainSizeX);
+      terrainVertices.push(v2[2]);
+      terrainIndices.push(terrainVertices.length / 3 - 4);
+      terrainIndices.push(terrainVertices.length / 3 - 3);
+      terrainIndices.push(terrainVertices.length / 3 - 2);
+      terrainIndices.push(terrainVertices.length / 3 - 3);
+      terrainIndices.push(terrainVertices.length / 3 - 1);
+      terrainIndices.push(terrainVertices.length / 3 - 2);
+      for (var i = 0; i < 4; i++) {
+        terrainNormals.push(1);
+        terrainNormals.push(0);
+        terrainNormals.push(0);
+        terrainColors.push(terrainColors[i1 * 4]);
+        terrainColors.push(terrainColors[i1 * 4 + 1]);
+        terrainColors.push(terrainColors[i1 * 4 + 2]);
+        terrainColors.push(terrainColors[i1 * 4 + 3]);
+        terrainPosition.push(0);
+        terrainPosition.push(0);
+        terrainPosition.push(0);
+        terrainObjType.push(material.TYPE);
+      }
+    }
+  }
   const shape = new Shape(scene, { 
     vertexBuffer:   terrainVertices, 
     indexBuffer:    terrainIndices, 
@@ -265,6 +420,28 @@ function initTerrain(scene, level) {
                 vec3.sub(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
               } else {
                 vec3.add(v, v, vec3.fromValues(0, (modArea - l) * 0.01, 0));
+              }
+              if (i == 0) {
+                const i1 = 18 * nX * nZ + 24 * nX + 24 * j + 1;
+                const i2 = i1 - 21;
+                vertices[i1] = v[1];
+                if (j > 0) vertices[i2] = v[1];
+              } else if (i == nX) {
+                const i1 = 18 * nX * nZ + 24 * nX + 24 * j + 13;
+                const i2 = i1 - 21;
+                vertices[i1] = v[1];
+                if (j > 0) vertices[i2] = v[1];
+              }
+              if (j == 0) {
+                const i1 = 18 * nX * nZ + 24 * i + 1;
+                const i2 = i1 - 21;
+                vertices[i1] = v[1];
+                if (i > 0) vertices[i2] = v[1];
+              } else if (j == nZ) {
+                const i1 = 18 * nX * nZ + 24 * i + 13;
+                const i2 = i1 - 21;
+                vertices[i1] = v[1];
+                if (i > 0) vertices[i2] = v[1];
               }
               if (i < nX && j < nZ) {
                 const i1 = (i * nZ + j) * 18 + 1;

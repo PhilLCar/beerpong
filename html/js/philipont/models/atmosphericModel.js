@@ -1,5 +1,3 @@
-const ATMOSPHERE_TEXTURE_SIZE = 1024;
-
 class Atmosphere {
   constructor(gl, sunlight) {
     this.gl       = gl;
